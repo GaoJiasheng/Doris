@@ -111,8 +111,23 @@ public struct ClaudeCodeIntegration: IntegrationProvider {
         // disappears before the user can react to "task done"; reminder
         // is the sweet spot — long enough to read + click-through, not
         // so persistent that you have to dismiss like critical.
+        //
+        // Title is localized at registration time by reading the same
+        // UserDefaults key LanguageSettings (in DorisUI) writes to.
+        // Frozen into the hook command — if the user changes language
+        // later, re-registering refreshes the command in place.
         let quotedPath = cliPath.contains(" ") ? "'\(cliPath)'" : cliPath
-        return "\(quotedPath) notify --title 'Claude task complete' --source claudeCode --level reminder --click-url 'claude://' \(marker)"
+        let title = localizedTitle()
+        return "\(quotedPath) notify --title '\(title)' --source claudeCode --level reminder --click-url 'claude://' \(marker)"
+    }
+
+    /// Pick the title for the user's current language. Reads the same
+    /// `doris.language.mode` key that DorisUI's `LanguageSettings`
+    /// writes to, so we don't have to depend on DorisUI from this
+    /// (DorisCore-internal) integration module.
+    private static func localizedTitle() -> String {
+        let mode = UserDefaults.standard.string(forKey: "doris.language.mode") ?? "zh"
+        return mode == "en" ? "Claude task complete" : "Claude 任务完成"
     }
 
     // MARK: - JSON read / mutate / write

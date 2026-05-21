@@ -878,39 +878,39 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					256698BC6302E70D89149B94 = {
-						DevelopmentTeam = "$(DORIS_TEAM_ID)";
+						DevelopmentTeam = D33974QQTD;
 						ProvisioningStyle = Automatic;
 					};
 					2833071FF23F0D8A790A7124 = {
-						DevelopmentTeam = "$(DORIS_TEAM_ID)";
+						DevelopmentTeam = D33974QQTD;
 						ProvisioningStyle = Automatic;
 					};
 					6D98964E81A5DE833DBB77C4 = {
-						DevelopmentTeam = "$(DORIS_TEAM_ID)";
+						DevelopmentTeam = D33974QQTD;
 						ProvisioningStyle = Automatic;
 					};
 					74ABD42FEAF5584BB3F42D38 = {
-						DevelopmentTeam = "$(DORIS_TEAM_ID)";
+						DevelopmentTeam = D33974QQTD;
 						ProvisioningStyle = Automatic;
 					};
 					81C1F9D600A935CC3AEC7970 = {
-						DevelopmentTeam = "$(DORIS_TEAM_ID)";
+						DevelopmentTeam = D33974QQTD;
 						ProvisioningStyle = Automatic;
 					};
 					AA6D72693A4DAD7B11E48153 = {
-						DevelopmentTeam = "$(DORIS_TEAM_ID)";
+						DevelopmentTeam = D33974QQTD;
 						ProvisioningStyle = Automatic;
 					};
 					DB1AA232CACA6C3AAD0B0E00 = {
-						DevelopmentTeam = "$(DORIS_TEAM_ID)";
+						DevelopmentTeam = D33974QQTD;
 						ProvisioningStyle = Automatic;
 					};
 					F2F26C4C1CA013E8917B1BBB = {
-						DevelopmentTeam = "$(DORIS_TEAM_ID)";
+						DevelopmentTeam = D33974QQTD;
 						ProvisioningStyle = Automatic;
 					};
 					FE50EF4F963E1C62DA468C38 = {
-						DevelopmentTeam = "$(DORIS_TEAM_ID)";
+						DevelopmentTeam = D33974QQTD;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -1297,7 +1297,7 @@
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = "$(DORIS_TEAM_ID)";
+				DEVELOPMENT_TEAM = D33974QQTD;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INSTALL_PATH = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1319,14 +1319,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-mac/Doris-macOS/Doris-macOS.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "apps/doris-mac/Doris-macOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris;
 				PRODUCT_NAME = Doris;
 				SDKROOT = macosx;
@@ -1441,7 +1441,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "$(DORIS_TEAM_ID)";
+				DEVELOPMENT_TEAM = D33974QQTD;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -1483,7 +1483,7 @@
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = "$(DORIS_TEAM_ID)";
+				DEVELOPMENT_TEAM = D33974QQTD;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INSTALL_PATH = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1505,14 +1505,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-mac/Doris-macOS/Doris-macOS.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "apps/doris-mac/Doris-macOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris;
 				PRODUCT_NAME = Doris;
 				SDKROOT = macosx;
@@ -1555,7 +1555,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "$(DORIS_TEAM_ID)";
+				DEVELOPMENT_TEAM = D33974QQTD;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;

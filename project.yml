@@ -12,7 +12,11 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.10"
-    DEVELOPMENT_TEAM: "$(DORIS_TEAM_ID)"
+    # Hardcoded so Xcode UI archive picks up the team without needing
+    # DORIS_TEAM_ID exported in the shell that launched Xcode (Xcode
+    # doesn't inherit env vars from Finder launches; user-defined
+    # build settings via project.yml work universally).
+    DEVELOPMENT_TEAM: "D33974QQTD"
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     SWIFT_STRICT_CONCURRENCY: minimal
@@ -143,7 +147,7 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         CODE_SIGN_ENTITLEMENTS: cli/doris/cli.entitlements
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: "$(DORIS_TEAM_ID)"
+        DEVELOPMENT_TEAM: "D33974QQTD"
         ENABLE_HARDENED_RUNTIME: YES
         # Stop Xcode from auto-merging app-level entitlements (sandbox,
         # iCloud, mic) into the CLI's signed entitlements. The CLI is
