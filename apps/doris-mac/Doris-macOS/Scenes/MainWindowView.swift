@@ -276,24 +276,46 @@ struct MainWindowView: View {
 
 private struct MainEventsList: View {
     @ObservedObject private var lang = LanguageSettings.shared
-    @Query(sort: [SortDescriptor(\Message.receivedAt, order: .reverse)])
-    private var messages: [Message]
+    @Environment(\.modelContext) private var ctx
+
+    /// Fetch only today's active messages on appear. Past-day archives
+    /// are loaded lazily via `DayCollapsibleEventList`'s per-day
+    /// disclosure groups. Was previously a full-history @Query which
+    /// materialised every message on every body re-evaluation —
+    /// noticeable lag once the Mac side accumulated more than a few
+    /// hundred CLI notifications.
+    @Query private var todayMessages: [Message]
+
+    init() {
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let activeRaw = MessageState.active.rawValue
+        _todayMessages = Query(
+            filter: #Predicate<Message> { msg in
+                msg.receivedAt >= startOfToday && msg.stateRaw == activeRaw
+            },
+            sort: [SortDescriptor(\Message.receivedAt, order: .reverse)]
+        )
+    }
 
     var body: some View {
-        let active = messages.filter { $0.state == .active }
         ScrollView {
-            VStack(spacing: 8) {
-                if active.isEmpty {
-                    emptyState
-                        .padding(.top, 80)
-                } else {
-                    ForEach(active) { m in
-                        EventRow(message: m)
-                    }
+            if todayMessages.isEmpty && !hasAnyMessage {
+                emptyState
+                    .padding(.top, 80)
+            } else {
+                DayCollapsibleEventList(today: todayMessages) { m in
+                    EventRow(message: m)
                 }
+                .padding(20)
             }
-            .padding(20)
         }
+    }
+
+    private var hasAnyMessage: Bool {
+        var desc = FetchDescriptor<Message>()
+        desc.fetchLimit = 1
+        let count = (try? ctx.fetchCount(desc)) ?? 0
+        return count > 0
     }
 
     private var emptyState: some View {

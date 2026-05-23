@@ -14,41 +14,53 @@ struct EventsScreen: View {
     @ObservedObject private var lang = LanguageSettings.shared
     @Environment(\.modelContext) private var ctx
 
-    @Query(sort: [SortDescriptor(\Message.receivedAt, order: .reverse)])
-    private var messages: [Message]
+    /// Only today's active events are fetched eagerly. Past days are
+    /// rendered as collapsed sections by `DayCollapsibleEventList` and
+    /// their messages load on first expand. This keeps the tab snappy
+    /// — earlier full-history `@Query` was the main culprit behind the
+    /// "events tab takes a second to paint" complaint.
+    @Query private var todayMessages: [Message]
+
+    init() {
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let activeRaw = MessageState.active.rawValue
+        _todayMessages = Query(
+            filter: #Predicate<Message> { msg in
+                msg.receivedAt >= startOfToday && msg.stateRaw == activeRaw
+            },
+            sort: [SortDescriptor(\Message.receivedAt, order: .reverse)]
+        )
+    }
 
     var body: some View {
-        let active = messages.filter { $0.state == .active }
         NavigationStack {
             ScrollView {
-                if active.isEmpty {
+                if todayMessages.isEmpty && !hasAnyMessage {
                     emptyState
                         .padding(.top, 80)
                 } else {
-                    LazyVStack(spacing: 8) {
-                        ForEach(active) { m in
-                            EventRow(message: m)
-                                .contextMenu {
-                                    Button {
-                                        m.state = .actioned
-                                        try? ctx.save()
-                                    } label: {
-                                        Label(L("Mark done", "标为已读"), systemImage: "checkmark.circle")
-                                    }
-                                    Button {
-                                        m.state = .dismissed
-                                        try? ctx.save()
-                                    } label: {
-                                        Label(L("Dismiss", "忽略"), systemImage: "xmark.circle")
-                                    }
-                                    Button(role: .destructive) {
-                                        ctx.delete(m)
-                                        try? ctx.save()
-                                    } label: {
-                                        Label(L("Delete", "删除"), systemImage: "trash")
-                                    }
+                    DayCollapsibleEventList(today: todayMessages) { m in
+                        EventRow(message: m)
+                            .contextMenu {
+                                Button {
+                                    m.state = .actioned
+                                    try? ctx.save()
+                                } label: {
+                                    Label(L("Mark done", "标为已读"), systemImage: "checkmark.circle")
                                 }
-                        }
+                                Button {
+                                    m.state = .dismissed
+                                    try? ctx.save()
+                                } label: {
+                                    Label(L("Dismiss", "忽略"), systemImage: "xmark.circle")
+                                }
+                                Button(role: .destructive) {
+                                    ctx.delete(m)
+                                    try? ctx.save()
+                                } label: {
+                                    Label(L("Delete", "删除"), systemImage: "trash")
+                                }
+                            }
                     }
                     .padding(14)
                 }
@@ -67,6 +79,17 @@ struct EventsScreen: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.hidden, for: .navigationBar)
         }
+    }
+
+    /// Cheap guard: if today is empty AND there are zero messages ever,
+    /// show the "no events yet" empty state instead of a list of empty
+    /// collapsed days. We bail to a fetchCount probe so we don't
+    /// reintroduce a full-history `@Query` just for this UX hint.
+    private var hasAnyMessage: Bool {
+        var desc = FetchDescriptor<Message>()
+        desc.fetchLimit = 1
+        let count = (try? ctx.fetchCount(desc)) ?? 0
+        return count > 0
     }
 
     private var emptyState: some View {

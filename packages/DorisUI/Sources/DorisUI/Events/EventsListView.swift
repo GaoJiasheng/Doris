@@ -1,14 +1,31 @@
 import SwiftUI
 import SwiftData
 import DorisCore
+import DorisIPC
 
+/// Compact events panel used by the Mac anchor dropdown
+/// (`NotchExpandedView`). Today's events render eagerly with the
+/// source-kind filter chips applied; past days are surfaced via the
+/// shared `DayCollapsibleEventList` and load on expand. Filter chips
+/// only affect today — past-day sections show every active event for
+/// that day so an expand is "what happened that day" rather than a
+/// filtered subset.
 public struct EventsListView: View {
-    @Query(sort: [SortDescriptor(\Message.receivedAt, order: .reverse)])
-    private var messages: [Message]
     @Environment(\.modelContext) private var modelContext
     @State private var filter: SourceKind?
 
-    public init() {}
+    @Query private var todayMessages: [Message]
+
+    public init() {
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let activeRaw = MessageState.active.rawValue
+        _todayMessages = Query(
+            filter: #Predicate<Message> { msg in
+                msg.receivedAt >= startOfToday && msg.stateRaw == activeRaw
+            },
+            sort: [SortDescriptor(\Message.receivedAt, order: .reverse)]
+        )
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -21,28 +38,43 @@ public struct EventsListView: View {
             }
             .padding(8)
             Divider()
-            List {
-                ForEach(filtered) { message in
-                    EventsRowView(message: message)
+            ScrollView {
+                // Anchor dropdown is short — only surface a week of
+                // past days, otherwise the disclosure list extends past
+                // the 400pt panel height and the user has to scroll
+                // through empty days to reach today's events.
+                DayCollapsibleEventList(
+                    today: filteredToday,
+                    pastDayCount: 7
+                ) { msg in
+                    EventsRowView(message: msg)
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
-                                message.state = .dismissed
-                            } label: { Label(L("Dismiss", "忽略"), systemImage: "xmark") }
+                                msg.state = .dismissed
+                            } label: {
+                                Label(L("Dismiss", "忽略"), systemImage: "xmark")
+                            }
                             Button {
-                                message.state = .actioned
-                            } label: { Label(L("Done", "完成"), systemImage: "checkmark") }
+                                msg.state = .actioned
+                            } label: {
+                                Label(L("Done", "完成"), systemImage: "checkmark")
+                            }
                             .tint(.green)
                         }
                 }
+                .padding(12)
             }
-            .listStyle(.inset)
         }
         .navigationTitle(L("Events", "事件"))
     }
 
-    private var filtered: [Message] {
-        guard let f = filter else { return messages.filter { $0.state == .active } }
-        return messages.filter { $0.state == .active && $0.source == f }
+    /// Today's messages with the source-kind filter chip applied (if
+    /// any). When the chip is "All", returns the @Query result
+    /// untouched. The filter intentionally only narrows today — past
+    /// days remain a full "what happened" archive.
+    private var filteredToday: [Message] {
+        guard let f = filter else { return todayMessages }
+        return todayMessages.filter { $0.source == f }
     }
 }
 

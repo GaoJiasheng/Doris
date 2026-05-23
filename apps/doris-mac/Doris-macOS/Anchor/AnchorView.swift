@@ -643,24 +643,54 @@ private struct CountdownStripe: View {
 // MARK: - Anchor body subviews
 
 private struct AnchorEventsView: View {
-    @Query(sort: [SortDescriptor(\Message.receivedAt, order: .reverse)])
-    private var messages: [Message]
     @ObservedObject private var lang = LanguageSettings.shared
+    @Environment(\.modelContext) private var ctx
+
+    /// Only today's active events are fetched on appear; older days
+    /// roll up into collapsed `DayCollapsibleEventList` sections that
+    /// fetch on expand. Anchor popup is the highest-frequency event
+    /// surface — keeping its initial paint to "today only" is the
+    /// single biggest perf win.
+    @Query private var todayMessages: [Message]
+
+    init() {
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let activeRaw = MessageState.active.rawValue
+        _todayMessages = Query(
+            filter: #Predicate<Message> { msg in
+                msg.receivedAt >= startOfToday && msg.stateRaw == activeRaw
+            },
+            sort: [SortDescriptor(\Message.receivedAt, order: .reverse)]
+        )
+    }
 
     var body: some View {
-        let active = messages.filter { $0.state == .active }
-        if active.isEmpty {
+        if todayMessages.isEmpty && !hasAnyMessage {
             empty(L("No events yet", "暂无事件"), systemImage: "bell.slash")
         } else {
             ScrollView {
-                VStack(spacing: 4) {
-                    ForEach(active) { m in
-                        anchorRow(for: m)
-                    }
+                // Anchor popup is narrow & short — surface a week of
+                // past days, deeper history is for the main window
+                // Events tab.
+                DayCollapsibleEventList(
+                    today: todayMessages,
+                    pastDayCount: 7,
+                    rowSpacing: 4
+                ) { m in
+                    anchorRow(for: m)
                 }
                 .padding(8)
             }
         }
+    }
+
+    /// Avoids a full-history @Query just to decide between empty-state
+    /// vs collapsed-archive UI when today happens to be quiet.
+    private var hasAnyMessage: Bool {
+        var desc = FetchDescriptor<Message>()
+        desc.fetchLimit = 1
+        let count = (try? ctx.fetchCount(desc)) ?? 0
+        return count > 0
     }
 
     @ViewBuilder
