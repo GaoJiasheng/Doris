@@ -1,3 +1,5 @@
+#if os(macOS)
+
 import Foundation
 import DorisIPC
 
@@ -23,3 +25,5 @@ public struct ChatGPTIntegration: IntegrationProvider {
     public func register() async throws { throw IntegrationError.notSupported }
     public func unregister() async throws {}
 }
+
+#endif // os(macOS)

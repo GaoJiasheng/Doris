@@ -1,3 +1,5 @@
+#if os(macOS)
+
 import Foundation
 import DorisIPC
 
@@ -27,3 +29,5 @@ public struct CodexIntegration: IntegrationProvider {
     public func register() async throws { throw IntegrationError.notSupported }
     public func unregister() async throws {}
 }
+
+#endif // os(macOS)

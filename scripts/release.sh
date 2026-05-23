@@ -168,7 +168,7 @@ ditto -c -k --keepParent "$APP" "$ZIP"
 xcrun notarytool submit "$ZIP" \
   --keychain-profile doris-notary --keychain "$HOME/Library/Keychains/login.keychain-db" \
   --wait \
-  --output-format plain
+  --output-format normal
 rm -f "$ZIP"
 
 # ---------- 5. staple .app + build DMG + notarize DMG ----------
@@ -238,7 +238,7 @@ echo "🍎 Submitting DMG to notary service..."
 xcrun notarytool submit "$DMG" \
   --keychain-profile doris-notary --keychain "$HOME/Library/Keychains/login.keychain-db" \
   --wait \
-  --output-format plain
+  --output-format normal
 xcrun stapler staple "$DMG"
 
 # ---------- 6. final validation ----------

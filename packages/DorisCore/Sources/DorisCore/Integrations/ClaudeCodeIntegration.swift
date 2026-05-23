@@ -1,3 +1,5 @@
+#if os(macOS)
+
 import Foundation
 import DorisIPC
 
@@ -245,3 +247,5 @@ public struct ClaudeCodeIntegration: IntegrationProvider {
         }
     }
 }
+
+#endif // os(macOS)

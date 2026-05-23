@@ -1,3 +1,5 @@
+#if os(macOS)
+
 import Foundation
 import Combine
 
@@ -81,3 +83,5 @@ public final class IntegrationsRegistry: ObservableObject {
         await refresh()
     }
 }
+
+#endif // os(macOS)

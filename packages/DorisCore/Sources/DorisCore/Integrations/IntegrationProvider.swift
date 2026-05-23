@@ -1,3 +1,11 @@
+// The whole integrations layer is macOS-only — Claude Code, Codex,
+// ChatGPT, etc. integrations target the desktop versions of those
+// apps (write to ~/.claude/settings.json, install shell wrappers,
+// etc.). iOS has no analogue and lacks `homeDirectoryForCurrentUser`
+// anyway, so we compile this entire module out on iOS to keep
+// DorisCore cross-platform.
+#if os(macOS)
+
 import Foundation
 import DorisIPC
 
@@ -149,3 +157,5 @@ public enum DorisCLILocator {
         return nil
     }
 }
+
+#endif // os(macOS)

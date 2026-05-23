@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Store distribution for iOS. Method "app-store" produces
+         an IPA suitable for upload to App Store Connect via altool;
+         once uploaded the build is available in TestFlight Internal
+         Testing immediately + ready to submit for App Store review
+         once metadata / screenshots / privacy questionnaire are
+         filled in via the App Store Connect dashboard. -->
+    <key>method</key>
+    <string>app-store</string>
+
+    <!-- Automatic style + API key auth = xcodebuild auto-fetches the
+         iOS Distribution profile that includes iCloud + Push entitlements.
+         We already verified the team's API key has Admin scope, so the
+         "Cloud signing permission error" the Mac path tripped over
+         doesn't apply here. -->
+    <key>signingStyle</key>
+    <string>automatic</string>
+
+    <key>teamID</key>
+    <string>$(DORIS_TEAM_ID)</string>
+
+    <key>stripSwiftSymbols</key>
+    <true/>
+
+    <!-- Upload symbols so crash reports symbolicate in the App Store
+         Connect crash reporting tools. -->
+    <key>uploadSymbols</key>
+    <true/>
+
+    <!-- Don't compile bitcode — bitcode is deprecated for iOS apps
+         since Xcode 14 and is incompatible with hardened-runtime
+         entitlements that the embedded extensions carry. -->
+    <key>compileBitcode</key>
+    <false/>
+
+    <!-- Don't upload to TestFlight directly during exportArchive —
+         we'll call `xcrun altool --upload-app` ourselves after
+         verifying the IPA. Setting destination=export keeps the
+         IPA on disk so the script can inspect / re-sign / upload. -->
+    <key>destination</key>
+    <string>export</string>
+</dict>
+</plist>
