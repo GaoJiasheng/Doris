@@ -68,16 +68,26 @@ struct NotesScreen: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 4, leading: 14, bottom: 4, trailing: 14))
-                        // Trailing swipe: archive
+                        // Trailing (left-swipe) → toggle completed. Used
+                        // to be Archive, but completing is a far more
+                        // frequent action and the destructive red read
+                        // wrong for "I'm done with this." Archive moved
+                        // into the long-press menu where it belongs.
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                n.archive()
+                            Button {
+                                n.done.toggle()
+                                n.completedAt = n.done ? Date() : nil
+                                n.touch()
                                 try? ctx.save()
                             } label: {
-                                Label(L("Archive", "归档"), systemImage: "archivebox")
+                                Label(
+                                    n.done ? L("Undo", "取消完成") : L("Done", "完成"),
+                                    systemImage: n.done ? "arrow.uturn.backward" : "checkmark.circle.fill"
+                                )
                             }
+                            .tint(CyberPalette.doneAccent)
                         }
-                        // Leading swipe: toggle pin
+                        // Leading (right-swipe): toggle pin
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
                                 n.pinned.toggle()
@@ -91,7 +101,10 @@ struct NotesScreen: View {
                             }
                             .tint(CyberPalette.neonPink)
                         }
-                        // Long-press context menu
+                        // Long-press context menu — full action set lives
+                        // here. Archive is now ONLY reachable through
+                        // long-press so casual left-swipes can't soft-
+                        // delete a note by accident.
                         .contextMenu {
                             Button {
                                 n.pinned.toggle()
@@ -101,6 +114,17 @@ struct NotesScreen: View {
                                 Label(
                                     n.pinned ? L("Unpin", "取消置顶") : L("Pin", "置顶"),
                                     systemImage: n.pinned ? "pin.slash" : "pin.fill"
+                                )
+                            }
+                            Button {
+                                n.done.toggle()
+                                n.completedAt = n.done ? Date() : nil
+                                n.touch()
+                                try? ctx.save()
+                            } label: {
+                                Label(
+                                    n.done ? L("Mark as undone", "标为未完成") : L("Mark as done", "标为已完成"),
+                                    systemImage: n.done ? "circle" : "checkmark.circle.fill"
                                 )
                             }
                             Button {
@@ -121,8 +145,6 @@ struct NotesScreen: View {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .searchable(text: $searchText,
-                        prompt: L("Search notes…", "搜索笔记…"))
             .refreshable { await runSync() }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -164,6 +186,15 @@ struct NotesScreen: View {
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 statusBar
+            }
+            // Search bar lives at the bottom now — the top of the screen
+            // reads cleaner with just the title + sync pill, and a
+            // thumb-reachable search field is easier to use one-handed.
+            // No `.ignoresSafeArea(.keyboard)` here on purpose — we want
+            // the inset to lift with the keyboard so the field stays
+            // visible while typing.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                searchBar
             }
             // Note detail destination
             .navigationDestination(for: UUID.self) { id in
@@ -244,6 +275,65 @@ struct NotesScreen: View {
         }
         .preferredColorScheme(theme.mode.colorScheme)
         .presentationDetents([.medium])
+    }
+
+    // MARK: - Bottom search bar
+    //
+    // Replaces the system `.searchable` (which docks at the top under
+    // the title bar). A custom field at the bottom is easier to thumb-
+    // reach and keeps the top of the list clean. The capsule shape +
+    // neonCyan stroke ties into the rest of the cyber UI; the clear
+    // button only renders when there's text to clear so the bar reads
+    // empty by default.
+
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(CyberPalette.neonCyan.opacity(0.7))
+            TextField(
+                L("Search notes…", "搜索笔记…"),
+                text: $searchText
+            )
+            .textFieldStyle(.plain)
+            .font(.system(size: 14))
+            .submitLabel(.search)
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.primary.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .strokeBorder(CyberPalette.neonCyan.opacity(0.22), lineWidth: 0.7)
+        )
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(
+            // Subtle gradient fade so the search bar visually anchors to
+            // the bottom edge instead of floating. ultraThinMaterial on
+            // top of the system background to soften list rows scrolling
+            // beneath.
+            LinearGradient(
+                colors: [Color.clear, .black.opacity(0.04), .black.opacity(0.08)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .background(.ultraThinMaterial.opacity(0.6))
+        )
     }
 
     // MARK: - Compact status bar
@@ -433,12 +523,29 @@ private struct ArchivedNotesSheet: View {
 private struct NoteRow: View {
     let note: Note
 
+    /// Treat the row as completed if either the note's own done flag is
+    /// set OR it's a checklist whose items are all checked. Matches the
+    /// `isCompleted` logic in TodayPinnedCard/Row so the entire app
+    /// agrees on what "done" looks like.
+    private var isCompleted: Bool {
+        if note.done { return true }
+        if note.isChecklist {
+            let items = note.checklistItems ?? []
+            return !items.isEmpty && items.allSatisfy(\.done)
+        }
+        return false
+    }
+
     var body: some View {
         CyberCard {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: note.isChecklist ? "checklist" : "note.text")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(CyberPalette.neonPink.opacity(0.85))
+                    .foregroundStyle(
+                        isCompleted
+                            ? CyberPalette.doneAccent
+                            : CyberPalette.neonPink.opacity(0.85)
+                    )
                     .frame(width: 22)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -449,7 +556,10 @@ private struct NoteRow: View {
                         }
                         Text(note.title.isEmpty ? L("Untitled", "无标题") : note.title)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
+                            .strikethrough(isCompleted, color: CyberPalette.doneAccent.opacity(0.85))
+                            .foregroundStyle(isCompleted
+                                ? AnyShapeStyle(HierarchicalShapeStyle.primary.opacity(0.45))
+                                : AnyShapeStyle(HierarchicalShapeStyle.primary))
                             .lineLimit(1)
                     }
                     if let p = note.checklistProgress {
@@ -466,7 +576,12 @@ private struct NoteRow: View {
                         Text(note.updatedAt, style: .relative)
                             .font(.caption2)
                             .foregroundStyle(.primary.opacity(0.4))
-                        if let due = note.dueDate {
+                        // When completed, replace the due-date chip with
+                        // a "DONE" pill so completion is the dominant
+                        // signal on the row's meta line.
+                        if isCompleted {
+                            donePill
+                        } else if let due = note.dueDate {
                             dueDateChip(due)
                         }
                     }
@@ -475,6 +590,29 @@ private struct NoteRow: View {
             }
             .padding(12)
         }
+        .opacity(isCompleted ? 0.72 : 1.0)
+        .animation(.easeInOut(duration: 0.25), value: isCompleted)
+    }
+
+    private var donePill: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 8, weight: .bold))
+            Text(L("DONE", "已完成"))
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .tracking(0.7)
+        }
+        .foregroundStyle(CyberPalette.doneAccent)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 1.5)
+        .background(
+            Capsule(style: .continuous)
+                .fill(CyberPalette.doneAccent.opacity(0.14))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .strokeBorder(CyberPalette.doneAccent.opacity(0.55), lineWidth: 0.7)
+        )
     }
 
     private func dueDateChip(_ due: Date) -> some View {

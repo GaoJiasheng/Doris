@@ -28,7 +28,13 @@ public struct InlineNoteEditor: View {
 
     public var body: some View {
         VStack(spacing: 8) {
-            toolbar
+            // Minimal top toolbar: just navigation + destructive actions.
+            // Behavior toggles (Pin / Checklist / Due / Done) moved into
+            // a dedicated row under the title — mirrors the iOS editor
+            // sheet layout, gives the toggles room to breathe with full
+            // labels, and stops the title from feeling pinched against
+            // a busy header.
+            topBar
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
 
@@ -45,6 +51,13 @@ public struct InlineNoteEditor: View {
             .foregroundStyle(.primary)
             .lineLimit(2)
             .padding(.horizontal, 14)
+
+            // Behaviour row: Pin · Checklist · Due · Done. Same visual
+            // language as the iOS NoteEditorSheet's toggle row — capsule
+            // buttons with state-tinted fill, full bilingual labels, the
+            // updated-at relative time on the right.
+            attributeRow
+                .padding(.horizontal, 14)
 
             // Body editor (or checklist) — fills every remaining pixel.
             // The whole point of the redesign was to maximise this
@@ -87,11 +100,10 @@ public struct InlineNoteEditor: View {
         }
     }
 
-    /// One compact row: Back · Pin · Checklist · spacer · time · Delete.
-    /// Replaces the previous two-row design (separate header strip plus
-    /// a Pin/Checklist row inside the editor body) — saves ~50pt of
-    /// vertical real estate that now goes to the body editor.
-    private var toolbar: some View {
+    /// Minimal top bar — Back · Spacer · time · Delete. Behaviour
+    /// toggles (Pin / Checklist / Due / Done) live in `attributeRow`
+    /// under the title to mirror the iOS editor sheet's layout.
+    private var topBar: some View {
         HStack(spacing: 6) {
             // Back
             Button {
@@ -114,10 +126,6 @@ public struct InlineNoteEditor: View {
             .buttonStyle(.plain)
             .keyboardShortcut(.escape, modifiers: [])
             .help(L("Back to list", "返回列表"))
-
-            pinToggle
-            checklistToggle
-            DueDateChipButton(note: note)
 
             Spacer(minLength: 0)
 
@@ -147,47 +155,71 @@ public struct InlineNoteEditor: View {
         }
     }
 
-    /// Pin toggle. Label logic is inverted from the obvious choice:
-    ///
-    ///   - **off**: outline icon + "置顶" text — the text tells the user
-    ///     what the button DOES. Without it, an outline pin icon alone
-    ///     is opaque ("does it mean pinned? or is it a generic pin?").
-    ///   - **on**: filled neonPink icon, no text — the saturated color
-    ///     IS the affordance, "置顶" text would be redundant.
-    private var pinToggle: some View {
-        Button {
-            note.pinned.toggle()
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: note.pinned ? "pin.fill" : "pin")
-                    .font(.system(size: 10, weight: .semibold))
-                if !note.pinned {
-                    Text(L("Pin", "置顶"))
-                        .font(.caption2.weight(.medium))
-                }
-            }
-            .foregroundStyle(note.pinned ? CyberPalette.neonPink : Color.primary.opacity(0.7))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(
-                Capsule().fill(Color.primary.opacity(0.06))
-            )
-            .overlay(
-                Capsule().stroke(note.pinned
-                                 ? CyberPalette.neonPink.opacity(0.4)
-                                 : Color.primary.opacity(0.15),
-                                 lineWidth: 0.6)
-            )
+    /// Attribute row — Pin · Checklist · Due · Done. Sits between title
+    /// and body so the user can scan & toggle a note's full state in
+    /// one row, exactly like the iOS NoteEditorSheet.
+    private var attributeRow: some View {
+        HStack(spacing: 10) {
+            pinToggle
+            checklistToggle
+            DueDateChipButton(note: note, compact: false)
+            doneToggle
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
+    }
+
+    /// Toggle the whole note as completed. Mirrors `doneBinding` from
+    /// NoteEditorSheet — also stamps `completedAt` so the Today tab's
+    /// completed-state visuals (and any future "completed at" sort)
+    /// have the timestamp they need. Uses the same system Toggle +
+    /// `.toggleStyle(.button)` recipe as pinToggle/checklistToggle so
+    /// the pressed-state fill is identical to iOS.
+    private var doneToggle: some View {
+        Toggle(isOn: doneBinding) {
+            Label(
+                L("Done", "已完成"),
+                systemImage: note.done ? "checkmark.seal.fill" : "checkmark.seal"
+            )
+            .font(.caption)
+        }
+        .toggleStyle(.button)
+        .tint(CyberPalette.doneAccent)
+        .help(note.done
+              ? L("Mark as not done", "标为未完成")
+              : L("Mark as done", "标为已完成"))
+    }
+
+    /// Custom binding that stamps `completedAt` whenever the toggle
+    /// flips, matching the per-checkbox semantics in TodoRow.
+    private var doneBinding: Binding<Bool> {
+        Binding(
+            get: { note.done },
+            set: { newValue in
+                note.done = newValue
+                note.completedAt = newValue ? Date() : nil
+                note.touch()
+            }
+        )
+    }
+
+    /// Pin toggle — system `Toggle(.button)` style matches iOS exactly:
+    /// when ON the capsule fills with the tint color, when OFF it sits
+    /// as a subtle outlined pill. Earlier iteration hand-drew this with
+    /// only an icon-color change on press, which read as too quiet next
+    /// to the iOS sheet.
+    private var pinToggle: some View {
+        Toggle(isOn: $note.pinned) {
+            Label(L("Pinned", "置顶"), systemImage: "pin.fill")
+                .font(.caption)
+        }
+        .toggleStyle(.button)
+        .tint(CyberPalette.neonPink)
         .help(note.pinned
               ? L("Unpin from top", "取消置顶")
               : L("Pin to top of list", "置顶到列表顶部"))
     }
 
-    /// Checklist toggle — same inverted-label logic as `pinToggle`.
-    /// Off = outline icon + "清单" text; on = neonCyan icon, no text.
-    ///
+    /// Checklist toggle — same `Toggle(.button)` recipe as `pinToggle`.
     /// On enable, prepend `- [ ] ` to every non-empty body line that
     /// isn't already a checkbox — the body field is the SINGLE source
     /// of truth for both modes (no separate `checklistItems` storage),
@@ -195,38 +227,32 @@ public struct InlineNoteEditor: View {
     /// existing lines into tasks. Disable doesn't strip the markers
     /// (they're still readable plain text).
     private var checklistToggle: some View {
-        Button {
-            if !note.isChecklist {
-                convertBodyToChecklistMarkers()
-            }
-            note.isChecklist.toggle()
-            note.touch()
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "checklist")
-                    .font(.system(size: 10, weight: .semibold))
-                if !note.isChecklist {
-                    Text(L("Checklist", "清单"))
-                        .font(.caption2.weight(.medium))
-                }
-            }
-            .foregroundStyle(note.isChecklist ? CyberPalette.neonCyan : Color.primary.opacity(0.7))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(
-                Capsule().fill(Color.primary.opacity(0.06))
-            )
-            .overlay(
-                Capsule().stroke(note.isChecklist
-                                 ? CyberPalette.neonCyan.opacity(0.4)
-                                 : Color.primary.opacity(0.15),
-                                 lineWidth: 0.6)
-            )
+        Toggle(isOn: checklistBinding) {
+            Label(L("Checklist", "清单"), systemImage: "checklist")
+                .font(.caption)
         }
-        .buttonStyle(.plain)
+        .toggleStyle(.button)
+        .tint(CyberPalette.neonCyan)
         .help(note.isChecklist
               ? L("Plain note", "纯文本")
               : L("Convert to checklist", "转为清单"))
+    }
+
+    /// Drives the checklist toggle. Switching ON also injects checkbox
+    /// markers into the body so existing lines turn into tasks; we keep
+    /// that conversion centralised here so the Toggle wrapper stays
+    /// declarative.
+    private var checklistBinding: Binding<Bool> {
+        Binding(
+            get: { note.isChecklist },
+            set: { newValue in
+                if newValue && !note.isChecklist {
+                    convertBodyToChecklistMarkers()
+                }
+                note.isChecklist = newValue
+                note.touch()
+            }
+        )
     }
 
     /// Prepend `- [ ] ` to every non-empty body line that isn't already

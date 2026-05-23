@@ -6,10 +6,18 @@ import DorisCore
 /// with a date picker and a "Clear" button.
 public struct DueDateChipButton: View {
     @Bindable public var note: Note
+    /// When `true` (default), render at the small size that fits inline
+    /// inside `TodoRow` — a tiny dated chip / barely-there calendar+ in
+    /// the undated state. When `false`, render at the larger size that
+    /// matches the Pin / Checklist / Done toggles in the editor's
+    /// attribute row, including an always-visible outlined pill in the
+    /// undated state so the row reads as a coherent set.
+    public var compact: Bool
     @State private var showingPicker = false
 
-    public init(note: Note) {
+    public init(note: Note, compact: Bool = true) {
         self.note = note
+        self.compact = compact
     }
 
     public var body: some View {
@@ -23,25 +31,40 @@ public struct DueDateChipButton: View {
                 // a glance instead of just "May 20".
                 HStack(spacing: 4) {
                     Image(systemName: "calendar")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(compact ? .system(size: 9, weight: .semibold) : .caption)
                     Text(smartDueLabel(for: due))
-                        .font(.caption2.weight(.semibold).monospacedDigit())
+                        .font(compact
+                              ? .caption2.weight(.semibold).monospacedDigit()
+                              : .caption.weight(.medium).monospacedDigit())
                 }
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Capsule().fill(chipColor.opacity(0.15)))
-                .overlay(Capsule().stroke(chipColor.opacity(0.45), lineWidth: 0.6))
+                .padding(.horizontal, compact ? 7 : 10)
+                .padding(.vertical, compact ? 3 : 5)
+                .background(Capsule().fill(chipColor.opacity(compact ? 0.15 : 0.18)))
+                .overlay(Capsule().stroke(chipColor.opacity(compact ? 0.45 : 0.55),
+                                          lineWidth: compact ? 0.6 : 0.8))
                 .foregroundStyle(chipColor)
-            } else {
-                // Undated → minimal, low-visual-weight calendar icon
-                // affordance. Hosts that need an even more obvious
-                // "schedule this" button can wrap in their own label.
+            } else if compact {
+                // Compact undated → tiny icon-only affordance for use
+                // in `TodoRow`, where the row already has plenty of
+                // chrome and a full pill would crowd things.
                 Image(systemName: "calendar.badge.plus")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.primary.opacity(0.35))
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
                     .contentShape(Rectangle())
+            } else {
+                // Editor undated → outlined pill with icon + "Schedule"
+                // label, matching the visual weight of the sibling Pin
+                // / Checklist / Done toggles. Earlier iteration showed
+                // only a tiny icon which visually broke the editor row.
+                Label(L("Schedule", "排期"), systemImage: "calendar.badge.plus")
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Color.primary.opacity(0.06)))
+                    .overlay(Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 0.6))
+                    .foregroundStyle(.primary.opacity(0.7))
             }
         }
         .buttonStyle(.plain)

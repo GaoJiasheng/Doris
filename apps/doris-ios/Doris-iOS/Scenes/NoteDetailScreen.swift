@@ -62,8 +62,13 @@ struct NoteDetailScreen: View {
                 }
 
                 if note.isChecklist {
+                    // Don't force a minimum height on the checklist —
+                    // when the user has only a couple of items, the
+                    // 240pt minimum left a big blank below the list
+                    // that looked like a broken layout. The parent
+                    // ScrollView handles overflow when the list grows.
                     ChecklistEditorView(note: note)
-                        .frame(minHeight: 240)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
                 } else if showingMarkdownPreview {
                     MarkdownText(note.bodyMarkdown)
                         .frame(minHeight: 320, alignment: .topLeading)
@@ -149,55 +154,87 @@ struct NoteDetailScreen: View {
     // MARK: - Meta row
 
     private var metaRow: some View {
-        HStack(spacing: 10) {
-            Toggle(isOn: $note.pinned) {
-                Label(L("Pinned", "置顶"), systemImage: "pin.fill")
-                    .font(.caption)
-            }
-            .toggleStyle(.button)
-            .tint(CyberPalette.neonPink)
-            .controlSize(.small)
-            .onChange(of: note.pinned) { _, _ in note.touch() }
-
-            Toggle(isOn: $note.isChecklist) {
-                Label(L("Checklist", "清单"), systemImage: "checklist")
-                    .font(.caption)
-            }
-            .toggleStyle(.button)
-            .tint(CyberPalette.neonCyan)
-            .controlSize(.small)
-            .onChange(of: note.isChecklist) { _, _ in note.touch() }
-
-            // Due date chip
-            Button {
-                showingDatePicker = true
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 10, weight: .semibold))
-                    if let due = note.dueDate {
-                        Text(due, format: .dateTime.month(.abbreviated).day())
-                            .font(.caption.monospacedDigit())
-                    } else {
-                        Text(L("Due", "截止"))
-                            .font(.caption)
-                    }
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Toggle(isOn: $note.pinned) {
+                    Label(L("Pinned", "置顶"), systemImage: "pin.fill")
+                        .font(.caption)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(dueDateColor.opacity(0.15)))
-                .overlay(Capsule().stroke(dueDateColor.opacity(0.45), lineWidth: 0.6))
-                .foregroundStyle(note.dueDate == nil ? .primary.opacity(0.5) : dueDateColor)
-            }
-            .buttonStyle(.plain)
+                .toggleStyle(.button)
+                .tint(CyberPalette.neonPink)
+                .controlSize(.small)
+                .onChange(of: note.pinned) { _, _ in note.touch() }
 
-            Spacer()
+                Toggle(isOn: $note.isChecklist) {
+                    Label(L("Checklist", "清单"), systemImage: "checklist")
+                        .font(.caption)
+                }
+                .toggleStyle(.button)
+                .tint(CyberPalette.neonCyan)
+                .controlSize(.small)
+                .onChange(of: note.isChecklist) { _, _ in note.touch() }
+
+                // Due date chip
+                Button {
+                    showingDatePicker = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 10, weight: .semibold))
+                        if let due = note.dueDate {
+                            Text(due, format: .dateTime.month(.abbreviated).day())
+                                .font(.caption.monospacedDigit())
+                        } else {
+                            Text(L("Due", "截止"))
+                                .font(.caption)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(dueDateColor.opacity(0.15)))
+                    .overlay(Capsule().stroke(dueDateColor.opacity(0.45), lineWidth: 0.6))
+                    .foregroundStyle(note.dueDate == nil ? .primary.opacity(0.5) : dueDateColor)
+                }
+                .buttonStyle(.plain)
+
+                // Mark-whole-note-as-done toggle. Same recipe as the
+                // editor sheets — sets `completedAt` so Today-tab
+                // completed-state visuals (strikethrough, DONE pill,
+                // dimmed card) light up immediately on save.
+                Toggle(isOn: doneBinding) {
+                    Label(
+                        L("Done", "已完成"),
+                        systemImage: note.done ? "checkmark.seal.fill" : "checkmark.seal"
+                    )
+                    .font(.caption)
+                }
+                .toggleStyle(.button)
+                .tint(CyberPalette.doneAccent)
+                .controlSize(.small)
+
+                Spacer()
+            }
 
             Text(note.updatedAt, style: .relative)
                 .font(.caption2)
                 .foregroundStyle(.primary.opacity(0.45))
                 .monospacedDigit()
         }
+    }
+
+    /// Mirror of the binding in `NoteEditorSheet` / `InlineNoteEditor` —
+    /// flipping the Done toggle also stamps (or clears) `completedAt`
+    /// so the Today tab's completed-card visuals key off a real value
+    /// instead of inferring from `done` alone.
+    private var doneBinding: Binding<Bool> {
+        Binding(
+            get: { note.done },
+            set: { newValue in
+                note.done = newValue
+                note.completedAt = newValue ? Date() : nil
+                note.touch()
+            }
+        )
     }
 
     private var dueDateColor: Color {

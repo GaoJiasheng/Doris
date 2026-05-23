@@ -156,6 +156,23 @@ public struct NoteEditorSheet: View {
         }
     }
 
+    // MARK: - Done toggle binding
+
+    /// Custom binding for the "Done" toggle. Couples `note.done` and
+    /// `note.completedAt` so flipping the toggle also stamps when (or
+    /// clears the stamp on un-complete). Also bumps `updatedAt` so the
+    /// list re-sorts and CloudKit mirror picks up the change.
+    private var doneBinding: Binding<Bool> {
+        Binding(
+            get: { note.done },
+            set: { newValue in
+                note.done = newValue
+                note.completedAt = newValue ? Date() : nil
+                note.touch()
+            }
+        )
+    }
+
     // MARK: - Shared editor body
 
     private var editorBody: some View {
@@ -170,7 +187,10 @@ public struct NoteEditorSheet: View {
             .foregroundStyle(.primary)
             .lineLimit(2)
 
-            HStack(spacing: 14) {
+            // Attribute row — Pin · Checklist · Due · Done. The Due chip
+            // is the same component the Mac InlineNoteEditor uses, so a
+            // user can schedule from either editor with the same UX.
+            HStack(spacing: 10) {
                 Toggle(isOn: $note.pinned) {
                     Label(L("Pinned", "置顶"), systemImage: "pin.fill")
                         .font(.caption)
@@ -185,34 +205,61 @@ public struct NoteEditorSheet: View {
                 .toggleStyle(.button)
                 .tint(CyberPalette.neonCyan)
 
-                Spacer()
+                DueDateChipButton(note: note, compact: false)
 
-                Text(note.updatedAt, style: .relative)
-                    .font(.caption2)
-                    .foregroundStyle(.primary.opacity(0.45))
+                Toggle(isOn: doneBinding) {
+                    Label(
+                        L("Done", "已完成"),
+                        systemImage: note.done ? "checkmark.seal.fill" : "checkmark.seal"
+                    )
+                    .font(.caption)
+                }
+                .toggleStyle(.button)
+                .tint(CyberPalette.doneAccent)
+
+                Spacer()
             }
+
+            Text(note.updatedAt, style: .relative)
+                .font(.caption2)
+                .foregroundStyle(.primary.opacity(0.45))
 
             Divider().overlay(Color.primary.opacity(0.08))
 
-            if note.isChecklist {
-                ChecklistEditorView(note: note)
-                    .frame(minHeight: 240)
-            } else {
-                TextEditor(text: $note.bodyMarkdown)
-                    .font(.body)
-                    .foregroundStyle(.primary)
+            // Content area — pinned to top and given .infinity height so
+            // a short checklist no longer floats centred in the screen
+            // with empty bands above and below. ScrollView ensures the
+            // checklist scrolls if it ever exceeds the editor height.
+            Group {
+                if note.isChecklist {
+                    ScrollView {
+                        ChecklistEditorView(note: note)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 4)
+                    }
                     .scrollContentBackground(.hidden)
-                    .frame(minHeight: 280)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(.primary.opacity(0.04))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(.primary.opacity(0.07), lineWidth: 0.5)
-                    )
+                } else {
+                    TextEditor(text: $note.bodyMarkdown)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                        .scrollContentBackground(.hidden)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(.primary.opacity(0.04))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(.primary.opacity(0.07), lineWidth: 0.5)
+                        )
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
+        // Anchor the whole editor to the top of its container — without
+        // this, ZStack on iOS centres the VStack vertically and a short
+        // checklist drifts into the middle of the screen with big blank
+        // bands above and below.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onChange(of: note.bodyMarkdown) { _, _ in
             note.touch()
         }

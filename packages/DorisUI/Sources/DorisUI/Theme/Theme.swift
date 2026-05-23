@@ -26,6 +26,16 @@ public enum CyberPalette {
 
     public static let neonPink = Color(red: 1.0, green: 0.30, blue: 0.75)
     public static let neonCyan = Color(red: 0.0, green: 0.85, blue: 1.0)
+    /// Accent used for "completed / done" UI — strikethrough color, DONE
+    /// pill, completed-card border, seal icon. Earlier iterations used a
+    /// vivid neon green which read as "alert" and visually fought with
+    /// neonCyan; a cool mid-grey reads as "settled / archived-but-here"
+    /// without competing with the brand accents. Auto-adapts so it's
+    /// readable on both themes.
+    public static let doneAccent = Color(
+        light: Color(red: 0.42, green: 0.46, blue: 0.52),
+        dark:  Color(red: 0.62, green: 0.66, blue: 0.72)
+    )
 
     // MARK: Adaptive backdrop
 

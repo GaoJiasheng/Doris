@@ -236,6 +236,19 @@ public struct TodayPinnedCard: View {
         self.note = note
     }
 
+    /// True when the user considers this card "done" — either the note's
+    /// own `done` flag is set, or it's a checklist whose items are all
+    /// checked. Drives the entire completed-state visual treatment
+    /// (strikethrough title, green border, DONE pill, seal icon, dim).
+    private var isCompleted: Bool {
+        if note.done { return true }
+        if note.isChecklist {
+            let items = note.checklistItems ?? []
+            return !items.isEmpty && items.allSatisfy(\.done)
+        }
+        return false
+    }
+
     private var dueChipColor: Color {
         guard let d = note.dueDate else { return CyberPalette.neonCyan }
         if d < Date() { return .red }
@@ -260,27 +273,44 @@ public struct TodayPinnedCard: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Top: icon · title · pin
+            // Top: icon · title · pin/seal
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: note.isChecklist ? "checklist" : "note.text")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(CyberPalette.neonCyan)
+                    .foregroundStyle(isCompleted ? CyberPalette.doneAccent : CyberPalette.neonCyan)
                     .frame(width: 16)
                 Text(note.title.isEmpty ? L("Untitled", "无标题") : note.title)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    // Strikethrough + dim when done — the strongest single
+                    // signal that this card is "settled". Color of the
+                    // strikethrough itself is neon-green so it reads as
+                    // "completed" rather than "deleted/cancelled".
+                    .strikethrough(isCompleted, color: CyberPalette.doneAccent.opacity(0.85))
+                    .foregroundStyle(isCompleted
+                        ? AnyShapeStyle(HierarchicalShapeStyle.primary.opacity(0.45))
+                        : AnyShapeStyle(HierarchicalShapeStyle.primary))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 9))
-                    .foregroundStyle(CyberPalette.neonCyan.opacity(0.45))
+                // Pinned cards normally show a tiny pin glyph; when done we
+                // swap to a green seal so the badge itself signals state.
+                Image(systemName: isCompleted ? "checkmark.seal.fill" : "pin.fill")
+                    .font(.system(size: isCompleted ? 11 : 9))
+                    .foregroundStyle(
+                        isCompleted
+                            ? CyberPalette.doneAccent
+                            : CyberPalette.neonCyan.opacity(0.45)
+                    )
             }
 
             Spacer(minLength: 0)
 
-            // Bottom: progress (checklist) · due (dated) · time (plain)
-            bottomMeta
+            // Bottom: DONE pill if completed, otherwise progress / due meta
+            if isCompleted {
+                donePill
+            } else {
+                bottomMeta
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -296,12 +326,49 @@ public struct TodayPinnedCard: View {
                 .fill(.ultraThinMaterial.opacity(0.45))
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(CyberPalette.neonCyan.opacity(0.04))
+                        .fill(
+                            (isCompleted ? CyberPalette.doneAccent : CyberPalette.neonCyan)
+                                .opacity(0.04)
+                        )
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(CyberPalette.neonCyan.opacity(0.22), lineWidth: 0.7)
+                .strokeBorder(
+                    (isCompleted ? CyberPalette.doneAccent : CyberPalette.neonCyan)
+                        .opacity(isCompleted ? 0.45 : 0.22),
+                    lineWidth: 0.7
+                )
+        )
+        // Whole card recedes a touch when done so unfinished cards "pop"
+        // forward in the grid. Animated so toggling a checkbox elsewhere
+        // gives a satisfying fade rather than a hard cut.
+        .opacity(isCompleted ? 0.7 : 1.0)
+        .animation(.easeInOut(duration: 0.25), value: isCompleted)
+    }
+
+    /// "DONE / 已完成" pill — replaces the due-date chip for completed
+    /// cards. Uppercase monospaced caps, mini check glyph, neon-green
+    /// tinted fill + stroke. Sized to mirror the dueRow chip so the
+    /// card baseline doesn't shift between states.
+    private var donePill: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 9, weight: .bold))
+            Text(L("DONE", "已完成"))
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .tracking(0.8)
+        }
+        .foregroundStyle(CyberPalette.doneAccent)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 2)
+        .background(
+            Capsule(style: .continuous)
+                .fill(CyberPalette.doneAccent.opacity(0.12))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .strokeBorder(CyberPalette.doneAccent.opacity(0.55), lineWidth: 0.7)
         )
     }
 
@@ -379,7 +446,24 @@ public struct TodayCalendarRow: View {
 
     private var due: Date { note.dueDate ?? .distantFuture }
 
+    /// Same logic as TodayPinnedCard — the row is "done" if the note's
+    /// own flag is set or all checklist items are checked. Keeping the
+    /// two computeds identical (rather than factoring to Note) is OK
+    /// for now; if a third surface adopts this we'll move it.
+    private var isCompleted: Bool {
+        if note.done { return true }
+        if note.isChecklist {
+            let items = note.checklistItems ?? []
+            return !items.isEmpty && items.allSatisfy(\.done)
+        }
+        return false
+    }
+
     private var chipColor: Color {
+        // When done, the whole row goes neon-green — date column, accent
+        // bar, due-chip text. Single accent flip = one clear "settled"
+        // signal even on the small calendar row.
+        if isCompleted { return CyberPalette.doneAccent }
         if due < Date() { return .red }
         if Calendar.current.isDateInToday(due) { return .yellow }
         return CyberPalette.neonCyan
@@ -430,12 +514,39 @@ public struct TodayCalendarRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(note.title.isEmpty ? L("Untitled", "无标题") : note.title)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .strikethrough(isCompleted, color: CyberPalette.doneAccent.opacity(0.85))
+                    .foregroundStyle(isCompleted
+                        ? AnyShapeStyle(HierarchicalShapeStyle.primary.opacity(0.45))
+                        : AnyShapeStyle(HierarchicalShapeStyle.primary))
                     .lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(dueLabel)
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(chipColor)
+                    if isCompleted {
+                        // Replaces the due chip — uppercase mono "DONE /
+                        // 已完成" pill. Slightly smaller than the pinned
+                        // card's version to fit the row's tighter rhythm.
+                        HStack(spacing: 3) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 8, weight: .bold))
+                            Text(L("DONE", "已完成"))
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .tracking(0.7)
+                        }
+                        .foregroundStyle(CyberPalette.doneAccent)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1.5)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(CyberPalette.doneAccent.opacity(0.12))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .strokeBorder(CyberPalette.doneAccent.opacity(0.55), lineWidth: 0.7)
+                        )
+                    } else {
+                        Text(dueLabel)
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(chipColor)
+                    }
                     if note.isChecklist {
                         let items = note.checklistItems ?? []
                         let done = items.filter(\.done).count
@@ -462,7 +573,14 @@ public struct TodayCalendarRow: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(chipColor.opacity(0.12), lineWidth: 0.6)
+                .strokeBorder(
+                    chipColor.opacity(isCompleted ? 0.35 : 0.12),
+                    lineWidth: isCompleted ? 0.8 : 0.6
+                )
         )
+        // Match the pinned card: completed rows dim slightly so unfinished
+        // ones lead the list visually.
+        .opacity(isCompleted ? 0.72 : 1.0)
+        .animation(.easeInOut(duration: 0.25), value: isCompleted)
     }
 }
