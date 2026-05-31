@@ -988,9 +988,20 @@ private struct AnchorNotesView: View {
 
     /// Permanently delete every row currently in the trash. Confirmed
     /// before reaching this — the alert lives in `filterBar`.
+    ///
+    /// Uses the same "queue-for-purge" pattern as the main window: drop
+    /// `updatedAt` and `deletedAt` to 31 days ago so the next
+    /// `SyncTimer.purgeTombstones` cycle (≤60 s) hard-deletes them.
+    /// Direct `ctx.delete` races against the other device's CloudKit
+    /// mirror upload of its still-local copy, which resurrects the
+    /// rows on the cloud and they come back on this device. Soft-stamp
+    /// + 60 s purge gives the deleted=true flag time to propagate to
+    /// every device first.
     private func emptyTrash() {
+        let purgeMarker = Date().addingTimeInterval(-31 * 24 * 60 * 60)
         for n in notes where n.deleted {
-            ctx.delete(n)
+            n.deletedAt = purgeMarker
+            n.updatedAt = purgeMarker
         }
         try? ctx.save()
     }
@@ -1093,9 +1104,14 @@ private struct AnchorTodayView: View {
             }
     }
 
+    /// Mirrors `MainTodayView.calendarNotes`: drop past + completed
+    /// rows so the popup's Today tab doesn't carry yesterday's
+    /// finished work. Overdue (past + not done) stays visible — the
+    /// popup is the highest-frequency surface and the user needs to
+    /// see what's still on their plate.
     private var calendarNotes: [Note] {
         allNotes
-            .filter { $0.dueDate != nil }
+            .filter { $0.dueDate != nil && !$0.isPastAndCompleted() }
             .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
     }
 

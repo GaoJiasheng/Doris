@@ -203,7 +203,11 @@ private struct IOSRecentlyDeletedSection: View {
     @Environment(\.modelContext) private var ctx
 
     @Query(
-        filter: #Predicate<Note> { note in note.archived },
+        // Excludes notes that have been soft-deleted (`deleted = true`)
+        // because "Delete All" / per-row delete moves them to that
+        // state — see SyncTimer.purgeTombstones for the rationale
+        // (avoiding CloudKit-mirror resurrection race).
+        filter: #Predicate<Note> { note in note.archived && !note.deleted },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var archived: [Note]
@@ -240,7 +244,13 @@ private struct IOSRecentlyDeletedSection: View {
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
-                            ctx.delete(note)
+                            // Soft-delete; SyncTimer.purgeTombstones
+                            // hard-deletes 24h after deletedAt once the
+                            // flag has propagated to every device.
+                            let now = Date()
+                            note.deleted = true
+                            note.deletedAt = now
+                            note.updatedAt = now
                             try? ctx.save()
                         } label: {
                             Label(L("Delete Forever", "永久删除"), systemImage: "trash")
@@ -248,7 +258,12 @@ private struct IOSRecentlyDeletedSection: View {
                     }
                 }
                 Button(role: .destructive) {
-                    for note in archived { ctx.delete(note) }
+                    let now = Date()
+                    for note in archived {
+                        note.deleted = true
+                        note.deletedAt = now
+                        note.updatedAt = now
+                    }
                     try? ctx.save()
                 } label: {
                     Text(L("Delete All (\(archived.count))",

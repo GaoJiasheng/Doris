@@ -620,8 +620,23 @@ private struct MainNotesList: View {
     }
 
     private func emptyTrash() {
+        // `n.deleted` is already the soft-delete flag — by the time a
+        // note is in Trash it's already deleted=true. To "empty" the
+        // trash we want a hard delete via CloudKit, but `ctx.delete`
+        // races against other devices' mirror (same root cause as the
+        // Settings Recently Deleted bug: notes resurrect when iOS
+        // still has them in its local store and uploads its copy
+        // before our tombstone propagates).
+        //
+        // Workaround: bump deletedAt to 31 days ago so `purgeTombstones`
+        // picks them up on the next 60-second poke. By then all
+        // devices have surely seen the deleted=true flag, so the hard
+        // delete is safe. User loses "instant emptiness" but gains
+        // "actually deleted, doesn't come back".
+        let purgeMarker = Date().addingTimeInterval(-31 * 24 * 60 * 60)
         for n in notes where n.deleted {
-            ctx.delete(n)
+            n.deletedAt = purgeMarker
+            n.updatedAt = purgeMarker
         }
         try? ctx.save()
     }

@@ -342,7 +342,13 @@ private struct MacRecentlyDeletedTab: View {
     @Environment(\.modelContext) private var ctx
 
     @Query(
-        filter: #Predicate<Note> { note in note.archived },
+        // Exclude trashed notes so "Delete All" (which soft-deletes
+        // archived items by setting `deleted = true`) makes them
+        // disappear from this view immediately. Without the
+        // `!note.deleted` clause the records linger here because
+        // `archived` stays true after soft-delete, and the user sees
+        // "nothing happened".
+        filter: #Predicate<Note> { note in note.archived && !note.deleted },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var archived: [Note]
@@ -371,7 +377,25 @@ private struct MacRecentlyDeletedTab: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                     Button(L("Delete All", "全部删除"), role: .destructive) {
-                        for n in archived { ctx.delete(n) }
+                        // SOFT delete, not ctx.delete — see SchemaV1/Note.swift
+                        // notes on the two-flag scheme. Hard-deleting via
+                        // `ctx.delete` here races against the other
+                        // device's CloudKit mirror: if iOS still has these
+                        // notes locally and does a sync poke before our
+                        // tombstone propagates, its "still-alive" copy
+                        // resurrects the records on the cloud and they
+                        // re-appear on every device. Setting deleted=true
+                        // + touch is a regular CloudKit update — every
+                        // device sees "this is now in trash" with a
+                        // monotonic updatedAt. `SyncTimer.purgeTombstones`
+                        // will hard-delete after 30 days once we know all
+                        // devices have caught up.
+                        let now = Date()
+                        for n in archived {
+                            n.deleted = true
+                            n.deletedAt = now
+                            n.updatedAt = now
+                        }
                         try? ctx.save()
                     }
                     .foregroundStyle(.red)
@@ -396,7 +420,15 @@ private struct MacRecentlyDeletedTab: View {
                             .controlSize(.small)
                             .foregroundStyle(Color.accentColor)
                             Button(L("Delete Forever", "彻底删除")) {
-                                ctx.delete(note)
+                                // Same soft-delete reasoning as Delete All
+                                // above. Single-note hard delete used to
+                                // race CloudKit mirror sync too, just less
+                                // visibly because one note re-appearing
+                                // looked like "I forgot to click delete".
+                                let now = Date()
+                                note.deleted = true
+                                note.deletedAt = now
+                                note.updatedAt = now
                                 try? ctx.save()
                             }
                             .controlSize(.small)
