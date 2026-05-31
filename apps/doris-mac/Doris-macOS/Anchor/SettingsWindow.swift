@@ -132,18 +132,23 @@ private struct AppearanceSettingsView: View {
 
     var body: some View {
         ScrollView {
+            // Order: theme / language / appearance are the everyday
+            // tweaks at the top. Integrations / Voice / Sync sit at
+            // the bottom as the "set once, forget" infrastructure
+            // tier — burying them keeps the scroll anchored on what
+            // you actually touch each day.
             VStack(alignment: .leading, spacing: 14) {
-                syncSection
-                Divider().overlay(Color.primary.opacity(0.08))
-                integrationsSection
-                Divider().overlay(Color.primary.opacity(0.08))
                 themeSection
                 Divider().overlay(Color.primary.opacity(0.08))
                 languageSection
                 Divider().overlay(Color.primary.opacity(0.08))
+                appearanceSection
+                Divider().overlay(Color.primary.opacity(0.08))
+                integrationsSection
+                Divider().overlay(Color.primary.opacity(0.08))
                 voiceSection
                 Divider().overlay(Color.primary.opacity(0.08))
-                appearanceSection
+                syncSection
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 6)

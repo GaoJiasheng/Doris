@@ -46,6 +46,20 @@ public struct DayCollapsibleEventList<Row: View>: View {
     @State private var loadedDays: [Date: [Message]] = [:]
     @State private var expandedDays: Set<Date> = []
 
+    /// Per-past-day event counts (loaded eagerly via `fetchCount`, much
+    /// cheaper than materialising rows). Drives two things:
+    /// 1. **Skip empty days entirely** — no point rendering a
+    ///    DisclosureGroup for a date with zero events. Earlier the
+    ///    list always showed every day in the window as a collapsed
+    ///    row even if it was empty, which read as visual noise.
+    /// 2. Section-header count badge — shows immediately instead of
+    ///    waiting for the user to expand the row.
+    /// Loaded once on appear (via `.task` in pastDaysSection); changes
+    /// to today's events still trigger via the `today` array but past
+    /// counts stay anchored to whatever was true at appear time.
+    @State private var dayCounts: [Date: Int] = [:]
+    @State private var dayCountsLoaded = false
+
     public init(
         today: [Message],
         pastDayCount: Int = 14,
@@ -97,15 +111,36 @@ public struct DayCollapsibleEventList<Row: View>: View {
         }
     }
 
+    /// Past days within the window that actually have ≥1 active event.
+    /// Empty until `dayCountsLoaded`, so the section briefly shows
+    /// nothing on first appear instead of flashing 14 placeholder
+    /// rows that then collapse. The flash window is the duration of
+    /// one batch of `fetchCount` calls (≤100 ms on a normal store).
+    private var nonEmptyPastDays: [Date] {
+        guard dayCountsLoaded else { return [] }
+        return pastDays.filter { (dayCounts[$0] ?? 0) > 0 }
+    }
+
     private var pastDaysSection: some View {
-        // Indented spacing so past-day sections feel like an archive
-        // shelf below "today", not a parallel surface.
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(pastDays, id: \.self) { day in
-                pastDaySection(day: day)
+        // Only render the section + top-padding when there's something
+        // to show. An entirely-empty past window (e.g. fresh install,
+        // or all old days settled) results in zero chrome below
+        // today — no shelf, no separator, nothing wasted.
+        let days = nonEmptyPastDays
+        return Group {
+            if !days.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(days, id: \.self) { day in
+                        pastDaySection(day: day)
+                    }
+                }
+                .padding(.top, 8)
             }
         }
-        .padding(.top, 8)
+        // Attach the count load to the wrapper so it fires regardless
+        // of which branch renders. Idempotent — guarded by
+        // `dayCountsLoaded` inside the function.
+        .task { await loadDayCounts() }
     }
 
     @ViewBuilder
@@ -153,7 +188,12 @@ public struct DayCollapsibleEventList<Row: View>: View {
         } label: {
             sectionHeader(
                 title: dayLabel(for: day),
-                count: loadedDays[day]?.count,
+                // Use the eagerly-loaded fetchCount; falling back to
+                // the materialised count only if (somehow) the count
+                // probe missed this day. Means the count badge
+                // displays as soon as the row appears, no waiting for
+                // expand.
+                count: dayCounts[day] ?? loadedDays[day]?.count,
                 isToday: false,
                 isExpanded: isExpanded
             )
@@ -165,6 +205,35 @@ public struct DayCollapsibleEventList<Row: View>: View {
     }
 
     // MARK: - Lazy fetch
+
+    /// Up-front cheap count probe — fetchCount per past day so empty
+    /// days can be skipped entirely from the rendered list. Way
+    /// lighter than materialising rows: `fetchCount` issues a
+    /// `SELECT COUNT(*)` against the SQLite store, no object
+    /// instantiation. 14 of these typically come back under 50ms.
+    /// Idempotent — guarded by `dayCountsLoaded` so re-renders don't
+    /// re-fetch.
+    @MainActor
+    private func loadDayCounts() async {
+        guard !dayCountsLoaded else { return }
+        let cal = Calendar.current
+        let activeRaw = MessageState.active.rawValue
+        var counts: [Date: Int] = [:]
+        for day in pastDays {
+            let start = cal.startOfDay(for: day)
+            guard let end = cal.date(byAdding: .day, value: 1, to: start) else { continue }
+            let desc = FetchDescriptor<Message>(
+                predicate: #Predicate<Message> { msg in
+                    msg.receivedAt >= start
+                        && msg.receivedAt < end
+                        && msg.stateRaw == activeRaw
+                }
+            )
+            counts[day] = (try? ctx.fetchCount(desc)) ?? 0
+        }
+        dayCounts = counts
+        dayCountsLoaded = true
+    }
 
     /// Fire the SwiftData fetch for a single day. Caches result in
     /// `loadedDays` so toggling the disclosure doesn't refetch. Filters
