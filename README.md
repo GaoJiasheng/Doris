@@ -1,4 +1,4 @@
-# doris
+# Doris
 
 A native macOS + iOS notification, notes, and notch helper. Replaces a paid SideNotes-style sidebar with cross-device push, a CLI bridge, and minute-level iCloud sync.
 
