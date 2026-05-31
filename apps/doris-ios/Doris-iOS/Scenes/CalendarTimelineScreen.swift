@@ -48,7 +48,14 @@ struct CalendarTimelineScreen: View {
             }
             let dueDay = cal.startOfDay(for: due)
             if dueDay < today {
-                overdue.append(note)
+                // Past dates: only show overdue (uncompleted) rows.
+                // Past + completed are dropped entirely so the timeline
+                // doesn't fill up with yesterday's settled tasks. Users
+                // who want to see them can flip the row back to "not
+                // done" or look at the Notes tab archive.
+                if !note.isCompleted {
+                    overdue.append(note)
+                }
             } else if cal.isDateInToday(due) {
                 todayNotes.append(note)
             } else if cal.isDateInTomorrow(due) {
@@ -134,6 +141,12 @@ struct CalendarTimelineScreen: View {
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                // Long-press → shared note action menu
+                                // (Schedule / Done / Done&archive /
+                                // Pin / Archive / Trash) so users can
+                                // act on a calendar row without
+                                // drilling into the detail screen.
+                                .noteContextMenu(for: n)
                             }
                         } header: {
                             sectionHeader(section)

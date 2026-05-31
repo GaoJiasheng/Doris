@@ -56,9 +56,14 @@ struct MainTodayView: View {
             }
     }
 
+    /// Notes with a due date, minus the "past and already completed"
+    /// rows that are no longer actionable. Overdue (past + not done)
+    /// still surfaces so the user knows what's been hanging. Today &
+    /// future show regardless of completion state — strikethrough
+    /// visuals carry the "this is done" signal there.
     private var calendarNotes: [Note] {
         allNotes
-            .filter { $0.dueDate != nil }
+            .filter { $0.dueDate != nil && !$0.isPastAndCompleted() }
             .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
     }
 

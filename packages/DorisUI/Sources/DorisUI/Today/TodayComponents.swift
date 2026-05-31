@@ -237,17 +237,13 @@ public struct TodayPinnedCard: View {
     }
 
     /// True when the user considers this card "done" — either the note's
-    /// own `done` flag is set, or it's a checklist whose items are all
-    /// checked. Drives the entire completed-state visual treatment
-    /// (strikethrough title, green border, DONE pill, seal icon, dim).
-    private var isCompleted: Bool {
-        if note.done { return true }
-        if note.isChecklist {
-            let items = note.checklistItems ?? []
-            return !items.isEmpty && items.allSatisfy(\.done)
-        }
-        return false
-    }
+    /// Delegates to the model's `isCompleted` so every surface reads
+    /// completion from the same source of truth (note.done OR every
+    /// markdown checklist item ticked). Was previously inlined here
+    /// against `checklistItems` — the legacy relationship, which is
+    /// never written by the current editor — so the all-items-done
+    /// branch silently never fired.
+    private var isCompleted: Bool { note.isCompleted }
 
     private var dueChipColor: Color {
         guard let d = note.dueDate else { return CyberPalette.neonCyan }
@@ -446,18 +442,15 @@ public struct TodayCalendarRow: View {
 
     private var due: Date { note.dueDate ?? .distantFuture }
 
-    /// Same logic as TodayPinnedCard — the row is "done" if the note's
-    /// own flag is set or all checklist items are checked. Keeping the
-    /// two computeds identical (rather than factoring to Note) is OK
-    /// for now; if a third surface adopts this we'll move it.
-    private var isCompleted: Bool {
-        if note.done { return true }
-        if note.isChecklist {
-            let items = note.checklistItems ?? []
-            return !items.isEmpty && items.allSatisfy(\.done)
-        }
-        return false
-    }
+    /// Delegate to the model-level `isCompleted` so the visual treatment
+    /// and the "hide past + completed" filter in MainTodayView /
+    /// TodayScreen agree on the same definition. Earlier this was
+    /// inlined against the legacy `checklistItems` relationship —
+    /// which the current markdown-based editor never writes — so it
+    /// drifted out of sync with the model's truth and a past-completed
+    /// row could simultaneously render its DONE pill AND escape the
+    /// calendar filter.
+    private var isCompleted: Bool { note.isCompleted }
 
     private var chipColor: Color {
         // When done, the whole row goes neon-green — date column, accent

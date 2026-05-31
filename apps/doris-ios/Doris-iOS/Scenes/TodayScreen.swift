@@ -43,9 +43,12 @@ struct TodayScreen: View {
             }
     }
 
+    /// Same filter as the macOS Today view — past + completed rows are
+    /// hidden by default; overdue (past + not done) stays visible. The
+    /// `isPastAndCompleted` helper lives on Note so the rule is shared.
     private var calendarNotes: [Note] {
         allNotes
-            .filter { $0.dueDate != nil }
+            .filter { $0.dueDate != nil && !$0.isPastAndCompleted() }
             .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
     }
 
@@ -79,6 +82,11 @@ struct TodayScreen: View {
                                     TodayPinnedCard(note: n)
                                 }
                                 .buttonStyle(.plain)
+                                // Long-press = the same actions the
+                                // Mac right-click surfaces (Schedule
+                                // submenu, Mark done, Done & archive,
+                                // Pin, Archive, Move to trash).
+                                .noteContextMenu(for: n) { path.append(n.id) }
                             }
                         }
                     }
@@ -96,6 +104,7 @@ struct TodayScreen: View {
                                     TodayCalendarRow(note: n)
                                 }
                                 .buttonStyle(.plain)
+                                .noteContextMenu(for: n) { path.append(n.id) }
                             }
                         }
                     }

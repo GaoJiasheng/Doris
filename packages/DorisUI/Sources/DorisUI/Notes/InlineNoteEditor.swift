@@ -129,6 +129,46 @@ public struct InlineNoteEditor: View {
 
             Spacer(minLength: 0)
 
+            // Prominent Complete button — the attribute row below has
+            // a Done toggle too, but it's one of four small chips that
+            // users were missing. A solid pill in the top bar makes
+            // "I finished this" a single, obvious click.
+            Button {
+                let now = Date()
+                note.done.toggle()
+                note.completedAt = note.done ? now : nil
+                note.updatedAt = now
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: note.done
+                          ? "checkmark.circle.fill"
+                          : "checkmark.circle")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(note.done ? L("Done", "已完成") : L("Complete", "完成"))
+                        .font(.caption2.weight(.semibold))
+                }
+                .foregroundStyle(note.done
+                                 ? CyberPalette.doneAccent
+                                 : Color.primary.opacity(0.75))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule().fill(note.done
+                                   ? CyberPalette.doneAccent.opacity(0.12)
+                                   : Color.primary.opacity(0.06))
+                )
+                .overlay(
+                    Capsule().stroke(note.done
+                                     ? CyberPalette.doneAccent.opacity(0.5)
+                                     : Color.primary.opacity(0.18),
+                                     lineWidth: 0.6)
+                )
+            }
+            .buttonStyle(.plain)
+            .help(note.done
+                  ? L("Mark as not done", "标为未完成")
+                  : L("Mark as done", "标为已完成"))
+
             Text(RelativeTime.short(note.updatedAt))
                 .font(.caption2)
                 .foregroundStyle(.primary.opacity(0.45))

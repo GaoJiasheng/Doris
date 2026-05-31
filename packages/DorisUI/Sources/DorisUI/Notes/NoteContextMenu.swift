@@ -75,6 +75,27 @@ private struct NoteContextMenuModifier: ViewModifier {
         } else {
             scheduleMenu
             Divider()
+            // Done toggle — sits right after Schedule because "I just
+            // finished this" is the second most common quick action
+            // after "schedule it for later". Stamps `completedAt` like
+            // every other Done-toggle surface, so the Today tab's
+            // "hide past + completed" filter sees it immediately.
+            Button { toggleDone() } label: {
+                Label(
+                    note.done ? L("Mark not done", "标为未完成") : L("Mark as done", "标为已完成"),
+                    systemImage: note.done ? "arrow.uturn.backward" : "checkmark.circle.fill"
+                )
+            }
+            // One-shot "complete + archive" shortcut for the workflow
+            // where finishing a task should also clear it from active
+            // lists. Only offered when the row isn't already archived
+            // — re-using it as "unarchive" would be confusing.
+            if !note.archived {
+                Button { completeAndArchive() } label: {
+                    Label(L("Done & archive", "完成并归档"),
+                          systemImage: "checkmark.seal.fill")
+                }
+            }
             Button { togglePin() } label: {
                 Label(
                     note.pinned ? L("Unpin", "取消置顶") : L("Pin to top", "置顶"),
@@ -93,7 +114,7 @@ private struct NoteContextMenuModifier: ViewModifier {
                     systemImage: note.archived ? "tray.and.arrow.up" : "archivebox"
                 )
             }
-            Button {
+            Button(role: .destructive) {
                 let now = Date()
                 note.deleted = true
                 note.deletedAt = now
@@ -224,6 +245,33 @@ private struct NoteContextMenuModifier: ViewModifier {
         let now = Date()
         note.archived.toggle()
         note.archivedAt = note.archived ? now : nil
+        note.updatedAt = now
+    }
+
+    /// Flip `note.done` and stamp/clear `completedAt`. Same semantics
+    /// as the Done toggle in the editor sheet so the calendar filter
+    /// & strikethrough visuals react instantly.
+    private func toggleDone() {
+        let now = Date()
+        note.done.toggle()
+        note.completedAt = note.done ? now : nil
+        note.updatedAt = now
+    }
+
+    /// One-click "complete + archive" — workflow shortcut for users who
+    /// want "I'm done with this, get it off my active list" in one
+    /// action instead of two menu trips. Idempotent if either flag is
+    /// already in the target state.
+    private func completeAndArchive() {
+        let now = Date()
+        if !note.done {
+            note.done = true
+            note.completedAt = now
+        }
+        if !note.archived {
+            note.archived = true
+            note.archivedAt = now
+        }
         note.updatedAt = now
     }
 }
