@@ -1,14 +1,18 @@
 # Codex × Doris 集成指南
 
-Codex（OpenAI 的 agentic 编程工具）目前没有公开的 hooks API，**没法像 Claude Code 那样自动通知 Doris**。最实用的方式是用一个 shell wrapper —— 把 `codex` 命令包一层，让它跑完之后自动 fire 一次 Doris banner。这样你启动一个长任务后切去干别的，跑完会有提示。
+> **Doris 1.0 起已经支持一键注册**。打开菜单栏 Doris → ⚙ 设置 → 应用集成 → Codex 那行 → 点 **注册** 按钮就完事。Doris 会自动检测你的 shell（zsh / bash / fish），把下面的 wrapper 函数写进对应的 rc 文件里。**新开一个 terminal 窗口**就生效。
+>
+> 这份文档介绍的是注册按钮**底下到底干了什么**，以及如果想自己定制的高级玩法。日常用户**不用读**。
 
-整个改动只需要给 shell 配置加 6 行。完整流程 **2 分钟**。
+Codex（OpenAI 的 agentic 编程工具）目前没有公开的 hooks API，**没法像 Claude Code 那样从 settings.json 走 hook**。退而求其次的方案是用一个 shell wrapper —— 把 `codex` 命令包一层，让它跑完之后自动 fire 一次 Doris banner。这样你启动一个长任务后切去干别的，跑完会有提示。
+
+完整流程 **零步**（点注册按钮）/ 手动也只要 **2 分钟**。
 
 ---
 
 ## 工作原理
 
-Doris CLI 已经装在 `/usr/local/bin/doris`（如果没装，看[安装指南](#没装-cli)）。`doris notify` 会经 App Group 写一条事件给 Doris App，触发 banner。我们要做的就是把它接到 `codex` 命令的结尾。
+Doris CLI 装在 `/usr/local/bin/doris`（首次启动 Doris 会有 wizard 引导安装）。`doris notify` 会经 App Group 写一条事件给 Doris App，触发 banner。我们要做的就是把它接到 `codex` 命令的结尾。
 
 最终效果：
 
@@ -17,6 +21,21 @@ $ codex "implement a binary search"
 ... (Codex 跑代码 / 思考 / 几分钟)
 ✅ Codex 完成   ← Doris banner 弹出，点击切回终端
 ```
+
+---
+
+## 注册按钮做的事
+
+点 **设置 → 应用集成 → Codex → 注册** 后，Doris 会：
+
+1. 读 `$SHELL` 判断你的 shell — zsh / bash / fish
+2. 打开对应的 rc 文件（`~/.zshrc` / `~/.bashrc` / `~/.config/fish/config.fish`）
+3. 在末尾插入下面的标记块（已存在则原地刷新，不重复堆叠）
+4. 不会动 rc 文件里你已有的任何其他内容
+
+之后只要**新开 terminal 窗口**（或 `source` 一下 rc 文件），`codex` 命令就被 wrapper 接管。点 **取消注册** 会精确删除这个块，其他内容原封不动。
+
+下面是**手动**配置的步骤（仅供想知道细节 / 不用 Doris UI 注册的用户参考）。
 
 ---
 

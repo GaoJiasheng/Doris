@@ -45,7 +45,7 @@ public struct CodexIntegration: IntegrationProvider {
     public let sourceKind: SourceKind = .codex
     public let clickURL: URL? = URL(string: "codex://")
     public let supportTier: IntegrationSupportTier = .full
-    public let tutorialURL: URL? = URL(string: "https://github.com/GaoJiasheng/khan/blob/main/docs/integrations/codex.md")
+    public let tutorialURL: URL? = URL(string: "https://github.com/GaoJiasheng/Doris/blob/main/docs/integrations/codex.md")
 
     /// Block-delimiter markers. Begin/end shapes (vs. a single-line
     /// marker like ClaudeCode uses) because the wrapper is multi-line —
