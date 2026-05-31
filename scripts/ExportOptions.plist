@@ -26,6 +26,20 @@
     <key>teamID</key>
     <string>$(DORIS_TEAM_ID)</string>
 
+    <!-- Explicit profile map. Without this, manual export tries to
+         AUTO-CREATE a Developer ID profile via the ASC API and fails
+         because the API key (Admin role) lacks permission to provision
+         Developer ID profiles — only App Manager+ can. The "Mac Team
+         Direct Provisioning Profile: com.gavin.doris" was generated
+         locally by Xcode UI during the 0.2.0 release and lives in
+         ~/Library/Developer/Xcode/UserData/Provisioning Profiles/.
+         exportArchive picks it up by name. -->
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.gavin.doris</key>
+        <string>Mac Team Direct Provisioning Profile: com.gavin.doris</string>
+    </dict>
+
     <!-- Strip Swift debug symbols out of the exported bundle to keep
          the DMG small; the .xcarchive still has them if we ever need
          to symbolicate a crash report. -->
