@@ -149,6 +149,10 @@ private struct AppearanceSettingsView: View {
                 voiceSection
                 Divider().overlay(Color.primary.opacity(0.08))
                 syncSection
+                // Anchored at the very bottom of the scroll: the build
+                // identity. Tracks project.yml via Bundle.main so it
+                // never goes stale.
+                versionFooter
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 6)
@@ -504,6 +508,32 @@ private struct AppearanceSettingsView: View {
         .font(.caption2)
         .foregroundStyle(.primary.opacity(0.5))
         .padding(.bottom, 2)
+    }
+
+    // MARK: - Version footer
+
+    /// Compact build-identity strip at the bottom of the settings
+    /// scroll. Reads CFBundleShortVersionString + CFBundleVersion via
+    /// `Bundle.main` so it stays in lockstep with `project.yml` —
+    /// avoids the "iOS Settings still says 0.7.0" stale-string bug.
+    private var versionFooter: some View {
+        HStack {
+            Spacer()
+            Text("Doris " + Self.appVersionString)
+                .font(.caption2.monospaced())
+                .foregroundStyle(.primary.opacity(0.35))
+                .textSelection(.enabled)
+            Spacer()
+        }
+        .padding(.top, 6)
+        .padding(.bottom, 2)
+    }
+
+    private static var appVersionString: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let short = (info["CFBundleShortVersionString"] as? String) ?? "?"
+        let build = (info["CFBundleVersion"] as? String) ?? "?"
+        return "\(short) (\(build))"
     }
 
     // MARK: - Appearance

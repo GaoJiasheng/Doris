@@ -80,8 +80,17 @@ struct EventsWidgetView: View {
                             .font(.caption)
                             .lineLimit(1)
                         Spacer()
-                        Text(m.receivedAt, style: .relative)
-                            .font(.caption2)
+                        // Absolute timestamp (MM/dd HH:mm) — matches
+                        // the main app surfaces. Widget refreshes
+                        // are timeline-driven anyway, so the live-
+                        // updating .relative style brings nothing
+                        // here and trades it for "ago math" the
+                        // user does in their head.
+                        Text(m.receivedAt,
+                             format: .dateTime.month(.twoDigits).day(.twoDigits)
+                                              .hour(.twoDigits(amPM: .omitted))
+                                              .minute(.twoDigits))
+                            .font(.caption2.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
                 }

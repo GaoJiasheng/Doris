@@ -376,8 +376,13 @@ private struct EventRow: View {
                             .foregroundStyle(.primary.opacity(0.55))
                         Text("·")
                             .foregroundStyle(.primary.opacity(0.4))
-                        Text(message.receivedAt, style: .relative)
-                            .font(.caption2)
+                        // Absolute timestamp; see EventsRowView for
+                        // rationale.
+                        Text(message.receivedAt,
+                             format: .dateTime.month(.twoDigits).day(.twoDigits)
+                                              .hour(.twoDigits(amPM: .omitted))
+                                              .minute(.twoDigits))
+                            .font(.caption2.monospacedDigit())
                             .foregroundStyle(.primary.opacity(0.45))
                     }
                 }

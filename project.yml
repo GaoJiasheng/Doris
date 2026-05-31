@@ -94,6 +94,14 @@ targets:
           - CFBundleURLName: com.gavin.doris.url
             CFBundleURLSchemes: [doris]
         NSUserActivityTypes: []
+        # Tie the user-visible version + build to the build settings
+        # below so a bump in project.yml flows everywhere — Bundle
+        # main, Settings UI, ASC's TestFlight build list. Without
+        # these the source Info.plist's hardcoded "1.0" / "1" survive
+        # the build and ASC auto-bumps the build number, which surfaces
+        # in TestFlight as a number the user didn't recognise.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
     settings:
       base:
         # PRODUCT_NAME drives the .app bundle filename, the executable
@@ -107,7 +115,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: apps/doris-mac/Doris-macOS/Doris-macOS.entitlements
         ENABLE_HARDENED_RUNTIME: YES
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "3"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - package: DorisCore
@@ -251,6 +259,10 @@ targets:
         # We pick the latter — Doris is iPhone-form-factor, the
         # landscape iPad split-view layout isn't designed.
         UIRequiresFullScreen: true
+        # Same rationale as the macOS info.properties block — tie the
+        # user-visible version + build to the build settings below.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # Export compliance: Doris doesn't use any non-exempt encryption
         # (no custom crypto, only Apple-provided TLS/HTTPS/iCloud, which
         # are all exempt). Setting this here saves having to answer the
@@ -272,7 +284,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: apps/doris-ios/Doris-iOS/Doris-iOS.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "9"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - package: DorisCore

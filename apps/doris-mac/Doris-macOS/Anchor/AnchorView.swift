@@ -729,8 +729,12 @@ private struct AnchorEventsView: View {
                 }
             }
             Spacer(minLength: 0)
-            Text(m.receivedAt, style: .relative)
-                .font(.caption2)
+            // Absolute timestamp; see EventsRowView for rationale.
+            Text(m.receivedAt,
+                 format: .dateTime.month(.twoDigits).day(.twoDigits)
+                                  .hour(.twoDigits(amPM: .omitted))
+                                  .minute(.twoDigits))
+                .font(.caption2.monospacedDigit())
                 .foregroundStyle(.primary.opacity(0.4))
         }
         .padding(.horizontal, 12)

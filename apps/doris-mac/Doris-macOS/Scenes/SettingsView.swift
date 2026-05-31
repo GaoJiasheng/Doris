@@ -51,8 +51,24 @@ struct SettingsView: View {
             }
             Toggle(L("Show hex color preview", "显示十六进制颜色预览"), isOn: showHexColorPreview)
             Toggle(L("Auto-backup daily", "每日自动备份"), isOn: autoBackupEnabled)
+            // Version row — reads CFBundleShortVersionString +
+            // CFBundleVersion via Bundle.main so it tracks
+            // project.yml without manual touch-ups.
+            LabeledContent(L("Version", "版本")) {
+                Text(Self.appVersionString)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .textSelection(.enabled)
+            }
         }
         .scrollContentBackground(.hidden)
+    }
+
+    private static var appVersionString: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let short = (info["CFBundleShortVersionString"] as? String) ?? "?"
+        let build = (info["CFBundleVersion"] as? String) ?? "?"
+        return "\(short) (\(build))"
     }
 
     /// Sync tab — controls iCloud-backed CloudKit mirroring + manual
