@@ -144,6 +144,27 @@ struct AnchorView: View {
 
     // MARK: - Expanded message (banner / fix)
 
+    /// Leading glyph for a banner / fix card. Known agent sources
+    /// (Claude Code, Codex) show their real brand logo so a glance
+    /// tells you which agent finished; everything else falls back to
+    /// the animated Doris avatar.
+    @ViewBuilder
+    private func bannerLeadingGlyph(for m: AnchorMessage) -> some View {
+        if let asset = m.source?.brandLogoAssetName {
+            Image(asset)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                )
+        } else {
+            AnchorAvatarView(state: model.avatarState, size: 20)
+        }
+    }
+
     private func expandedMessageView(_ m: AnchorMessage) -> some View {
         let useFakeNotch = rendersAsFakeNotch
         let levelTint = EventLevelStyle.color(for: m.level)
@@ -168,7 +189,7 @@ struct AnchorView: View {
         // squeezed in below the title; banner mode drops the body
         // entirely — there's literally no room for two lines of text.
         return HStack(alignment: .center, spacing: 10) {
-            AnchorAvatarView(state: model.avatarState, size: 20)
+            bannerLeadingGlyph(for: m)
                 .frame(width: 22, height: 22)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {

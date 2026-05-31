@@ -13,6 +13,11 @@ struct AnchorMessage: Equatable {
     let title: String
     let body: String?
     let iconName: String?
+    /// Originating source. Drives the banner's leading glyph: known
+    /// brands (Claude Code, Codex) render their real logo asset
+    /// instead of the generic Doris avatar, so a glance tells you
+    /// which agent just finished.
+    let source: SourceKind?
     let level: EventLevel
     let displayMode: DisplayMode
     let receivedAt: Date
@@ -25,6 +30,21 @@ struct AnchorMessage: Equatable {
     /// Claude/Codex/ChatGPT integrations send so the user lands
     /// straight in the source app on click.
     let clickAction: ClickAction?
+}
+
+extension SourceKind {
+    /// Asset-catalog name of this source's real brand logo, or `nil`
+    /// for sources that have no dedicated logo (fall back to the Doris
+    /// avatar / SF Symbol). Logos are the actual app icons extracted
+    /// from the installed Claude.app / Codex.app, so they match what
+    /// the user sees in their Dock.
+    var brandLogoAssetName: String? {
+        switch self {
+        case .claudeCode: return "SourceLogoClaude"
+        case .codex:      return "SourceLogoCodex"
+        default:          return nil
+        }
+    }
 }
 
 extension EventLevel {
