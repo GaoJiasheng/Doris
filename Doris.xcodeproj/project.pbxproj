@@ -1326,7 +1326,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris;
 				PRODUCT_NAME = Doris;
 				SDKROOT = macosx;
@@ -1371,13 +1371,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios;
 				PRODUCT_NAME = Doris;
 				SDKROOT = iphoneos;
@@ -1391,13 +1391,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios;
 				PRODUCT_NAME = Doris;
 				SDKROOT = iphoneos;
@@ -1512,7 +1512,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris;
 				PRODUCT_NAME = Doris;
 				SDKROOT = macosx;
