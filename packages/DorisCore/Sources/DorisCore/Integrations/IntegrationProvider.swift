@@ -1,7 +1,7 @@
 // The whole integrations layer is macOS-only — Claude Code, Codex,
-// ChatGPT, etc. integrations target the desktop versions of those
-// apps (write to ~/.claude/settings.json, install shell wrappers,
-// etc.). iOS has no analogue and lacks `homeDirectoryForCurrentUser`
+// etc. integrations target the desktop versions of those apps
+// (write to ~/.claude/settings.json, install shell wrappers, etc.).
+// iOS has no analogue and lacks `homeDirectoryForCurrentUser`
 // anyway, so we compile this entire module out on iOS to keep
 // DorisCore cross-platform.
 #if os(macOS)
@@ -10,8 +10,8 @@ import Foundation
 import DorisIPC
 
 /// One pluggable "send your task-done notifications through Doris"
-/// integration with an external AI app (Claude Code, Codex, ChatGPT,
-/// future Trae/Cursor/Feishu/…).
+/// integration with an external AI app (Claude Code, Codex, future
+/// Trae/Cursor/Feishu/…).
 ///
 /// The UI binds against this protocol uniformly: every Integrations
 /// row shows status + an action button, regardless of whether the

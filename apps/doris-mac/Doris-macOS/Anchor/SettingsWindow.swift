@@ -231,8 +231,8 @@ private struct AppearanceSettingsView: View {
                 Spacer()
             }
             Text(L(
-                "Route task-completion notifications from Claude Code / Codex / ChatGPT through Doris instead of the system Notification Center.",
-                "把 Claude Code / Codex / ChatGPT 等 AI 应用的「任务完成」通知改走 Doris，绕过系统通知中心。"
+                "Route task-completion notifications from Claude Code and Codex through Doris instead of the system Notification Center.",
+                "把 Claude Code 和 Codex 的「任务完成」通知改走 Doris，绕过系统通知中心。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))
