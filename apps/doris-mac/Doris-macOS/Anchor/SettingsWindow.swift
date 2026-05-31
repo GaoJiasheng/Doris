@@ -305,11 +305,8 @@ private struct AppearanceSettingsView: View {
             return L("Auto-write a Stop hook into ~/.claude/settings.json.",
                      "自动写入 Stop 钩子到 ~/.claude/settings.json。")
         case "codex":
-            return L("No official hooks yet — view tutorial to set up a shell wrapper.",
-                     "暂无官方钩子,查看教程用 shell wrapper 接入。")
-        case "chatgpt":
-            return L("Use a macOS Shortcut to call doris://notify when a reply arrives.",
-                     "通过 macOS 快捷指令调用 doris://notify。")
+            return L("Auto-wire Codex's notify hook in ~/.codex/config.toml.",
+                     "自动接入 ~/.codex/config.toml 的 notify 钩子。")
         default:
             return provider.summary
         }

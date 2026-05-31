@@ -3,239 +3,308 @@
 import Foundation
 import DorisIPC
 
-/// Codex integration — OpenAI's agentic coding tool.
+/// Codex integration — OpenAI's agentic coding tool (desktop app +
+/// CLI). Uses Codex's **native `notify` hook** in `~/.codex/config.toml`
+/// — the proper analogue to Claude Code's `~/.claude/settings.json`
+/// hooks. Codex invokes its configured `notify` program once per turn
+/// completion, passing a JSON payload as the final argument.
 ///
-/// Codex has no documented hooks API (vs. Claude Code's
-/// `~/.claude/settings.json` hook injection). The next best thing is
-/// a **shell wrapper**: a `codex()` function in the user's shell rc
-/// file that calls `command codex "$@"`, captures the exit code, and
-/// fires `doris notify` on completion. Same end-user effect as a
-/// proper hook (banner pops when a long codex task finishes), just
-/// achieved at shell-function granularity instead of inside the
-/// app.
+/// ### Why not a shell wrapper?
 ///
-/// Wrapper block shape (zsh / bash variant):
-/// ```bash
-/// # >>> doris-codex-integration >>>
-/// codex() {
-///     command codex "$@"
-///     local exit_code=$?
-///     if [ $exit_code -eq 0 ]; then
-///         /usr/local/bin/doris notify --title 'Codex 任务完成' \
-///             --source codex --level reminder --click-url 'doris://main' \
-///             >/dev/null 2>&1
-///     else
-///         /usr/local/bin/doris notify --title 'Codex 任务完成 (失败)' \
-///             --body "exit $exit_code" --source codex --level critical \
-///             --click-url 'doris://main' >/dev/null 2>&1
-///     fi
-///     return $exit_code
-/// }
-/// # <<< doris-codex-integration <<<
-/// ```
+/// An earlier version of this integration installed a `codex()` shell
+/// function in the user's rc file. That only fires when `codex` is
+/// invoked *from an interactive terminal* and the process exits — it
+/// never fires for the **Codex desktop app**, where a task completes
+/// while the app keeps running. Most users run the app, so the wrapper
+/// was effectively dead. The `notify` hook fires for both the app and
+/// the CLI, on every turn completion. We migrated to it wholesale.
 ///
-/// Detection / cleanup uses the begin/end marker lines so the block
-/// can be upserted in place without parsing the surrounding rc file.
-/// Any other content in the rc file is preserved untouched.
+/// ### Coexisting with the app's own notifier
+///
+/// On builds that ship the computer-use feature, the Codex app *owns*
+/// the `notify` slot: it resets `notify[0]` to its own client
+/// (`SkyComputerUseClient`) and supports a `--previous-notify` chain.
+/// When Doris sets `notify = ["<dispatcher>"]`, the app absorbs the
+/// dispatcher as its downstream, so the live chain becomes:
+///
+///     Codex  ->  SkyComputerUseClient  ->  Doris dispatcher  ->  doris CLI
+///
+/// Because the app's notifier ends up *upstream* of the dispatcher in
+/// that case, the dispatcher must NOT call back into it (that would
+/// double-fire the app's own notification). The dispatcher therefore
+/// only fires the Doris banner and never forwards. On a plain CLI
+/// setup where Doris's dispatcher is itself `notify[0]`, any prior
+/// notifier is preserved via the backup file and restored on
+/// unregister.
+///
+/// ### Files Doris manages
+///
+///   - `~/.codex/doris-notify-dispatch.sh` — the dispatcher (executable)
+///   - `~/.codex/config.toml`              — `notify` points at the above
+///   - `~/.codex/.doris-notify-backup`     — original `notify` line, for
+///                                            clean restore on unregister
 public struct CodexIntegration: IntegrationProvider {
     public let id = "codex"
     public let displayName = "Codex"
-    public let summary = "Wrap `codex` shell command to fire Doris on exit."
+    public let summary = "Fire Doris when a Codex turn completes (notify hook)."
     public let iconSymbol = "terminal"
     public let sourceKind: SourceKind = .codex
     public let clickURL: URL? = URL(string: "codex://")
     public let supportTier: IntegrationSupportTier = .full
     public let tutorialURL: URL? = URL(string: "https://github.com/GaoJiasheng/Doris/blob/main/docs/integrations/codex.md")
 
-    /// Block-delimiter markers. Begin/end shapes (vs. a single-line
-    /// marker like ClaudeCode uses) because the wrapper is multi-line —
-    /// we need to know where to cut.
-    static let beginMarker = "# >>> doris-codex-integration >>>"
-    static let endMarker   = "# <<< doris-codex-integration <<<"
+    /// Begin/end markers wrapping the generated dispatcher body so the
+    /// script is recognizable as Doris-managed.
+    static let beginMarker = "# >>> doris-codex-notify-dispatch >>>"
+    static let endMarker   = "# <<< doris-codex-notify-dispatch <<<"
 
-    /// Which interactive shell rc file to touch. Apple's docs say
-    /// `$SHELL` reflects the user's *login* shell which is also their
-    /// default Terminal.app shell on macOS — good enough as a fast
-    /// detection without parsing `/etc/passwd`.
-    enum Shell {
-        case zsh
-        case bash
-        case fish
+    /// Dispatcher filename. Also doubles as the substring `currentStatus`
+    /// greps for in config.toml — it shows up whether the dispatcher is
+    /// `notify[0]` or nested inside the app's `--previous-notify`.
+    static let dispatcherFilename = "doris-notify-dispatch.sh"
 
-        /// rc filename relative to the user's home dir.
-        var rcRelativePath: String {
-            switch self {
-            case .zsh:  return ".zshrc"
-            case .bash: return ".bashrc"
-            case .fish: return ".config/fish/config.fish"
-            }
-        }
-    }
-
-    private static func detectShell() -> Shell {
-        let s = ProcessInfo.processInfo.environment["SHELL"] ?? ""
-        if s.contains("zsh")  { return .zsh }
-        if s.contains("fish") { return .fish }
-        return .bash
-    }
-
-    private var rcURL: URL {
-        let shell = Self.detectShell()
-        return FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(shell.rcRelativePath)
-    }
+    /// Written into the backup file when there was no prior `notify`
+    /// line — tells `unregister()` to delete the line outright rather
+    /// than restore something.
+    static let noOriginalMarker = "# doris: no original notify"
 
     public init() {}
 
+    // MARK: - Paths
+
+    /// `$CODEX_HOME` if set (Codex respects it), else `~/.codex`.
+    static var codexHomeURL: URL {
+        if let home = ProcessInfo.processInfo.environment["CODEX_HOME"], !home.isEmpty {
+            return URL(fileURLWithPath: (home as NSString).expandingTildeInPath,
+                       isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".codex", isDirectory: true)
+    }
+
+    var configURL: URL { Self.codexHomeURL.appendingPathComponent("config.toml") }
+    var dispatcherURL: URL { Self.codexHomeURL.appendingPathComponent(Self.dispatcherFilename) }
+    var backupURL: URL { Self.codexHomeURL.appendingPathComponent(".doris-notify-backup") }
+
+    // MARK: - Status
+
     public func currentStatus() async -> IntegrationStatus {
         let fm = FileManager.default
-        guard fm.fileExists(atPath: rcURL.path) else { return .notRegistered }
-        guard let text = try? String(contentsOf: rcURL, encoding: .utf8) else {
-            return .error("Couldn't read \(rcURL.lastPathComponent)")
+        guard fm.fileExists(atPath: configURL.path) else { return .notRegistered }
+        guard let text = try? String(contentsOf: configURL, encoding: .utf8) else {
+            return .error("Couldn't read config.toml")
         }
-        if text.contains(Self.beginMarker) {
-            // Block is present; verify the CLI it points at still resolves.
-            if DorisCLILocator.resolve() == nil {
-                return .missingCLI
-            }
-            return .registered
-        }
-        return .notRegistered
+        // Our dispatcher is referenced somewhere in the notify chain
+        // (either as notify[0] or inside the app's --previous-notify).
+        guard text.contains(Self.dispatcherFilename) else { return .notRegistered }
+        // Config points at us, but verify the pieces are actually intact.
+        guard fm.isExecutableFile(atPath: dispatcherURL.path) else { return .notRegistered }
+        if DorisCLILocator.resolve() == nil { return .missingCLI }
+        return .registered
     }
+
+    // MARK: - Register
 
     public func register() async throws {
         guard let cliPath = DorisCLILocator.resolve() else {
             throw IntegrationError.cliNotInstalled
         }
-        let shell = Self.detectShell()
-        let block = Self.generateBlock(cliPath: cliPath, shell: shell)
-        let url = rcURL
+        let fm = FileManager.default
 
-        // Create the parent dir if needed (fish nests under ~/.config).
-        let parent = url.deletingLastPathComponent()
-        try? FileManager.default.createDirectory(
-            at: parent, withIntermediateDirectories: true
-        )
+        // Make sure ~/.codex exists (Codex creates it, but be defensive
+        // so registering before first Codex launch still works).
+        try? fm.createDirectory(at: Self.codexHomeURL,
+                                withIntermediateDirectories: true)
 
-        let existing: String
-        if FileManager.default.fileExists(atPath: url.path) {
-            existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        } else {
-            existing = ""
-        }
-        // Upsert: drop the old block (if any) then append the fresh one.
-        // Refreshing in place is important for cases where the CLI path
-        // moved (e.g. user re-installed Doris and the symlink target
-        // changed).
-        var cleaned = Self.removeBlock(from: existing)
-        // Ensure a separating newline before our block.
-        if !cleaned.isEmpty && !cleaned.hasSuffix("\n") {
-            cleaned += "\n"
-        }
-        if !cleaned.isEmpty {
-            cleaned += "\n"
-        }
-        let updated = cleaned + block + "\n"
+        // 1) Write / refresh the dispatcher. Done first so that even on
+        //    an idempotent re-register a moved CLI path gets baked in.
+        let script = Self.generateDispatcher(cliPath: cliPath)
         do {
-            try updated.write(to: url, atomically: true, encoding: .utf8)
+            try script.write(to: dispatcherURL, atomically: true, encoding: .utf8)
         } catch {
-            throw IntegrationError.writeFailed(path: url.path, underlying: error)
+            throw IntegrationError.writeFailed(path: dispatcherURL.path, underlying: error)
         }
+        try? fm.setAttributes([.posixPermissions: 0o755],
+                              ofItemAtPath: dispatcherURL.path)
+
+        // 2) Wire config.toml's `notify` to the dispatcher.
+        let configExists = fm.fileExists(atPath: configURL.path)
+        let originalPerms = (try? fm.attributesOfItem(atPath: configURL.path))?[.posixPermissions] as? NSNumber
+        let current = configExists
+            ? ((try? String(contentsOf: configURL, encoding: .utf8)) ?? "")
+            : ""
+
+        // Already wired (dispatcher referenced anywhere in the chain)?
+        // The dispatcher was just refreshed above, so leave config.toml
+        // untouched — re-writing it would fight the Codex app's
+        // previous-notify absorption.
+        if current.contains(Self.dispatcherFilename) { return }
+
+        // Back up whatever notify line exists today, so unregister can
+        // restore the user's prior setup exactly.
+        let originalNotify = Self.firstTopLevelNotifyLine(in: current)
+        let backup = originalNotify ?? Self.noOriginalMarker
+        try? backup.write(to: backupURL, atomically: true, encoding: .utf8)
+
+        let newLine = "notify = [\(Self.tomlString(dispatcherURL.path))]"
+        let updated = Self.upsertNotifyLine(in: current, newLine: newLine)
+        do {
+            try updated.write(to: configURL, atomically: true, encoding: .utf8)
+        } catch {
+            throw IntegrationError.writeFailed(path: configURL.path, underlying: error)
+        }
+        // Preserve the original file mode (Codex writes config.toml 0600);
+        // a fresh file we created stays private too.
+        let mode = originalPerms?.intValue ?? 0o600
+        try? fm.setAttributes([.posixPermissions: mode], ofItemAtPath: configURL.path)
     }
+
+    // MARK: - Unregister
 
     public func unregister() async throws {
-        let url = rcURL
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
-        guard let existing = try? String(contentsOf: url, encoding: .utf8) else {
-            // Nothing readable to mutate — treat as idempotent success.
-            return
+        let fm = FileManager.default
+        defer {
+            // Always drop our artifacts, even if the config edit below
+            // short-circuits.
+            try? fm.removeItem(at: dispatcherURL)
+            try? fm.removeItem(at: backupURL)
         }
-        let cleaned = Self.removeBlock(from: existing)
+        guard fm.fileExists(atPath: configURL.path),
+              let current = try? String(contentsOf: configURL, encoding: .utf8),
+              current.contains(Self.dispatcherFilename) else {
+            return // nothing of ours in the config
+        }
+        let originalPerms = (try? fm.attributesOfItem(atPath: configURL.path))?[.posixPermissions] as? NSNumber
+        let backup = (try? String(contentsOf: backupURL, encoding: .utf8))?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let updated: String
+        if let backup, !backup.isEmpty, backup != Self.noOriginalMarker {
+            // Restore the user's prior notify line verbatim.
+            updated = Self.upsertNotifyLine(in: current, newLine: backup)
+        } else {
+            // There was no prior notify — remove the line entirely.
+            updated = Self.removeNotifyLine(in: current)
+        }
         do {
-            try cleaned.write(to: url, atomically: true, encoding: .utf8)
+            try updated.write(to: configURL, atomically: true, encoding: .utf8)
         } catch {
-            throw IntegrationError.writeFailed(path: url.path, underlying: error)
+            throw IntegrationError.writeFailed(path: configURL.path, underlying: error)
+        }
+        if let mode = originalPerms?.intValue {
+            try? fm.setAttributes([.posixPermissions: mode], ofItemAtPath: configURL.path)
         }
     }
 
-    // MARK: - Block string ops
+    // MARK: - Dispatcher script
 
-    /// Strip every line between (and including) the begin/end markers.
-    /// Operates line-by-line so we tolerate stray whitespace around
-    /// the markers without depending on exact-match in regex form.
-    static func removeBlock(from text: String) -> String {
-        let lines = text.components(separatedBy: "\n")
-        var result: [String] = []
-        var inBlock = false
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed == beginMarker { inBlock = true;  continue }
-            if trimmed == endMarker   { inBlock = false; continue }
-            if !inBlock { result.append(line) }
-        }
-        // Strip trailing blank lines that the removed block left behind,
-        // so re-registering doesn't accumulate blank rows over time.
-        while let last = result.last,
-              last.trimmingCharacters(in: .whitespaces).isEmpty {
-            result.removeLast()
-        }
-        return result.joined(separator: "\n")
-    }
-
-    /// Build the wrapper block for the given shell. Single-quoted
-    /// string args keep the body safe from shell expansion regardless
-    /// of how the rc file is sourced.
-    static func generateBlock(cliPath: String, shell: Shell) -> String {
-        let quotedPath = cliPath.contains(" ") ? "'\(cliPath)'" : cliPath
+    /// Build the dispatcher. It fires the Doris banner and nothing else
+    /// (see the type doc for why it must not forward).
+    static func generateDispatcher(cliPath: String) -> String {
         let title = localizedTitle()
-        let titleFail = localizedTitleFailure()
-        switch shell {
-        case .zsh, .bash:
-            return """
-            \(beginMarker)
-            codex() {
-                command codex "$@"
-                local exit_code=$?
-                if [ $exit_code -eq 0 ]; then
-                    \(quotedPath) notify --title '\(title)' --source codex --level reminder --click-url 'doris://main' >/dev/null 2>&1
-                else
-                    \(quotedPath) notify --title '\(titleFail)' --body "exit $exit_code" --source codex --level critical --click-url 'doris://main' >/dev/null 2>&1
-                fi
-                return $exit_code
-            }
-            \(endMarker)
-            """
-        case .fish:
-            // Fish syntax differs: `function ... end`, `$argv`, `$status`.
-            return """
-            \(beginMarker)
-            function codex
-                command codex $argv
-                set -l exit_code $status
-                if test $exit_code -eq 0
-                    \(quotedPath) notify --title '\(title)' --source codex --level reminder --click-url 'doris://main' >/dev/null 2>&1
-                else
-                    \(quotedPath) notify --title '\(titleFail)' --body "exit $exit_code" --source codex --level critical --click-url 'doris://main' >/dev/null 2>&1
-                end
-                return $exit_code
-            end
-            \(endMarker)
-            """
-        }
+        return """
+        #!/bin/bash
+        \(beginMarker)
+        # Managed by Doris. Regenerated whenever you (re-)register the
+        # Codex integration from Doris Settings — do not edit by hand.
+        #
+        # Codex invokes its `notify` program once per turn completion.
+        # On builds with the computer-use feature the Codex app keeps
+        # its own notifier upstream of us via --previous-notify, so this
+        # script must NOT call back into it. It only fires Doris.
+        #
+        # Firing is unconditional: Codex only calls `notify` on turn
+        # completion, so there is no event type to filter on. The JSON
+        # payload arrives as "$@" and is intentionally ignored.
+
+        DORIS_CLI="\(cliPath)"
+
+        if [ -x "$DORIS_CLI" ]; then
+            "$DORIS_CLI" notify \\
+                --title '\(title)' \\
+                --source codex \\
+                --level reminder \\
+                --click-url 'doris://main' >/dev/null 2>&1 &
+        fi
+
+        exit 0
+        \(endMarker)
+        """
     }
 
-    /// Pick titles for the user's current language. Mirrors the
-    /// ClaudeCodeIntegration approach — reads the UserDefaults key
-    /// DorisUI's LanguageSettings writes to, so DorisCore stays
-    /// independent of the UI module.
+    /// Title in the user's current language. Mirrors
+    /// ClaudeCodeIntegration: reads the UserDefaults key DorisUI's
+    /// LanguageSettings writes, so DorisCore stays UI-independent.
     private static func localizedTitle() -> String {
         let mode = UserDefaults.standard.string(forKey: "doris.language.mode") ?? "zh"
         return mode == "en" ? "Codex task complete" : "Codex 任务完成"
     }
 
-    private static func localizedTitleFailure() -> String {
-        let mode = UserDefaults.standard.string(forKey: "doris.language.mode") ?? "zh"
-        return mode == "en" ? "Codex task failed" : "Codex 任务失败"
+    // MARK: - TOML notify-line surgery
+
+    /// Index of the first **top-level** `notify = …` assignment, or nil.
+    /// "Top-level" = appears before the first `[table]` header, since
+    /// TOML top-level keys must precede any table.
+    static func topLevelNotifyIndex(_ lines: [String]) -> Int? {
+        for (i, line) in lines.enumerated() {
+            let t = line.trimmingCharacters(in: .whitespaces)
+            if t.hasPrefix("[") { return nil }      // entered a table — stop
+            if isNotifyAssignment(t) { return i }
+        }
+        return nil
+    }
+
+    /// True if `trimmed` is a `notify = …` assignment (not `notify_x`,
+    /// not a comment).
+    static func isNotifyAssignment(_ trimmed: String) -> Bool {
+        guard trimmed.hasPrefix("notify") else { return false }
+        let rest = trimmed.dropFirst("notify".count)
+            .drop(while: { $0 == " " || $0 == "\t" })
+        return rest.first == "="
+    }
+
+    static func firstTopLevelNotifyLine(in text: String) -> String? {
+        let lines = text.components(separatedBy: "\n")
+        guard let idx = topLevelNotifyIndex(lines) else { return nil }
+        return lines[idx]
+    }
+
+    /// Replace the first top-level notify line with `newLine`. If none
+    /// exists, insert it just before the first `[table]` header (or
+    /// append if the file has no tables).
+    static func upsertNotifyLine(in text: String, newLine: String) -> String {
+        var lines = text.components(separatedBy: "\n")
+        if let idx = topLevelNotifyIndex(lines) {
+            lines[idx] = newLine
+            return lines.joined(separator: "\n")
+        }
+        if let secIdx = lines.firstIndex(where: {
+            $0.trimmingCharacters(in: .whitespaces).hasPrefix("[")
+        }) {
+            lines.insert(newLine, at: secIdx)
+            return lines.joined(separator: "\n")
+        }
+        var result = text
+        if !result.isEmpty && !result.hasSuffix("\n") { result += "\n" }
+        result += newLine + "\n"
+        return result
+    }
+
+    /// Remove the first top-level notify line (if any).
+    static func removeNotifyLine(in text: String) -> String {
+        var lines = text.components(separatedBy: "\n")
+        if let idx = topLevelNotifyIndex(lines) {
+            lines.remove(at: idx)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// Render a string as a TOML basic string (double-quoted, escaped).
+    static func tomlString(_ s: String) -> String {
+        let escaped = s
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "\"\(escaped)\""
     }
 }
 

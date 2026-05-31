@@ -1,26 +1,34 @@
 # Codex × Doris 集成指南
 
-> **Doris 1.0 起已经支持一键注册**。打开菜单栏 Doris → ⚙ 设置 → 应用集成 → Codex 那行 → 点 **注册** 按钮就完事。Doris 会自动检测你的 shell（zsh / bash / fish），把下面的 wrapper 函数写进对应的 rc 文件里。**新开一个 terminal 窗口**就生效。
+> **Doris 1.0 起一键注册**。打开菜单栏 Doris → ⚙ 设置 → 应用集成 → Codex 那行 → 点 **注册** 即可。Doris 会接入 Codex 自带的 `notify` 钩子，**Codex 桌面 App 和命令行都生效**——每当一个 Codex 回合（turn）完成，就弹一条 Doris 提醒。
 >
-> 这份文档介绍的是注册按钮**底下到底干了什么**，以及如果想自己定制的高级玩法。日常用户**不用读**。
+> 这份文档讲注册按钮**底下到底干了什么**，以及手动配置 / 排查的方法。日常用户**不用读**。
 
-Codex（OpenAI 的 agentic 编程工具）目前没有公开的 hooks API，**没法像 Claude Code 那样从 settings.json 走 hook**。退而求其次的方案是用一个 shell wrapper —— 把 `codex` 命令包一层，让它跑完之后自动 fire 一次 Doris banner。这样你启动一个长任务后切去干别的，跑完会有提示。
+Codex（OpenAI 的 agentic 编程工具）在 `~/.codex/config.toml` 里提供了一个原生的 **`notify` 钩子**——这正是和 Claude Code 的 `settings.json` hooks 对等的机制。Codex 每完成一个回合就会调用你配置的 `notify` 程序，并把一段 JSON 负载作为最后一个参数传进去。Doris 把自己接到这个钩子上，于是任务一完成就弹 banner。
 
-完整流程 **零步**（点注册按钮）/ 手动也只要 **2 分钟**。
+> **为什么不再用 shell wrapper？** 1.0 之前的版本是往 `~/.zshrc` 里塞一个 `codex()` 函数。那个只在**终端里敲 `codex` 且进程退出**时才触发——对**Codex 桌面 App** 完全无效（App 里任务跑完，进程还活着）。绝大多数人用的是 App，所以 wrapper 形同虚设。`notify` 钩子对 App 和 CLI 都有效，已全面替换掉 wrapper 方案。
 
 ---
 
 ## 工作原理
 
-Doris CLI 装在 `/usr/local/bin/doris`（首次启动 Doris 会有 wizard 引导安装）。`doris notify` 会经 App Group 写一条事件给 Doris App，触发 banner。我们要做的就是把它接到 `codex` 命令的结尾。
+Doris CLI 随 App 一起分发（`Doris.app/Contents/Resources/doris`，首次启动会有 wizard 引导把它链接到 `/usr/local/bin/doris`）。`doris notify` 经 App Group 写一条事件给 Doris App，触发 banner。注册要做的，就是让 Codex 在回合结束时去调一个会 fire `doris notify` 的小脚本。
 
-最终效果：
+最终的调用链：
 
-```bash
-$ codex "implement a binary search"
-... (Codex 跑代码 / 思考 / 几分钟)
-✅ Codex 完成   ← Doris banner 弹出，点击切回终端
 ```
+Codex 回合结束  →  notify 程序  →  Doris 派发脚本  →  doris CLI  →  Doris banner
+```
+
+### 和 Codex App 自带通知器共存
+
+带 computer-use 功能的 Codex App 会**接管** `notify` 槽位:它把 `notify[0]` 重置成自己的客户端（`SkyComputerUseClient`），并支持一个 `--previous-notify` 链。当 Doris 把 `notify` 设成自己的派发脚本时，App 会把这个脚本「吸收」成它的下游，于是实际链路变成:
+
+```
+Codex  →  SkyComputerUseClient（computer-use 通知）  →  Doris 派发脚本  →  doris CLI
+```
+
+也就是说 App 自己的通知器在我们**上游**——所以 Doris 的派发脚本**绝不能反过来再去调它**（否则 App 的通知会弹两次）。派发脚本只 fire Doris banner，从不转发。两边的通知互不干扰。
 
 ---
 
@@ -28,171 +36,71 @@ $ codex "implement a binary search"
 
 点 **设置 → 应用集成 → Codex → 注册** 后，Doris 会：
 
-1. 读 `$SHELL` 判断你的 shell — zsh / bash / fish
-2. 打开对应的 rc 文件（`~/.zshrc` / `~/.bashrc` / `~/.config/fish/config.fish`）
-3. 在末尾插入下面的标记块（已存在则原地刷新，不重复堆叠）
-4. 不会动 rc 文件里你已有的任何其他内容
+1. 定位 `doris` CLI 的绝对路径（`/usr/local/bin/doris` 或 bundle 内置那份）
+2. 写一个派发脚本 `~/.codex/doris-notify-dispatch.sh`（可执行，里面 baked 了 CLI 路径）
+3. 把 `~/.codex/config.toml` 里的 `notify` 指向这个派发脚本
+4. 把原本的 `notify` 那一行备份到 `~/.codex/.doris-notify-backup`，供取消注册时**原样还原**
+5. 不动 config.toml 里的任何其他内容
 
-之后只要**新开 terminal 窗口**（或 `source` 一下 rc 文件），`codex` 命令就被 wrapper 接管。点 **取消注册** 会精确删除这个块，其他内容原封不动。
+点 **取消注册** 会还原原来的 `notify`（没有就删掉该行），并删除派发脚本与备份。
 
-下面是**手动**配置的步骤（仅供想知道细节 / 不用 Doris UI 注册的用户参考）。
-
----
-
-## 步骤 1：选你用的 shell
-
-```bash
-echo $SHELL
-```
-
-输出 `/bin/zsh` → 编辑 `~/.zshrc`
-输出 `/bin/bash` → 编辑 `~/.bashrc`（或 `~/.bash_profile`）
-输出 `/opt/homebrew/bin/fish` → 编辑 `~/.config/fish/config.fish`
-
-## 步骤 2：加 wrapper 函数
-
-### Zsh / Bash
-
-在 `~/.zshrc`（或对应文件）末尾加：
-
-```bash
-# Codex × Doris — fire a banner when codex exits, regardless of success.
-codex() {
-    command codex "$@"
-    local exit_code=$?
-    if [ $exit_code -eq 0 ]; then
-        doris notify \
-            --title "Codex" \
-            --body "任务完成" \
-            --source codex \
-            --level reminder \
-            --click-url "doris://main"
-    else
-        doris notify \
-            --title "Codex" \
-            --body "退出代码 $exit_code" \
-            --source codex \
-            --level critical \
-            --click-url "doris://main"
-    fi
-    return $exit_code
-}
-```
-
-### Fish
-
-`~/.config/fish/config.fish` 里加：
-
-```fish
-function codex
-    command codex $argv
-    set -l exit_code $status
-    if test $exit_code -eq 0
-        doris notify \
-            --title "Codex" \
-            --body "任务完成" \
-            --source codex \
-            --level reminder \
-            --click-url "doris://main"
-    else
-        doris notify \
-            --title "Codex" \
-            --body "退出代码 $exit_code" \
-            --source codex \
-            --level critical \
-            --click-url "doris://main"
-    end
-    return $exit_code
-end
-```
-
-## 步骤 3：重载配置
-
-```bash
-# zsh
-source ~/.zshrc
-
-# bash
-source ~/.bashrc
-
-# fish
-source ~/.config/fish/config.fish
-```
-
-或者直接开个新 terminal 窗口。
-
-## 步骤 4：测试
-
-```bash
-codex --version
-```
-
-应该立刻看到一个绿色（reminder level）banner 弹出："Codex / 任务完成"。如果有，配置成功。
-
-故意制造一次失败：
-
-```bash
-codex --this-flag-does-not-exist
-```
-
-应该看到红色 critical banner "Codex / 退出代码 1"。
+> Codex App 在运行时会把上面第 3 步的 `notify` 自动改写成「`SkyComputerUseClient` 在前、Doris 派发脚本作为 `--previous-notify`」的规范形态——这是预期行为，不用管。
 
 ---
 
-## 进阶：只在长任务后通知
+## 手动配置（不走 Doris UI）
 
-不想每次 `codex --version` / `codex --help` 都弹 banner？加个时间阈值——只有跑超过 **N 秒**才提醒：
-
-### Zsh / Bash
+### 步骤 1：确认 CLI 在
 
 ```bash
-codex() {
-    local start=$(date +%s)
-    command codex "$@"
-    local exit_code=$?
-    local elapsed=$(($(date +%s) - start))
-
-    # 跑不到 10 秒的任务不打扰
-    if [ $elapsed -ge 10 ]; then
-        local mins=$((elapsed / 60))
-        local secs=$((elapsed % 60))
-        local body="${mins}m${secs}s"
-        if [ $exit_code -eq 0 ]; then
-            doris notify --title "Codex 完成" --body "$body" \
-                --source codex --level reminder --click-url "doris://main"
-        else
-            doris notify --title "Codex 失败" --body "$body · exit $exit_code" \
-                --source codex --level critical --click-url "doris://main"
-        fi
-    fi
-    return $exit_code
-}
+which doris && doris --version
 ```
 
-### Fish
+没结果的话先装 CLI（见下方「没装 CLI」）。
 
-```fish
-function codex
-    set -l start (date +%s)
-    command codex $argv
-    set -l exit_code $status
-    set -l elapsed (math (date +%s) - $start)
+### 步骤 2：写派发脚本
 
-    if test $elapsed -ge 10
-        set -l mins (math $elapsed / 60)
-        set -l secs (math $elapsed % 60)
-        set -l body "$mins"m"$secs"s
-        if test $exit_code -eq 0
-            doris notify --title "Codex 完成" --body $body \
-                --source codex --level reminder --click-url "doris://main"
-        else
-            doris notify --title "Codex 失败" --body "$body · exit $exit_code" \
-                --source codex --level critical --click-url "doris://main"
-        end
-    end
-    return $exit_code
-end
+新建 `~/.codex/doris-notify-dispatch.sh`：
+
+```bash
+#!/bin/bash
+# 每个 Codex 回合结束都会被调一次。只 fire Doris，不转发。
+DORIS_CLI="/usr/local/bin/doris"   # 或 Doris.app/Contents/Resources/doris
+if [ -x "$DORIS_CLI" ]; then
+    "$DORIS_CLI" notify \
+        --title 'Codex 任务完成' \
+        --source codex \
+        --level reminder \
+        --click-url 'doris://main' >/dev/null 2>&1 &
+fi
+exit 0
 ```
+
+```bash
+chmod +x ~/.codex/doris-notify-dispatch.sh
+```
+
+### 步骤 3：把 config.toml 的 notify 指过去
+
+编辑 `~/.codex/config.toml`，加（或改）这一行到顶部、第一个 `[表]` 之前：
+
+```toml
+notify = ["/Users/<你>/.codex/doris-notify-dispatch.sh"]
+```
+
+如果之前 `notify` 已经有值（比如 Codex App 的 `SkyComputerUseClient`），**先记下原值**以便日后还原。保存后，运行中的 Codex App 会自动把你的脚本吸收成 `--previous-notify`——这是正常的。
+
+### 步骤 4：测试
+
+跑一个真实的 Codex 回合（在 App 里发一条消息，或命令行 `codex exec "say hi"`）。回合结束应弹出一条 reminder banner「Codex 任务完成」。
+
+也可以直接验证派发脚本本身：
+
+```bash
+~/.codex/doris-notify-dispatch.sh '{"type":"agent-turn-complete"}'
+```
+
+立刻弹 banner 就说明脚本通。
 
 ---
 
@@ -201,8 +109,8 @@ end
 如果 `which doris` 没结果：
 
 1. 打开 Doris.app
-2. 顶部菜单栏图标 → ⚙ 设置 → **应用集成** → 找 CLI 安装入口
-3. 或者直接菜单栏顶部 **Doris → Install CLI…**
+2. 菜单栏图标 → ⚙ 设置 → **应用集成** → 找 CLI 安装入口
+3. 或菜单栏顶部 **Doris → Install CLI…**
 
 详情看 [CLI Manual](../cli-manual.md)。
 
@@ -212,36 +120,44 @@ end
 
 ### 没弹 banner
 
-确认 Doris 在跑 → `pgrep Doris`
-确认 CLI 装好 → `which doris && doris --version`
-确认通知权限 → 系统设置 → 隐私与安全性 → 通知 → Doris
+逐项确认：
 
-直接跑 CLI 测试，绕过 wrapper：
+```bash
+pgrep -f Doris.app                    # Doris 在跑？
+which doris && doris --version        # CLI 装好？
+grep '^notify' ~/.codex/config.toml   # notify 指向 doris-notify-dispatch.sh？
+ls -l ~/.codex/doris-notify-dispatch.sh   # 脚本存在且可执行？
+```
+
+绕过整条链，直接测 CLI ↔ App 通信：
 
 ```bash
 doris notify --title test --source codex --level reminder
 ```
 
-应该立刻弹 banner。如果连这个都没反应，问题在 Doris ↔ CLI 通信（看 [CLI Manual](../cli-manual.md) → "故障排查"）。
+应立刻弹 banner。连这个都没反应 → 问题在 Doris ↔ CLI（看 [CLI Manual](../cli-manual.md) → 「故障排查」）；通知权限也查一下：系统设置 → 隐私与安全性 → 通知 → Doris。
 
-### `codex` 被无限递归调用
+### config.toml 里的 notify 被 Codex App 改写了
 
-如果 wrapper 写错（漏了 `command codex`），shell 会无限递归。
+这是**正常**的。带 computer-use 的 Codex App 会把 `notify[0]` 设回它自己的客户端，并把 Doris 的派发脚本挂到 `--previous-notify` 上。只要 `grep doris-notify-dispatch ~/.codex/config.toml` 还能搜到这个脚本，链路就是通的。
 
-修复：直接编辑配置文件删掉/改对 wrapper，重启 shell。在没修好之前可以用 `\codex "$@"` 绕过别名 / `/path/to/codex` 走绝对路径。
+### banner 弹了两次
+
+说明派发脚本里在反向转发到 `SkyComputerUseClient`。新版派发脚本**不应该**有任何转发——重新点一次「注册」让 Doris 重写脚本即可。
 
 ### Banner 点击没反应
 
-`--click-url "doris://main"` 让 banner 打开 Doris 主窗口。如果你想点了直接打开 Codex 网页版：
-
-```bash
---click-url "https://codex.openai.com"
-```
+`--click-url 'doris://main'` 让 banner 打开 Doris 主窗口。想点了开 Codex 网页版就把它换成 `--click-url 'https://chatgpt.com/codex'`，再重新注册。
 
 ---
 
-## 为什么不能像 Claude Code 一样自动？
+## 和 Claude Code 的对照
 
-Claude Code 暴露了 `~/.claude/settings.json` 里的 `hooks` 字段，让 Doris 注入一段 `doris notify` 命令在每次 Claude 回复后自动跑（具体看 Doris → 设置 → 应用集成 → Claude Code 那行右边的"已注册"状态）。
+| | Claude Code | Codex |
+|---|---|---|
+| 钩子位置 | `~/.claude/settings.json` 的 `hooks` | `~/.codex/config.toml` 的 `notify` |
+| 触发时机 | 每次回复 / Stop 事件 | 每个回合（turn）完成 |
+| Doris 接入 | 注入一段 `doris notify` hook | `notify` 指向 Doris 派发脚本 |
+| 自动注册 | ✅ `.full` | ✅ `.full` |
 
-Codex 目前**没有等价机制**。OpenAI 团队提了类似 issue，但还在 roadmap 上。一旦上线，Doris 的 `CodexIntegration` 会从 `.manual` 升级到 `.full`，到时这份文档可以删掉。
+两者现在都是 `.full` 一键注册。

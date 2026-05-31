@@ -88,9 +88,13 @@ separately:
 
 The integrations subsystem reads provider statuses from
 `IntegrationsRegistry` (DorisCore). Claude Code reads/writes
-`~/.claude/settings.json`. Codex reads/writes the user's shell rc file
-(`~/.zshrc` / `~/.bashrc` / `~/.config/fish/config.fish`) with a
-marker-delimited block.
+`~/.claude/settings.json`. Codex wires its native `notify` hook in
+`~/.codex/config.toml` to a Doris-managed dispatcher script
+(`~/.codex/doris-notify-dispatch.sh`); the prior `notify` line is
+backed up to `~/.codex/.doris-notify-backup` for clean restore. This
+fires for both the Codex desktop app and the CLI on every turn
+completion (an earlier shell-rc-wrapper approach only worked for the
+terminal CLI and was replaced).
 
 ## Lifecycle — iOS
 
