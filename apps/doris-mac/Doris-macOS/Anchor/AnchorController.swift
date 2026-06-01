@@ -509,11 +509,12 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             self.model.state = .banner(message: m)
             self.showPanel()
             self.bannerDismissTask?.cancel()
-            // Level-driven duration: info peeks for 1.5s, reminder
-            // hangs around for 4s. Critical would be .infinity but
-            // critical events are routed through `presentFix` instead
-            // and never reach this path.
-            let duration = m.level.bannerDuration
+            // Level-driven duration (info 1.5s, reminder 4s) plus a
+            // +2s bump for agent-completion sources (Claude Code /
+            // Codex) so their banner is easier to catch — see
+            // AnchorMessage.bannerDuration. Critical would be .infinity
+            // but routes through `presentFix` and never reaches here.
+            let duration = m.bannerDuration
             self.bannerDismissTask = Task { @MainActor [weak self] in
                 try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
                 guard !Task.isCancelled else { return }

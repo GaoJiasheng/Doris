@@ -59,3 +59,18 @@ extension EventLevel {
         }
     }
 }
+
+extension AnchorMessage {
+    /// On-screen duration for this banner. Base is level-driven; the
+    /// agent-completion sources (Claude Code, Codex) get a +2s bump so
+    /// their "task done" banner is easier to catch when you glance up
+    /// a moment late. Skips the bump for sticky (`.infinity`) banners.
+    var bannerDuration: TimeInterval {
+        let base = level.bannerDuration
+        guard base.isFinite else { return base }
+        switch source {
+        case .claudeCode, .codex: return base + 2
+        default:                  return base
+        }
+    }
+}
