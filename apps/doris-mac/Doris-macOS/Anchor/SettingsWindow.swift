@@ -123,6 +123,8 @@ private struct AppearanceSettingsView: View {
     @ObservedObject var theme = ThemeSettings.shared
     @ObservedObject var sync = SyncSettings.shared
     @ObservedObject var integrations = IntegrationsRegistry.shared
+    @ObservedObject var avatarSettings = AvatarSettings.shared
+    @ObservedObject var desktopPanel = DesktopPanelSettings.shared
     /// Toggled by the "Install CLI…" button on a .missingCLI integration
     /// row — presents the InstallCLIWizardView as a sheet so the user
     /// can finish the wizard without leaving Settings. On dismiss we
@@ -143,6 +145,8 @@ private struct AppearanceSettingsView: View {
                 languageSection
                 Divider().overlay(Color.primary.opacity(0.08))
                 appearanceSection
+                Divider().overlay(Color.primary.opacity(0.08))
+                windowSection
                 Divider().overlay(Color.primary.opacity(0.08))
                 integrationsSection
                 Divider().overlay(Color.primary.opacity(0.08))
@@ -534,6 +538,37 @@ private struct AppearanceSettingsView: View {
     }
 
     // MARK: - Appearance
+
+    // MARK: - Window (avatar + desktop panel)
+
+    private var windowSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L("Window", "窗口"))
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            Toggle(isOn: Binding(get: { avatarSettings.avatarVisible },
+                                 set: { avatarSettings.avatarVisible = $0 })) {
+                Text(L("Show avatar", "显示小姑娘")).font(.subheadline)
+            }
+            .toggleStyle(.switch)
+
+            Toggle(isOn: Binding(get: { desktopPanel.visible },
+                                 set: { $0 ? DesktopPanelController.shared.show()
+                                           : DesktopPanelController.shared.hide() })) {
+                Text(L("Desktop panel", "桌面面板")).font(.subheadline)
+            }
+            .toggleStyle(.switch)
+
+            Text(L(
+                "The desktop panel floats a pinned + today summary on your desktop. To stick a single note, right-click it → Stick to desktop.",
+                "桌面面板会在桌面上浮出「置顶 + 今日」的汇总。把单条笔记贴到桌面:右键那条笔记 →「贴到桌面」。"
+            ))
+            .font(.caption)
+            .foregroundStyle(.primary.opacity(0.6))
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
     private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: 8) {
