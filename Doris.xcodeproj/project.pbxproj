@@ -38,6 +38,7 @@
 		4D1DACEE3B5F8E6A874A90A7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECD70CD58C18BA0CEC81EB /* SettingsView.swift */; };
 		513597108B56CFB5759C787A /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C0A5F483ACA3F72ED343586 /* RootTabView.swift */; };
 		51389334F27B6EF35EB52DEC /* Doris.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 64155F5EDC6DD796F45AED03 /* Doris.sdef */; };
+		521B0B2B1B54209E339769ED /* StickyNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9EEC8CD45FAA99FBBBB0ECA /* StickyNoteView.swift */; };
 		54F5154519AC049C9E0EB47D /* AddNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 158FE15ABF0D2A4C3DC8BAC3 /* AddNoteIntent.swift */; };
 		585D3E3760BE6A4849A2A6D3 /* NotesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EBAD6C975AC7AE7F032E9F4 /* NotesScreen.swift */; };
 		5C3EF76E0DD7FB08F51AC55C /* AnchorAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68DA5B4E4262C02B2CEA72DF /* AnchorAvatarView.swift */; };
@@ -77,6 +78,7 @@
 		BE57B57CE9DCCD7F9B1E5175 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1428A4010334504409D6401 /* MainWindowController.swift */; };
 		C0E36B64A06FE09BF55B87AA /* MarkMessageDoneIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEB137662D3DAC600C955D36 /* MarkMessageDoneIntent.swift */; };
 		C597EEBAAAF4373EE7F54D85 /* EventsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94332B9CD417EEC812A1F43 /* EventsScreen.swift */; };
+		C69045DE3256A44939AC43A1 /* StickyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ABC8FF8127AE2864BFD08BE /* StickyStore.swift */; };
 		C8A90F820AABDC6FE94E2417 /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 807EB227D46D06301C8887E2 /* DorisCore */; };
 		C925620D6935B31ED0C947F8 /* OpenSidebarIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1DCF61C45573AFCC4F934A3 /* OpenSidebarIntent.swift */; };
 		CBDFE415BC2CB5CA5E2B67FF /* TasksWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C7B70C5FCD86527B9D5FD2 /* TasksWidget.swift */; };
@@ -89,6 +91,7 @@
 		DC3062E4DFBF622D3BAD70ED /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2DBDD4CD5705CFC775419428 /* DorisCore */; };
 		DEDAD6EE1603ABB0F65DE5FA /* TodayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8B8DA6961CB3BF53478514 /* TodayScreen.swift */; };
 		E04B3E365C9DB9EDDA3F16B9 /* OpenBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1447CB53626E37F1DD855B25 /* OpenBarController.swift */; };
+		E0CA0E00846F392054F5E13B /* StickyWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */; };
 		E9874DBDAB1A27FE48686FCB /* SpeechRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8853F1317B2486DAB7E291 /* SpeechRecognizer.swift */; };
 		ECE71D8218A7B7F75330A156 /* PushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA6D6367889FF95F93F720F /* PushCommand.swift */; };
 		EDA1F10972E0C809C89C3DA5 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = 71109000BAFF694A906BECD1 /* ArgumentParser */; };
@@ -155,9 +158,11 @@
 		49787817ECF3EE4EB1D6E5CC /* DevicesCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesCommand.swift; sourceTree = "<group>"; };
 		4ABABD988A1B81A6F7DC411C /* NotifyCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyCommand.swift; sourceTree = "<group>"; };
 		50476AECFF2B8FC223258807 /* DorisMacChrome */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisMacChrome; path = packages/DorisMacChrome; sourceTree = SOURCE_ROOT; };
+		510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyWindowManager.swift; sourceTree = "<group>"; };
 		5207402EE925DF6E240B5132 /* ExitCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExitCodes.swift; sourceTree = "<group>"; };
 		57AA392218328D9FF434AF27 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		5860F89D0929C6440DEA0036 /* PushNotificationIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationIntent.swift; sourceTree = "<group>"; };
+		5ABC8FF8127AE2864BFD08BE /* StickyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyStore.swift; sourceTree = "<group>"; };
 		5AC3F2A4FFB36D66A3B4097B /* DorisIntentsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DorisIntentsBundle.swift; sourceTree = "<group>"; };
 		5FFE8BFB4CAA1D8CE956C57D /* IPCFSEventReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IPCFSEventReader.swift; sourceTree = "<group>"; };
 		64155F5EDC6DD796F45AED03 /* Doris.sdef */ = {isa = PBXFileReference; path = Doris.sdef; sourceTree = "<group>"; };
@@ -220,6 +225,7 @@
 		F917FF55F7AE753CE04C0714 /* AnchorController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorController.swift; sourceTree = "<group>"; };
 		F95CBB9E79FDA43E0755BF23 /* VoiceFloater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFloater.swift; sourceTree = "<group>"; };
 		F9C7B70C5FCD86527B9D5FD2 /* TasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksWidget.swift; sourceTree = "<group>"; };
+		F9EEC8CD45FAA99FBBBB0ECA /* StickyNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyNoteView.swift; sourceTree = "<group>"; };
 		FA324399D378502240BA8470 /* AnchorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -368,6 +374,16 @@
 				7EF4AEE04447F0F367068947 /* Assets.xcassets */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		2476B72ECD8DADD53952F5AA /* Sticky */ = {
+			isa = PBXGroup;
+			children = (
+				F9EEC8CD45FAA99FBBBB0ECA /* StickyNoteView.swift */,
+				5ABC8FF8127AE2864BFD08BE /* StickyStore.swift */,
+				510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */,
+			);
+			path = Sticky;
 			sourceTree = "<group>";
 		};
 		27949FE873C0E086881C25C4 /* doris-ios */ = {
@@ -603,6 +619,7 @@
 				20E53C999CEB05428C13BC95 /* Resources */,
 				6CDCCB245A7BF7C0F83EA9DD /* Scenes */,
 				558FA949130E3E3007A7074B /* Sidebar */,
+				2476B72ECD8DADD53952F5AA /* Sticky */,
 				6F04757BBA688D3295A98AE8 /* Voice */,
 				EB0CC25ABC1FEFF7EB8E7F34 /* AppDelegate.swift */,
 				203CFD2E1C735CEEA3435589 /* Doris-macOS-dev.entitlements */,
@@ -1121,6 +1138,9 @@
 				466612C4F9BF3A250E8F0963 /* SidebarRootView.swift in Sources */,
 				E9874DBDAB1A27FE48686FCB /* SpeechRecognizer.swift in Sources */,
 				99A039F0737F80C5295506D0 /* StatusBarItem.swift in Sources */,
+				521B0B2B1B54209E339769ED /* StickyNoteView.swift in Sources */,
+				C69045DE3256A44939AC43A1 /* StickyStore.swift in Sources */,
+				E0CA0E00846F392054F5E13B /* StickyWindowManager.swift in Sources */,
 				67321342134C8C94E59F7225 /* VoiceController.swift in Sources */,
 				D01C3F8225DA23A3FCD01FD6 /* VoiceFloater.swift in Sources */,
 				60F8A5E4F93A9559EE50D3E0 /* VoiceSettings.swift in Sources */,

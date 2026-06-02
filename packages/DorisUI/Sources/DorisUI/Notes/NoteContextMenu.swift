@@ -2,6 +2,13 @@ import SwiftUI
 import SwiftData
 import DorisCore
 
+public extension Notification.Name {
+    /// Posted (object = note `UUID`) when the user picks "Stick to
+    /// desktop" from a note's context menu on macOS. The app-level
+    /// StickyWindowManager observes it and floats a sticky window.
+    static let dorisStickToDesktop = Notification.Name("doris.stickToDesktop")
+}
+
 /// Right-click context menu shared by every note row on macOS. Centralises
 /// the scheduling quick picks (Today / Tomorrow / This Weekend / Next
 /// Week / Pick date / Clear), the Pin · Open editor · Archive · Move to
@@ -118,6 +125,21 @@ private struct NoteContextMenuModifier: ViewModifier {
                     Label(L("Open editor", "打开编辑器"), systemImage: "doc.text")
                 }
             }
+            #if os(macOS)
+            // Float this note as a sticky window on the desktop. The
+            // mac app's StickyWindowManager observes this notification
+            // (DorisUI has no AppKit dependency, so we decouple via
+            // NotificationCenter rather than a direct call).
+            if !note.archived {
+                Button {
+                    NotificationCenter.default.post(
+                        name: .dorisStickToDesktop, object: note.id
+                    )
+                } label: {
+                    Label(L("Stick to desktop", "贴到桌面"), systemImage: "macwindow.on.rectangle")
+                }
+            }
+            #endif
             Divider()
             Button { toggleArchive() } label: {
                 Label(
