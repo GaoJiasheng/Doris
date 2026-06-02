@@ -9,6 +9,13 @@ public final class Note {
     public var bodyMarkdown: String = ""
     public var isChecklist: Bool = false
     public var pinned: Bool = false
+    /// Sub-flag of `pinned`: when a pinned note also has `longTerm`,
+    /// it lives in the "长期 / Long-term" bucket of the Today pinned
+    /// area instead of the regular "置顶 / Pinned" bucket. Both are
+    /// pinned (so every existing `pinned` filter / "pinned first" sort
+    /// still applies); this only splits how they're grouped + labeled.
+    /// A non-pinned note is never long-term.
+    public var longTerm: Bool = false
     public var archived: Bool = false
     /// Top-level "task done" state. Each Note IS a TODO item — the
     /// list view shows a checkbox per row; tick it to mark this whole

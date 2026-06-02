@@ -96,10 +96,21 @@ private struct NoteContextMenuModifier: ViewModifier {
                           systemImage: "checkmark.seal.fill")
                 }
             }
+            // Two pin buckets — regular "置顶" and "长期" (long-term).
+            // A note sits in exactly one (or neither); both set
+            // note.pinned so the Today pinned area + "pinned first"
+            // sort still pick them up, while note.longTerm chooses the
+            // bucket.
             Button { togglePin() } label: {
                 Label(
-                    note.pinned ? L("Unpin", "取消置顶") : L("Pin to top", "置顶"),
-                    systemImage: note.pinned ? "pin.slash" : "pin"
+                    (note.pinned && !note.longTerm) ? L("Unpin", "取消置顶") : L("Pin to top", "置顶"),
+                    systemImage: (note.pinned && !note.longTerm) ? "pin.slash" : "pin"
+                )
+            }
+            Button { toggleLongTerm() } label: {
+                Label(
+                    (note.pinned && note.longTerm) ? L("Remove long-term", "取消长期") : L("Long-term", "长期"),
+                    systemImage: "infinity"
                 )
             }
             if let openEditor = onOpenEditor {
@@ -237,7 +248,23 @@ private struct NoteContextMenuModifier: ViewModifier {
     }
 
     private func togglePin() {
-        note.pinned.toggle()
+        if note.pinned && !note.longTerm {
+            note.pinned = false          // regular-pinned → unpin
+        } else {
+            note.pinned = true           // → regular pin (demote from long-term if needed)
+            note.longTerm = false
+        }
+        note.touch()
+    }
+
+    private func toggleLongTerm() {
+        if note.pinned && note.longTerm {
+            note.pinned = false          // long-term → unpin entirely
+            note.longTerm = false
+        } else {
+            note.pinned = true           // → long-term pin
+            note.longTerm = true
+        }
         note.touch()
     }
 

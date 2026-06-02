@@ -30,17 +30,28 @@ struct TodayScreen: View {
     ///      overdue → today → soonest future).
     ///   2. Notes without a `dueDate` come after, sorted by `updatedAt`
     ///      descending (most recently touched first).
-    private var pinnedNotes: [Note] {
-        allNotes
-            .filter { $0.pinned }
-            .sorted { a, b in
-                switch (a.dueDate, b.dueDate) {
-                case let (l?, r?): return l < r
-                case (_?, nil):    return true
-                case (nil, _?):    return false
-                case (nil, nil):   return a.updatedAt > b.updatedAt
-                }
+    /// Regular "置顶" pins (pinned, not long-term).
+    private var regularPinnedNotes: [Note] {
+        pinnedSorted(allNotes.filter { $0.pinned && !$0.longTerm })
+    }
+
+    /// "长期" / long-term pins — own bucket below the regular pins.
+    private var longTermNotes: [Note] {
+        pinnedSorted(allNotes.filter { $0.pinned && $0.longTerm })
+    }
+
+    /// Manual drag-order wins first (0 until reordered → falls through
+    /// to due-date / recency).
+    private func pinnedSorted(_ notes: [Note]) -> [Note] {
+        notes.sorted { a, b in
+            if a.order != b.order { return a.order < b.order }
+            switch (a.dueDate, b.dueDate) {
+            case let (l?, r?): return l < r
+            case (_?, nil):    return true
+            case (nil, _?):    return false
+            case (nil, nil):   return a.updatedAt > b.updatedAt
             }
+        }
     }
 
     /// Same filter as the macOS Today view — past + completed rows are
@@ -61,34 +72,25 @@ struct TodayScreen: View {
                     TodayWeatherCard(vm: weather)
 
                     // ── Block 2: Pinned tasks ─────────────────────────────
-                    if !pinnedNotes.isEmpty {
-                        // Pink for pinned (attention / user-flagged),
-                        // cyan for upcoming (calmer scheduled stuff).
-                        // Swapped from the original to read warmer.
+                    // Pink = 置顶 (attention / user-flagged), violet =
+                    // 长期 (long-term), cyan = upcoming schedule.
+                    if !regularPinnedNotes.isEmpty {
                         sectionHeader(
                             icon: "pin.fill",
                             title: L("Pinned", "置顶"),
                             tint: CyberPalette.neonPink
                         )
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 10),
-                                GridItem(.flexible(), spacing: 10)
-                            ],
-                            spacing: 10
-                        ) {
-                            ForEach(pinnedNotes) { n in
-                                Button { path.append(n.id) } label: {
-                                    TodayPinnedCard(note: n)
-                                }
-                                .buttonStyle(.plain)
-                                // Long-press = the same actions the
-                                // Mac right-click surfaces (Schedule
-                                // submenu, Mark done, Done & archive,
-                                // Pin, Archive, Move to trash).
-                                .noteContextMenu(for: n) { path.append(n.id) }
-                            }
-                        }
+                        pinnedGrid(regularPinnedNotes)
+                    }
+
+                    // ── Block 2b: Long-term ───────────────────────────────
+                    if !longTermNotes.isEmpty {
+                        sectionHeader(
+                            icon: "infinity",
+                            title: L("Long-term", "长期"),
+                            tint: Color(red: 0.62, green: 0.51, blue: 1.0)
+                        )
+                        pinnedGrid(longTermNotes)
                     }
 
                     // ── Block 3: Calendar ─────────────────────────────────
@@ -110,7 +112,7 @@ struct TodayScreen: View {
                     }
 
                     // Empty state (no pinned, no calendar)
-                    if pinnedNotes.isEmpty && calendarNotes.isEmpty {
+                    if regularPinnedNotes.isEmpty && longTermNotes.isEmpty && calendarNotes.isEmpty {
                         emptyState
                     }
                 }
@@ -148,6 +150,50 @@ struct TodayScreen: View {
                 .foregroundStyle(CyberPalette.neonCyan.opacity(0.85))
                 .kerning(3)
         }
+    }
+
+    // MARK: - Pinned grid
+
+    /// Shared 2-column card grid for both the 置顶 and 长期 buckets.
+    /// Cards drag-to-reorder within their bucket; the drop renumbers
+    /// `note.order` so the manual order persists + syncs.
+    @ViewBuilder
+    private func pinnedGrid(_ notes: [Note]) -> some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: 10),
+                GridItem(.flexible(), spacing: 10)
+            ],
+            spacing: 10
+        ) {
+            ForEach(notes) { n in
+                Button { path.append(n.id) } label: {
+                    TodayPinnedCard(note: n)
+                }
+                .buttonStyle(.plain)
+                // Long-press = the same actions the Mac right-click
+                // surfaces (Schedule, Mark done, Pin, Long-term, …).
+                .noteContextMenu(for: n) { path.append(n.id) }
+                .draggable(n.id.uuidString)
+                .dropDestination(for: String.self) { items, _ in
+                    guard let raw = items.first,
+                          let dragged = UUID(uuidString: raw),
+                          dragged != n.id else { return false }
+                    reorderPinned(dragged: dragged, before: n.id, within: notes)
+                    return true
+                }
+            }
+        }
+    }
+
+    private func reorderPinned(dragged: UUID, before targetID: UUID, within notes: [Note]) {
+        guard let draggedNote = notes.first(where: { $0.id == dragged }) else { return }
+        var arr = notes.filter { $0.id != dragged }
+        let idx = arr.firstIndex(where: { $0.id == targetID }) ?? arr.count
+        arr.insert(draggedNote, at: idx)
+        for (i, n) in arr.enumerated() { n.order = Double(i) }
+        draggedNote.touch()
+        try? ctx.save()
     }
 
     // MARK: - Section header
