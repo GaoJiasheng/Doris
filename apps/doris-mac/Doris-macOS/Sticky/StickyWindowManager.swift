@@ -66,23 +66,26 @@ final class StickyWindowManager: NSObject {
         let panel = StickyPanel(contentViewController: hosting)
         panel.noteID = id
 
-        // Position: restore saved origin, or cascade a fresh one.
-        let saved = StickyStore.shared.positions[id] ?? .zero
-        if saved == .zero {
+        // Frame: restore the saved origin+size, or apply the default
+        // size + a cascade origin for a fresh stick (a stored zero-size
+        // frame counts as "fresh" → default size).
+        if let saved = StickyStore.shared.frame(for: id),
+           saved.size.width > 0, saved.size.height > 0 {
+            panel.setFrame(saved, display: false)
+        } else {
+            panel.setContentSize(StickyStore.defaultSize)
             panel.center()
             let offset = CGFloat(windows.count) * 26
             var origin = panel.frame.origin
             origin.x += offset
             origin.y -= offset
             panel.setFrameOrigin(origin)
-            StickyStore.shared.setPosition(id, origin)
-        } else {
-            panel.setFrameOrigin(saved)
+            StickyStore.shared.setFrame(id, panel.frame)
         }
 
-        // Persist moves; clean the map if the window is closed by any
-        // other path than our unstick().
-        panel.onMoved = { origin in StickyStore.shared.setPosition(id, origin) }
+        // Persist move + resize; clean the map if the window is closed
+        // by any path other than our unstick().
+        panel.onFrameChanged = { rect in StickyStore.shared.setFrame(id, rect) }
         panel.onClosed = { [weak self] in
             StickyStore.shared.unstick(id)
             self?.windows[id] = nil
@@ -97,12 +100,14 @@ final class StickyWindowManager: NSObject {
 /// whole background; can become key so the inline text fields edit.
 final class StickyPanel: NSPanel {
     var noteID: UUID?
-    var onMoved: ((CGPoint) -> Void)?
+    /// Fired on move AND resize with the live window frame, so callers
+    /// can persist origin + size together.
+    var onFrameChanged: ((CGRect) -> Void)?
     var onClosed: (() -> Void)?
 
     init(contentViewController: NSViewController) {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 230, height: 210),
+            contentRect: NSRect(origin: .zero, size: StickyStore.defaultSize),
             styleMask: [.borderless, .nonactivatingPanel, .resizable],
             backing: .buffered,
             defer: false
@@ -120,8 +125,12 @@ final class StickyPanel: NSPanel {
         minSize = NSSize(width: 180, height: 140)
 
         NotificationCenter.default.addObserver(
-            self, selector: #selector(didMove),
+            self, selector: #selector(frameChanged),
             name: NSWindow.didMoveNotification, object: self
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(frameChanged),
+            name: NSWindow.didResizeNotification, object: self
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(willClose),
@@ -133,6 +142,6 @@ final class StickyPanel: NSPanel {
     // the title / checklist text fields are editable.
     override var canBecomeKey: Bool { true }
 
-    @objc private func didMove() { onMoved?(frame.origin) }
+    @objc private func frameChanged() { onFrameChanged?(frame) }
     @objc private func willClose() { onClosed?() }
 }

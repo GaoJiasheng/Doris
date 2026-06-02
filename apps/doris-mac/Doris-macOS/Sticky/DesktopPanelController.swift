@@ -46,7 +46,7 @@ final class DesktopPanelController {
             p.setFrameOrigin(saved)
         }
 
-        p.onMoved = { origin in DesktopPanelSettings.shared.position = origin }
+        p.onFrameChanged = { rect in DesktopPanelSettings.shared.position = rect.origin }
         p.onClosed = { [weak self] in
             DesktopPanelSettings.shared.visible = false
             self?.panel = nil
