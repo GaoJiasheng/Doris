@@ -79,6 +79,7 @@
 		C597EEBAAAF4373EE7F54D85 /* EventsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94332B9CD417EEC812A1F43 /* EventsScreen.swift */; };
 		C8A90F820AABDC6FE94E2417 /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 807EB227D46D06301C8887E2 /* DorisCore */; };
 		C925620D6935B31ED0C947F8 /* OpenSidebarIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1DCF61C45573AFCC4F934A3 /* OpenSidebarIntent.swift */; };
+		CBDFE415BC2CB5CA5E2B67FF /* TasksWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C7B70C5FCD86527B9D5FD2 /* TasksWidget.swift */; };
 		CEB4D62898B42D02C13B7429 /* DorisIntentsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC3F2A4FFB36D66A3B4097B /* DorisIntentsBundle.swift */; };
 		D01C3F8225DA23A3FCD01FD6 /* VoiceFloater.swift in Sources */ = {isa = PBXBuildFile; fileRef = F95CBB9E79FDA43E0755BF23 /* VoiceFloater.swift */; };
 		D401050CDE48DE017E2AC2F9 /* DorisWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACC181989765CFA4AACB513 /* DorisWidgetBundle.swift */; };
@@ -218,6 +219,7 @@
 		F2A0CEF0A5026DBA42892F9F /* DorisUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisUI; path = packages/DorisUI; sourceTree = SOURCE_ROOT; };
 		F917FF55F7AE753CE04C0714 /* AnchorController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorController.swift; sourceTree = "<group>"; };
 		F95CBB9E79FDA43E0755BF23 /* VoiceFloater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFloater.swift; sourceTree = "<group>"; };
+		F9C7B70C5FCD86527B9D5FD2 /* TasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksWidget.swift; sourceTree = "<group>"; };
 		FA324399D378502240BA8470 /* AnchorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -484,6 +486,7 @@
 				235E4E6BF62F710B10B2A744 /* DorisWidgetBundle.swift */,
 				9CCE4FF1D8E965309B159C1A /* EventsWidget.swift */,
 				BB71668C471E5FF4D4AF7C06 /* Info.plist */,
+				F9C7B70C5FCD86527B9D5FD2 /* TasksWidget.swift */,
 			);
 			path = "DorisWidget-iOS";
 			sourceTree = "<group>";
@@ -1064,6 +1067,7 @@
 			files = (
 				063391B1AD51BEFF94090ED9 /* DorisWidgetBundle.swift in Sources */,
 				9AC1BB149284034A65540B33 /* EventsWidget.swift in Sources */,
+				CBDFE415BC2CB5CA5E2B67FF /* TasksWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
