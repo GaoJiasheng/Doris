@@ -368,11 +368,14 @@ public struct TodayPinnedCard: View {
         )
     }
 
+    /// Sub-task progress for a checklist note. Delegates to the model's
+    /// markdown-parsing `checklistProgress` (counts `- [ ]` / `- [x]`
+    /// lines in the body) — the same source `isCompleted` uses. The
+    /// earlier version read `note.checklistItems`, the legacy
+    /// relationship the editor never writes, so the progress bar +
+    /// `done/total` row silently never appeared on pinned cards.
     private var checklistProgress: (done: Int, total: Int)? {
-        guard note.isChecklist, let items = note.checklistItems, !items.isEmpty else {
-            return nil
-        }
-        return (items.filter(\.done).count, items.count)
+        note.checklistProgress
     }
 
     @ViewBuilder
