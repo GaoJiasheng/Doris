@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 import DorisCore
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// Renders the note's `bodyMarkdown` as a list of editable rows.
 /// **Same single source of truth** as the plain-text editor: every row
@@ -57,10 +60,30 @@ public struct ChecklistEditorView: View {
             .buttonStyle(.plain)
             .help(checkboxHelp(for: line.checked))
 
-            // `axis: .vertical` lets a long item wrap onto multiple
-            // lines instead of scrolling horizontally inside a fixed
-            // single-line field. `.firstTextBaseline` on the HStack
-            // keeps the checkbox aligned to the first wrapped line.
+            #if os(macOS)
+            // AppKit-backed field: SwiftUI's TextField can't intercept
+            // the field editor's editing keys (Return / Backspace are
+            // consumed before .onKeyPress sees them), so Return-to-add
+            // and Backspace-on-empty-to-merge need the NSTextField
+            // delegate. Wraps long text + reports its height.
+            ChecklistItemField(
+                text: textBinding(at: idx),
+                checked: line.checked == true,
+                isFocused: focusedLine == idx,
+                onFocusChange: { gained in
+                    if gained { focusedLine = idx }
+                    else if focusedLine == idx { focusedLine = nil }
+                },
+                onSubmit: { insertLine(after: idx) },
+                onDeleteEmpty: {
+                    let arr = lines
+                    guard idx > 0, idx < arr.count, arr[idx].text.isEmpty else { return }
+                    backspaceMergeIntoPrevious(at: idx)
+                }
+            )
+            #else
+            // `axis: .vertical` lets a long item wrap onto multiple lines
+            // instead of scrolling horizontally inside a single-line field.
             TextField("", text: textBinding(at: idx), axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.body)
@@ -71,18 +94,7 @@ public struct ChecklistEditorView: View {
                                  : Color.primary)
                 .focused($focusedLine, equals: idx)
                 .onSubmit { insertLine(after: idx) }
-                // Backspace on an empty item deletes it and moves the
-                // cursor up to the end of the previous line — the usual
-                // bullet-list editing feel. When the field has text we
-                // return .ignored so the normal char-delete happens.
-                .onKeyPress(.delete) {
-                    let arr = lines
-                    guard idx > 0, idx < arr.count, arr[idx].text.isEmpty else {
-                        return .ignored
-                    }
-                    backspaceMergeIntoPrevious(at: idx)
-                    return .handled
-                }
+            #endif
 
             Spacer(minLength: 0)
 
@@ -232,6 +244,109 @@ public struct ChecklistEditorView: View {
         }
     }
 }
+
+#if os(macOS)
+
+// MARK: - macOS checklist item field (AppKit)
+
+/// Self-sizing, word-wrapping NSTextField. Reports its wrapped height to
+/// SwiftUI by refreshing `preferredMaxLayoutWidth` from its actual width
+/// on each layout pass and invalidating its intrinsic size.
+final class WrappingTextField: NSTextField {
+    override func layout() {
+        super.layout()
+        if abs(preferredMaxLayoutWidth - bounds.width) > 0.5 {
+            preferredMaxLayoutWidth = bounds.width
+            invalidateIntrinsicContentSize()
+        }
+    }
+}
+
+/// Editable checklist item backed by AppKit so we can intercept the
+/// field editor's command keys:
+///   • Return  → `onSubmit` (new item)
+///   • Backspace on an empty field → `onDeleteEmpty` (merge up)
+/// SwiftUI's TextField can't do this — the field editor consumes those
+/// keys before `.onKeyPress` runs.
+struct ChecklistItemField: NSViewRepresentable {
+    @Binding var text: String
+    var checked: Bool
+    var isFocused: Bool
+    var onFocusChange: (Bool) -> Void
+    var onSubmit: () -> Void
+    var onDeleteEmpty: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> WrappingTextField {
+        let tf = WrappingTextField()
+        tf.isEditable = true
+        tf.isSelectable = true
+        tf.isBordered = false
+        tf.drawsBackground = false
+        tf.focusRingType = .none
+        tf.font = .systemFont(ofSize: NSFont.systemFontSize)
+        tf.lineBreakMode = .byWordWrapping
+        tf.usesSingleLineMode = false
+        tf.maximumNumberOfLines = 0
+        tf.cell?.wraps = true
+        tf.cell?.isScrollable = false
+        tf.delegate = context.coordinator
+        tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        tf.setContentHuggingPriority(.required, for: .vertical)
+        return tf
+    }
+
+    func updateNSView(_ tf: WrappingTextField, context: Context) {
+        context.coordinator.parent = self
+        if tf.stringValue != text { tf.stringValue = text }
+        // Checked → dimmed (the checkbox glyph carries the "done" signal;
+        // strikethrough on an editable field fights the field editor).
+        tf.textColor = checked ? NSColor.labelColor.withAlphaComponent(0.45) : .labelColor
+
+        // Become first responder when SwiftUI marks this row focused —
+        // and drop the cursor at the END (so a backspace-merge lands the
+        // caret at the previous line's end).
+        if isFocused {
+            DispatchQueue.main.async {
+                guard let window = tf.window, window.firstResponder !== tf.currentEditor() else { return }
+                window.makeFirstResponder(tf)
+                if let editor = tf.currentEditor() {
+                    let end = (tf.stringValue as NSString).length
+                    editor.selectedRange = NSRange(location: end, length: 0)
+                }
+            }
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: ChecklistItemField
+        init(_ parent: ChecklistItemField) { self.parent = parent }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let tf = obj.object as? NSTextField else { return }
+            parent.text = tf.stringValue
+        }
+        func controlTextDidBeginEditing(_ obj: Notification) { parent.onFocusChange(true) }
+        func controlTextDidEndEditing(_ obj: Notification) { parent.onFocusChange(false) }
+
+        func control(_ control: NSControl, textView: NSTextView,
+                     doCommandBy selector: Selector) -> Bool {
+            if selector == #selector(NSResponder.insertNewline(_:)) {
+                parent.onSubmit()
+                return true
+            }
+            if selector == #selector(NSResponder.deleteBackward(_:)), textView.string.isEmpty {
+                parent.onDeleteEmpty()
+                return true
+            }
+            return false
+        }
+    }
+}
+
+#endif // os(macOS)
 
 // MARK: - Line model (parse / serialize markdown checkbox syntax)
 
