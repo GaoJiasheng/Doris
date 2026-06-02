@@ -71,6 +71,18 @@ public struct ChecklistEditorView: View {
                                  : Color.primary)
                 .focused($focusedLine, equals: idx)
                 .onSubmit { insertLine(after: idx) }
+                // Backspace on an empty item deletes it and moves the
+                // cursor up to the end of the previous line — the usual
+                // bullet-list editing feel. When the field has text we
+                // return .ignored so the normal char-delete happens.
+                .onKeyPress(.delete) {
+                    let arr = lines
+                    guard idx > 0, idx < arr.count, arr[idx].text.isEmpty else {
+                        return .ignored
+                    }
+                    backspaceMergeIntoPrevious(at: idx)
+                    return .handled
+                }
 
             Spacer(minLength: 0)
 
@@ -152,6 +164,19 @@ public struct ChecklistEditorView: View {
         if arr.isEmpty { arr.append(Line(checked: false, text: "")) }
         writeBack(arr)
         syncNoteDone(from: arr)
+    }
+
+    /// Backspace on an empty row: drop the row and land the cursor at
+    /// the end of the previous one (caller guarantees idx > 0). The
+    /// previous row keeps its text; @FocusState moving to idx-1 places
+    /// the insertion point there.
+    private func backspaceMergeIntoPrevious(at idx: Int) {
+        var arr = lines
+        guard idx > 0, idx < arr.count else { return }
+        arr.remove(at: idx)
+        writeBack(arr)
+        syncNoteDone(from: arr)
+        DispatchQueue.main.async { focusedLine = idx - 1 }
     }
 
     private func writeBack(_ arr: [Line]) {
