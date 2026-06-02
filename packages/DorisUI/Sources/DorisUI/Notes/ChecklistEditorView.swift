@@ -19,6 +19,11 @@ public struct ChecklistEditorView: View {
     @Bindable public var note: Note
     @ObservedObject private var lang = LanguageSettings.shared
 
+    /// Index of the checklist row whose text field should hold the
+    /// keyboard. Set right after inserting a row so the cursor lands in
+    /// the freshly-created item (Enter / "Add item" both route here).
+    @FocusState private var focusedLine: Int?
+
     public init(note: Note) {
         self.note = note
     }
@@ -52,13 +57,19 @@ public struct ChecklistEditorView: View {
             .buttonStyle(.plain)
             .help(checkboxHelp(for: line.checked))
 
-            TextField("", text: textBinding(at: idx))
+            // `axis: .vertical` lets a long item wrap onto multiple
+            // lines instead of scrolling horizontally inside a fixed
+            // single-line field. `.firstTextBaseline` on the HStack
+            // keeps the checkbox aligned to the first wrapped line.
+            TextField("", text: textBinding(at: idx), axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.body)
+                .lineLimit(1...8)
                 .strikethrough(line.checked == true, color: .secondary)
                 .foregroundStyle(line.checked == true
                                  ? Color.primary.opacity(0.45)
                                  : Color.primary)
+                .focused($focusedLine, equals: idx)
                 .onSubmit { insertLine(after: idx) }
 
             Spacer(minLength: 0)
@@ -117,6 +128,7 @@ public struct ChecklistEditorView: View {
         case true?:  arr[idx].checked = false   // checked → unchecked
         }
         writeBack(arr)
+        syncNoteDone(from: arr)
     }
 
     private func insertLine(after idx: Int) {
@@ -124,6 +136,11 @@ public struct ChecklistEditorView: View {
         let insertAt = min(max(idx + 1, 0), arr.count)
         arr.insert(Line(checked: false, text: ""), at: insertAt)
         writeBack(arr)
+        syncNoteDone(from: arr)
+        // Land the cursor in the row we just created. Deferred to the
+        // next runloop tick so the freshly-rendered TextField exists
+        // before we ask for focus.
+        DispatchQueue.main.async { focusedLine = insertAt }
     }
 
     private func removeLine(at idx: Int) {
@@ -134,11 +151,34 @@ public struct ChecklistEditorView: View {
         // makes the empty state visually awkward (just a Plus button).
         if arr.isEmpty { arr.append(Line(checked: false, text: "")) }
         writeBack(arr)
+        syncNoteDone(from: arr)
     }
 
     private func writeBack(_ arr: [Line]) {
         note.bodyMarkdown = Line.serialize(arr)
         note.touch()
+    }
+
+    /// One-shot completion trigger — an *action*, not a binding. Only
+    /// called from structural checklist edits (toggle / add / remove),
+    /// never from plain text typing, so a manually-set done state is
+    /// never silently overridden mid-keystroke. Two rules:
+    ///   • adding / having an open task un-completes a done note
+    ///   • ticking the last open task completes the note
+    /// Notes with no checkbox tasks (only loose lines) are left alone.
+    private func syncNoteDone(from arr: [Line]) {
+        let tasks = arr.filter { $0.checked != nil }
+        guard !tasks.isEmpty else { return }
+        let allDone = tasks.allSatisfy { $0.checked == true }
+        if allDone && !note.done {
+            note.done = true
+            note.completedAt = Date()
+            note.touch()
+        } else if !allDone && note.done {
+            note.done = false
+            note.completedAt = nil
+            note.touch()
+        }
     }
 
     // MARK: - Checkbox visuals
