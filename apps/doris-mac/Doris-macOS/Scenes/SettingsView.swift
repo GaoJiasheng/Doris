@@ -9,6 +9,7 @@ import KeyboardShortcuts
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @ObservedObject private var theme = ThemeSettings.shared
+    @ObservedObject private var avatarSettings = AvatarSettings.shared
     @Query private var settingsQuery: [UserSettings]
 
     private var settings: UserSettings {
@@ -51,6 +52,12 @@ struct SettingsView: View {
             }
             Toggle(L("Show hex color preview", "显示十六进制颜色预览"), isOn: showHexColorPreview)
             Toggle(L("Auto-backup daily", "每日自动备份"), isOn: autoBackupEnabled)
+            // Default visibility of the cyber-girl avatar pane (main
+            // window sidebar + menu-bar dropdown). Can also be toggled
+            // live from the dropdown header / sidebar collapse button.
+            Toggle(L("Show avatar", "显示小姑娘"),
+                   isOn: Binding(get: { avatarSettings.avatarVisible },
+                                 set: { avatarSettings.avatarVisible = $0 }))
             // Version row — reads CFBundleShortVersionString +
             // CFBundleVersion via Bundle.main so it tracks
             // project.yml without manual touch-ups.

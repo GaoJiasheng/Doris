@@ -9,6 +9,7 @@ struct AnchorView: View {
     @ObservedObject var model: AnchorModel
     @ObservedObject private var lang = LanguageSettings.shared
     @ObservedObject private var theme = ThemeSettings.shared
+    @ObservedObject private var avatarSettings = AvatarSettings.shared
     /// Lifted up from `AnchorNotesView` so the parent can hide the
     /// brand row + tab bar when editing is active — the editor gets
     /// the full right-pane height for itself.
@@ -369,34 +370,40 @@ struct AnchorView: View {
             // panel's outer border draws the chrome). selfChrome=false to
             // skip its built-in rounded clip so our UnevenRoundedRectangle
             // is the only clip.
-            AvatarHero(
-                mood: heroMood(for: model.avatarState),
-                showWeather: true,
-                selfChrome: false
-            )
-            .frame(width: 200)
-            .clipShape(
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 22,
-                    bottomLeadingRadius: 22,
-                    bottomTrailingRadius: 0,
-                    topTrailingRadius: 0,
-                    style: .continuous
+            // Avatar pane is collapsible — hidden when the user has
+            // turned the cyber-girl off (toggle in the header below /
+            // Settings). When hidden the content pane fills the panel.
+            if avatarSettings.avatarVisible {
+                AvatarHero(
+                    mood: heroMood(for: model.avatarState),
+                    showWeather: true,
+                    selfChrome: false
                 )
-            )
+                .frame(width: 200)
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 22,
+                        bottomLeadingRadius: 22,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 0,
+                        style: .continuous
+                    )
+                )
+                .transition(.move(edge: .leading).combined(with: .opacity))
 
-            // Vertical divider with a neon accent
-            Rectangle()
-                .fill(LinearGradient(
-                    colors: [
-                        Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.0),
-                        Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.6),
-                        Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.6),
-                        Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.0)
-                    ],
-                    startPoint: .top, endPoint: .bottom
-                ))
-                .frame(width: 1)
+                // Vertical divider with a neon accent
+                Rectangle()
+                    .fill(LinearGradient(
+                        colors: [
+                            Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.0),
+                            Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.6),
+                            Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.6),
+                            Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.0)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                    .frame(width: 1)
+            }
 
             // RIGHT: header + tabs + content. When the user is editing
             // a note, hide the brand row + tab bar + divider so the
@@ -435,6 +442,24 @@ struct AnchorView: View {
                                   dark: CyberPalette.neonCyan.opacity(0.7))
                         )
                     Spacer()
+                    // Collapse / restore the cyber-girl pane. Persisted
+                    // via AvatarSettings so it sticks across launches +
+                    // mirrors the Settings toggle.
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            avatarSettings.avatarVisible.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "sidebar.left")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(avatarSettings.avatarVisible
+                                ? AnyShapeStyle(CyberPalette.neonCyan.opacity(0.85))
+                                : AnyShapeStyle(Color.primary.opacity(0.45)))
+                    }
+                    .buttonStyle(.plain)
+                    .help(avatarSettings.avatarVisible
+                          ? L("Hide avatar", "隐藏小姑娘")
+                          : L("Show avatar", "显示小姑娘"))
                     // Theme toggle moved to Settings; the panel auto-
                     // dismisses on outside clicks, so no X button either.
                 }

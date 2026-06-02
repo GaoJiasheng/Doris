@@ -97,6 +97,7 @@
 		F351A5EDD34E87DEF0EFC0A1 /* AnchorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED774E489BE2AD3814737812 /* AnchorState.swift */; };
 		F44F0262B381BA936FD37F16 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0457AEB878C7FB706DFC7635 /* SettingsScreen.swift */; };
 		F548C0123D3DCE76BD293315 /* NoteDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7263649E21CCBD2C930F4317 /* NoteDetailScreen.swift */; };
+		F87B15508619139626BAB672 /* AvatarSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */; };
 		FCE5B30D06A345D7F7F149AD /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC6D9364F0DDD9193D0C20C8 /* MainWindowView.swift */; };
 		FCF68FD5D0FF4E8842C08219 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E06A5801ADADFF5C8CC26B70 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -196,6 +197,7 @@
 		BB71668C471E5FF4D4AF7C06 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BC455D587B89C7FF473794D7 /* Doris-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Doris-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEA9B7F3E7B56E2FE2927C83 /* AuthCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthCommand.swift; sourceTree = "<group>"; };
+		CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarSettings.swift; sourceTree = "<group>"; };
 		CC6D9364F0DDD9193D0C20C8 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		CE1DB98BBE156A6C003C5363 /* doris-avatar.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "doris-avatar.png"; sourceTree = "<group>"; };
 		D0ECD70CD58C18BA0CEC81EB /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -561,6 +563,7 @@
 				ED774E489BE2AD3814737812 /* AnchorState.swift */,
 				FA324399D378502240BA8470 /* AnchorView.swift */,
 				6A8D4FCB090245F62C745832 /* AppearanceSettings.swift */,
+				CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */,
 				0239401BE0698A4354F48B33 /* MenuBarAvatarWindow.swift */,
 				AD66496AECE70963437B750C /* SettingsWindow.swift */,
 				9124431BB7A8127A5AE105A1 /* StatusBarItem.swift */,
@@ -1093,6 +1096,7 @@
 				47ED5B5F98BD3CE3BB6745D4 /* AppDelegate.swift in Sources */,
 				25036E4CBA4693D9116F0370 /* AppRouter.swift in Sources */,
 				294983F21EEEC7DFB7A5E538 /* AppearanceSettings.swift in Sources */,
+				F87B15508619139626BAB672 /* AvatarSettings.swift in Sources */,
 				762208DDC9AAE1996EF6F987 /* ClickActionRouter.swift in Sources */,
 				80D2E4BE6C0981FAD23590B1 /* DorisApp.swift in Sources */,
 				6785932C8C20FE6106D45907 /* DorisCommands.swift in Sources */,
