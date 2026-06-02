@@ -99,6 +99,8 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
             // menu requests and re-float any notes still stuck from a
             // previous session.
             StickyWindowManager.shared.start()
+            // Desktop dashboard panel — re-show if left visible.
+            DesktopPanelController.shared.start()
 
             // Avatar's right-click menu calls into these hooks. Sync
             // completion fires a celebration so the cyber girl reacts.

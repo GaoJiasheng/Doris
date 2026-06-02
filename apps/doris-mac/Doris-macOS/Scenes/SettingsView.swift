@@ -10,6 +10,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @ObservedObject private var theme = ThemeSettings.shared
     @ObservedObject private var avatarSettings = AvatarSettings.shared
+    @ObservedObject private var desktopPanel = DesktopPanelSettings.shared
     @Query private var settingsQuery: [UserSettings]
 
     private var settings: UserSettings {
@@ -58,6 +59,13 @@ struct SettingsView: View {
             Toggle(L("Show avatar", "显示小姑娘"),
                    isOn: Binding(get: { avatarSettings.avatarVisible },
                                  set: { avatarSettings.avatarVisible = $0 }))
+            // Always-on-desktop dashboard panel (pinned + today). The
+            // binding drives the window controller so flipping it here
+            // actually shows / hides the floating panel.
+            Toggle(L("Desktop panel", "桌面面板"),
+                   isOn: Binding(get: { desktopPanel.visible },
+                                 set: { $0 ? DesktopPanelController.shared.show()
+                                           : DesktopPanelController.shared.hide() }))
             // Version row — reads CFBundleShortVersionString +
             // CFBundleVersion via Bundle.main so it tracks
             // project.yml without manual touch-ups.
