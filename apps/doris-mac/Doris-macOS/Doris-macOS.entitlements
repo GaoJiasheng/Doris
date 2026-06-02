@@ -12,6 +12,16 @@
     <true/>
     <key>com.apple.security.files.bookmarks.app-scope</key>
     <true/>
+    <!-- Integration registration writes the user's real ~/.claude
+         (Claude Code Stop hook) and ~/.codex (Codex notify dispatcher).
+         A sandboxed app's home is its container, so without these the
+         "Register" buttons silently wrote into the jail. Allowed for
+         Developer-ID distribution (App Store would scrutinize these). -->
+    <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+    <array>
+        <string>/.codex/</string>
+        <string>/.claude/</string>
+    </array>
     <key>com.apple.security.network.client</key>
     <true/>
     <key>com.apple.security.device.audio-input</key>

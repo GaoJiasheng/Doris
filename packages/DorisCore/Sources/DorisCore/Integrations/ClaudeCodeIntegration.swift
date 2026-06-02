@@ -45,7 +45,8 @@ public struct ClaudeCodeIntegration: IntegrationProvider {
     static let marker = "# doris-integration"
 
     private var settingsURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
+        // Real home, not the sandbox container — see integrationsRealHome().
+        integrationsRealHome()
             .appendingPathComponent(".claude", isDirectory: true)
             .appendingPathComponent("settings.json")
     }

@@ -7,7 +7,24 @@
 #if os(macOS)
 
 import Foundation
+import Darwin
 import DorisIPC
+
+/// The user's **real** home directory, bypassing App Sandbox container
+/// redirection. Inside a sandboxed app `homeDirectoryForCurrentUser` /
+/// `NSHomeDirectory()` return the container (`~/Library/Containers/<id>/
+/// Data`), so writing `~/.claude` / `~/.codex` there lands in the jail
+/// and never reaches the files Claude Code / Codex actually read.
+/// `getpwuid` reports the true home (`/Users/<you>`) even under the
+/// sandbox; access is granted by the `temporary-exception.files.
+/// home-relative-path` entitlements for `/.claude/` and `/.codex/`.
+func integrationsRealHome() -> URL {
+    if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir {
+        let path = String(cString: dir)
+        if !path.isEmpty { return URL(fileURLWithPath: path, isDirectory: true) }
+    }
+    return FileManager.default.homeDirectoryForCurrentUser
+}
 
 /// One pluggable "send your task-done notifications through Doris"
 /// integration with an external AI app (Claude Code, Codex, future

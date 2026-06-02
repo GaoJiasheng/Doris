@@ -78,7 +78,8 @@ public struct CodexIntegration: IntegrationProvider {
             return URL(fileURLWithPath: (home as NSString).expandingTildeInPath,
                        isDirectory: true)
         }
-        return FileManager.default.homeDirectoryForCurrentUser
+        // Real home, not the sandbox container — see integrationsRealHome().
+        return integrationsRealHome()
             .appendingPathComponent(".codex", isDirectory: true)
     }
 
