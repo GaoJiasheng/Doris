@@ -1,5 +1,5 @@
 % Doris CLI Manual
-% Version 1.0.0
+% Version 1.1.0
 % Generated from `docs/cli-manual.md`
 
 # Doris CLI 使用手册
@@ -421,10 +421,11 @@ the file timestamp: maybe a different tool also rewrote it.
 
 | Version | Notable changes |
 |---------|-----------------|
+| 1.1.0   | macOS desktop surfaces (floating sticky notes + always-on dashboard panel) and iOS home/lock-screen widgets with tap-to-complete; Today gains a 长期/Long-term bucket + drag-to-reorder pinned cards; checklist editor UX (wrap, Enter-to-new-item, Backspace-merge); collapsible / width-responsive menu-bar assistant; integrations now write the real `~/.codex` + `~/.claude` (sandbox-home fix). CLI surface unchanged from 1.0.0. |
 | 1.0.0   | Stable release. Auto-register flows for Claude Code + Codex integrations (Codex wires its native `notify` hook in `~/.codex/config.toml` to a Doris dispatcher — works for the Codex desktop app and CLI alike; an earlier shell-rc-wrapper approach only worked for the terminal CLI and was replaced). ChatGPT integration removed (no callback surface). Mac DMG ships with Developer ID signing + Production CloudKit env; iOS ships via TestFlight against the same Production iCloud container. Day-collapsible event lists across every event surface. CloudKit hard-delete race fix (soft-delete tombstone pattern via SyncTimer.purgeTombstones). |
 | 0.2.0   | Notification banner UX overhaul, halved card height, smart click-through, in-app integrations registry, localization pass |
 | 0.1.0   | Initial release: notify / note add / events dismiss-done / sync / auth / install |
 
 ---
 
-*Last updated: built into release 1.0.0.*
+*Last updated: built into release 1.1.0.*
