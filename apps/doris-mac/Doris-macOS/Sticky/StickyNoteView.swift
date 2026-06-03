@@ -60,16 +60,24 @@ struct StickyNoteView: View {
         .padding(10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(CyberPalette.backdrop.opacity(0.92))
-                )
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(CyberPalette.backdrop.opacity(0.92))
+                // Same pink/cyan corner glow signature as the desktop
+                // panel + iOS widget, so the desktop surfaces feel like
+                // one family.
+                RadialGradient(colors: [CyberPalette.neonCyan.opacity(0.14), .clear],
+                               center: .topTrailing, startRadius: 0, endRadius: 150)
+                RadialGradient(colors: [CyberPalette.neonPink.opacity(0.10), .clear],
+                               center: .bottomLeading, startRadius: 0, endRadius: 130)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(CyberPalette.neonCyan.opacity(0.25), lineWidth: 0.8)
+                .strokeBorder(CyberPalette.panelStroke, lineWidth: 0.9)
         )
         .preferredColorScheme(theme.mode.colorScheme)
     }
