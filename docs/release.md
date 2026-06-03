@@ -4,7 +4,7 @@
 
 | Target | Channel | Pipeline |
 |---|---|---|
-| **Mac** | Direct distribution DMG (Developer ID) | `scripts/release.sh` (aspirational) **OR** manual codesign + hdiutil (what 1.0.0 actually shipped) |
+| **Mac** | Direct distribution, Developer ID | `scripts/release-mac-zip.sh` — notarized + stapled `.zip` (what 1.1.0 ships). `scripts/release.sh` is the older notarized-DMG path (aspirational; see below) |
 | **iOS** | TestFlight → App Store | `scripts/release-ios.sh` |
 
 The Mac story has a wrinkle worth reading before your first release —
@@ -263,9 +263,27 @@ codesign -dvv "$APP"   # expect: Authority=Developer ID Application... + Timesta
 # … see commits in git history for the full create-dmg invocation
 ```
 
-The full path is currently inlined in chat history rather than scripted
-— if you find yourself running it more than 2-3 times, lift it into
-`scripts/release-mac-unnotarized.sh`.
+As of 1.1.0 this path is scripted end-to-end and **notarized**:
+
+```bash
+scripts/release-mac-zip.sh
+```
+
+It archives, copies the app out, swaps in the Direct provisioning
+profile (`dec15872-…`), writes the production entitlements (sandbox +
+iCloud Production + APS production + the `/.codex/` `/.claude/`
+temporary-exception), re-signs the embedded `doris` CLI then the app
+with Developer ID + hardened runtime, submits to the `doris-notary`
+keychain profile and **waits**, then staples and packages a
+`.zip` (via `ditto --keepParent`). Output:
+`build/release-<version>/Doris-<version>.zip` — a notarized + stapled
+zip that opens with a plain double-click (no right-click → Open dance).
+
+> Gotcha baked into the script: never pipe `codesign -dvv … | grep -q`
+> under `set -o pipefail`. `grep -q` exits on first match and closes the
+> pipe, codesign dies with SIGPIPE, and the pipeline reports failure even
+> though the pattern matched. Capture codesign's output to a variable
+> first, then grep the variable.
 
 ### Output
 
