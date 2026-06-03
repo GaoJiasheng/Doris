@@ -56,7 +56,7 @@ struct SettingsView: View {
             // Default visibility of the cyber-girl avatar pane (main
             // window sidebar + menu-bar dropdown). Can also be toggled
             // live from the dropdown header / sidebar collapse button.
-            Toggle(L("Show avatar", "显示小姑娘"),
+            Toggle(L("Show avatar", "显示卡通助手"),
                    isOn: Binding(get: { avatarSettings.avatarVisible },
                                  set: { avatarSettings.avatarVisible = $0 }))
             // Always-on-desktop dashboard panel (pinned + today). The

@@ -549,7 +549,7 @@ private struct AppearanceSettingsView: View {
 
             Toggle(isOn: Binding(get: { avatarSettings.avatarVisible },
                                  set: { avatarSettings.avatarVisible = $0 })) {
-                Text(L("Show avatar", "显示小姑娘")).font(.subheadline)
+                Text(L("Show avatar", "显示卡通助手")).font(.subheadline)
             }
             .toggleStyle(.switch)
 
