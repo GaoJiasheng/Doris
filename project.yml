@@ -284,14 +284,23 @@ targets:
         CODE_SIGN_ENTITLEMENTS: apps/doris-ios/Doris-iOS/Doris-iOS.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
         MARKETING_VERSION: "1.1.0"
-        CURRENT_PROJECT_VERSION: "11"
+        CURRENT_PROJECT_VERSION: "12"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - package: DorisCore
         product: DorisCore
       - package: DorisUI
         product: DorisUI
+      # Embed the widget extension into the app bundle (PlugIns/) so the
+      # home/lock-screen widgets show up in the widget gallery.
+      - target: DorisWidget-iOS
 
+  # NOTE: extension targets must be listed under the app target's
+  # `dependencies` as `- target: …` for XcodeGen to embed them into the
+  # app's PlugIns/. Doris-iOS now embeds DorisWidget-iOS (above) so the
+  # home/lock-screen widgets actually ship. DorisShareExtension-iOS and
+  # DorisIntents-iOS are still NOT embedded (pre-existing — wire them in
+  # the same way if/when those features are wanted).
   DorisShareExtension-iOS:
     type: app-extension
     platform: iOS

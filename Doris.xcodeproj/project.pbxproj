@@ -27,6 +27,7 @@
 		2940649DA54FBE297BAA1B5A /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4739E02B1BDFA6BEFF3F866E /* ShareViewController.swift */; };
 		294983F21EEEC7DFB7A5E538 /* AppearanceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8D4FCB090245F62C745832 /* AppearanceSettings.swift */; };
 		2B1E7665B38A5332C54C6414 /* Doris.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B5396492AF76E484A7B09C /* Doris.swift */; };
+		300EC0F3B6FB60CF9D44D400 /* DorisWidget-iOS.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 25C8267A2810EE34195F1355 /* DorisWidget-iOS.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		35112A479B47FFB163F1F9E9 /* DorisMacChrome in Frameworks */ = {isa = PBXBuildFile; productRef = D0FDF7CCD62DD6C044AF0CA7 /* DorisMacChrome */; };
 		3D8EAB7F8B417ED258C0765B /* AnchorController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F917FF55F7AE753CE04C0714 /* AnchorController.swift */; };
 		434DB57A49A8B0D99FDC2FC4 /* SidebarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165BF99C90BB28EB26A5D3D1 /* SidebarController.swift */; };
@@ -110,6 +111,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		0CB1C647699F8EA9EF20AE1B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 710F6DDF3A3AC8E25C1AAB9C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6D98964E81A5DE833DBB77C4;
+			remoteInfo = "DorisWidget-iOS";
+		};
 		D295586964E40C6FCF03A98C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 710F6DDF3A3AC8E25C1AAB9C /* Project object */;
@@ -120,6 +128,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		8F8EDD2DD124BD025F4BFBCC /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				300EC0F3B6FB60CF9D44D400 /* DorisWidget-iOS.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F36D91201313BB221653F206 /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -742,10 +761,12 @@
 				07BCB0D33BC576A33CED326A /* Sources */,
 				01E873DA253C1918A0532E56 /* Resources */,
 				829E34DD5D2215201F867D4E /* Frameworks */,
+				8F8EDD2DD124BD025F4BFBCC /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				465346522A2C7FF8B179B45C /* PBXTargetDependency */,
 			);
 			name = "Doris-iOS";
 			packageProductDependencies = (
@@ -1162,6 +1183,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		465346522A2C7FF8B179B45C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6D98964E81A5DE833DBB77C4 /* DorisWidget-iOS */;
+			targetProxy = 0CB1C647699F8EA9EF20AE1B /* PBXContainerItemProxy */;
+		};
 		D87B56846117A75713700E6C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 81C1F9D600A935CC3AEC7970 /* doris-cli */;
@@ -1411,7 +1437,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1431,7 +1457,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
