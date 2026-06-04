@@ -1200,12 +1200,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/DorisWidget-iOS/DorisWidget-iOS.entitlements";
+				CURRENT_PROJECT_VERSION = 12;
 				INFOPLIST_FILE = "apps/doris-ios/DorisWidget-iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios.widget;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1344,12 +1346,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/DorisWidget-iOS/DorisWidget-iOS.entitlements";
+				CURRENT_PROJECT_VERSION = 12;
 				INFOPLIST_FILE = "apps/doris-ios/DorisWidget-iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios.widget;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";

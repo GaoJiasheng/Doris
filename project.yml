@@ -335,9 +335,20 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gavin.doris.ios.widget
         CODE_SIGN_ENTITLEMENTS: apps/doris-ios/DorisWidget-iOS/DorisWidget-iOS.entitlements
+        # Embedded extensions must carry the SAME version as the host app
+        # or App Store Connect rejects the upload. Keep in lock-step with
+        # the Doris-iOS target's MARKETING_VERSION / CURRENT_PROJECT_VERSION.
+        MARKETING_VERSION: "1.1.0"
+        CURRENT_PROJECT_VERSION: "12"
     info:
       path: apps/doris-ios/DorisWidget-iOS/Info.plist
       properties:
+        # CFBundleDisplayName is required by ASC for embedded extensions
+        # (error 90360). Version keys track the build settings so the
+        # appex version matches the host app.
+        CFBundleDisplayName: Doris
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     dependencies:
