@@ -46,7 +46,9 @@ struct NotesScreen: View {
     /// IME (which on Chinese keyboards is huge but on English defaults
     /// to "return", confusing the affordance).
     @FocusState private var searchFocused: Bool
-    private let tickTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    // Drives the "synced X ago" label. 60s cadence → minute granularity,
+    // not a per-second stopwatch.
+    private let tickTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     private var filteredNotes: [Note] {
         guard !searchText.isEmpty else { return sortedNotes }
@@ -479,6 +481,11 @@ struct NotesScreen: View {
         guard sync.cloudKitEnabled else { return L("Local only", "仅本地") }
         guard let last = sync.lastSyncedAt else { return L("Never synced", "尚未同步") }
         _ = nowTick
+        // Minute granularity — no seconds stopwatch. Under a minute reads
+        // "just now"; past that, RelativeDateTimeFormatter shows min/hr/day.
+        if Date().timeIntervalSince(last) < 60 {
+            return L("Synced · just now", "已同步 · 刚刚")
+        }
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .short
         return L("Synced ", "已同步 ") + f.localizedString(for: last, relativeTo: Date())
@@ -663,18 +670,14 @@ private struct NoteRow: View {
                             .foregroundStyle(.primary.opacity(0.55))
                             .lineLimit(2)
                     }
-                    HStack(spacing: 6) {
-                        Text(note.updatedAt, style: .relative)
-                            .font(.caption2)
-                            .foregroundStyle(.primary.opacity(0.4))
-                        // When completed, replace the due-date chip with
-                        // a "DONE" pill so completion is the dominant
-                        // signal on the row's meta line.
-                        if isCompleted {
-                            donePill
-                        } else if let due = note.dueDate {
-                            dueDateChip(due)
-                        }
+                    // Cleaner rows: no running relative timer here — the
+                    // creation time lives in the detail page. Only show the
+                    // DONE pill (completed) or the due-date chip, and only
+                    // when there's actually one to show.
+                    if isCompleted {
+                        HStack(spacing: 6) { donePill }
+                    } else if let due = note.dueDate {
+                        HStack(spacing: 6) { dueDateChip(due) }
                     }
                 }
                 Spacer(minLength: 0)

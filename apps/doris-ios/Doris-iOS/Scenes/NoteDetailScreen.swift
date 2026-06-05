@@ -237,7 +237,9 @@ struct NoteDetailScreen: View {
                 Spacer()
             }
 
-            Text(note.updatedAt, style: .relative)
+            // Creation time, to the minute (no live ticking) — the list
+            // rows stay clean; the timestamp lives here.
+            Text(L("Created ", "创建于 ") + note.createdAt.formatted(date: .abbreviated, time: .shortened))
                 .font(.caption2)
                 .foregroundStyle(.primary.opacity(0.45))
                 .monospacedDigit()
