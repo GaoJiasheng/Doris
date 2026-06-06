@@ -123,6 +123,8 @@ private struct AppearanceSettingsView: View {
     @ObservedObject var theme = ThemeSettings.shared
     @ObservedObject var sync = SyncSettings.shared
     @ObservedObject var integrations = IntegrationsRegistry.shared
+    @ObservedObject var avatarSettings = AvatarSettings.shared
+    @ObservedObject var desktopPanel = DesktopPanelSettings.shared
     /// Toggled by the "Install CLI…" button on a .missingCLI integration
     /// row — presents the InstallCLIWizardView as a sheet so the user
     /// can finish the wizard without leaving Settings. On dismiss we
@@ -132,18 +134,29 @@ private struct AppearanceSettingsView: View {
 
     var body: some View {
         ScrollView {
+            // Order: theme / language / appearance are the everyday
+            // tweaks at the top. Integrations / Voice / Sync sit at
+            // the bottom as the "set once, forget" infrastructure
+            // tier — burying them keeps the scroll anchored on what
+            // you actually touch each day.
             VStack(alignment: .leading, spacing: 14) {
-                syncSection
-                Divider().overlay(Color.primary.opacity(0.08))
-                integrationsSection
-                Divider().overlay(Color.primary.opacity(0.08))
                 themeSection
                 Divider().overlay(Color.primary.opacity(0.08))
                 languageSection
                 Divider().overlay(Color.primary.opacity(0.08))
+                appearanceSection
+                Divider().overlay(Color.primary.opacity(0.08))
+                windowSection
+                Divider().overlay(Color.primary.opacity(0.08))
+                integrationsSection
+                Divider().overlay(Color.primary.opacity(0.08))
                 voiceSection
                 Divider().overlay(Color.primary.opacity(0.08))
-                appearanceSection
+                syncSection
+                // Anchored at the very bottom of the scroll: the build
+                // identity. Tracks project.yml via Bundle.main so it
+                // never goes stale.
+                versionFooter
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 6)
@@ -226,8 +239,8 @@ private struct AppearanceSettingsView: View {
                 Spacer()
             }
             Text(L(
-                "Route task-completion notifications from Claude Code / Codex / ChatGPT through Doris instead of the system Notification Center.",
-                "把 Claude Code / Codex / ChatGPT 等 AI 应用的「任务完成」通知改走 Doris，绕过系统通知中心。"
+                "Route task-completion notifications from Claude Code and Codex through Doris instead of the system Notification Center.",
+                "把 Claude Code 和 Codex 的「任务完成」通知改走 Doris，绕过系统通知中心。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))
@@ -296,11 +309,8 @@ private struct AppearanceSettingsView: View {
             return L("Auto-write a Stop hook into ~/.claude/settings.json.",
                      "自动写入 Stop 钩子到 ~/.claude/settings.json。")
         case "codex":
-            return L("No official hooks yet — view tutorial to set up a shell wrapper.",
-                     "暂无官方钩子,查看教程用 shell wrapper 接入。")
-        case "chatgpt":
-            return L("Use a macOS Shortcut to call doris://notify when a reply arrives.",
-                     "通过 macOS 快捷指令调用 doris://notify。")
+            return L("Auto-wire Codex's notify hook in ~/.codex/config.toml.",
+                     "自动接入 ~/.codex/config.toml 的 notify 钩子。")
         default:
             return provider.summary
         }
@@ -501,7 +511,64 @@ private struct AppearanceSettingsView: View {
         .padding(.bottom, 2)
     }
 
+    // MARK: - Version footer
+
+    /// Compact build-identity strip at the bottom of the settings
+    /// scroll. Reads CFBundleShortVersionString + CFBundleVersion via
+    /// `Bundle.main` so it stays in lockstep with `project.yml` —
+    /// avoids the "iOS Settings still says 0.7.0" stale-string bug.
+    private var versionFooter: some View {
+        HStack {
+            Spacer()
+            Text("Doris " + Self.appVersionString)
+                .font(.caption2.monospaced())
+                .foregroundStyle(.primary.opacity(0.35))
+                .textSelection(.enabled)
+            Spacer()
+        }
+        .padding(.top, 6)
+        .padding(.bottom, 2)
+    }
+
+    private static var appVersionString: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let short = (info["CFBundleShortVersionString"] as? String) ?? "?"
+        let build = (info["CFBundleVersion"] as? String) ?? "?"
+        return "\(short) (\(build))"
+    }
+
     // MARK: - Appearance
+
+    // MARK: - Window (avatar + desktop panel)
+
+    private var windowSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L("Window", "窗口"))
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            Toggle(isOn: Binding(get: { avatarSettings.avatarVisible },
+                                 set: { avatarSettings.avatarVisible = $0 })) {
+                Text(L("Show avatar", "显示卡通助手")).font(.subheadline)
+            }
+            .toggleStyle(.switch)
+
+            Toggle(isOn: Binding(get: { desktopPanel.visible },
+                                 set: { $0 ? DesktopPanelController.shared.show()
+                                           : DesktopPanelController.shared.hide() })) {
+                Text(L("Desktop panel", "桌面面板")).font(.subheadline)
+            }
+            .toggleStyle(.switch)
+
+            Text(L(
+                "The desktop panel floats a pinned + today summary on your desktop. To stick a single note, right-click it → Stick to desktop.",
+                "桌面面板会在桌面上浮出「置顶 + 今日」的汇总。把单条笔记贴到桌面:右键那条笔记 →「贴到桌面」。"
+            ))
+            .font(.caption)
+            .foregroundStyle(.primary.opacity(0.6))
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
     private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: 8) {

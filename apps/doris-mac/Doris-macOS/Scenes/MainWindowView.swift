@@ -18,6 +18,11 @@ struct MainWindowView: View {
     /// SwiftUI re-evaluation. Without this binding the window kept
     /// whatever colorScheme was captured at first mount.
     @ObservedObject private var theme = ThemeSettings.shared
+    /// Drives whether the avatar sidebar shows. Two-way synced with
+    /// `columnVisibility` below: collapsing the sidebar (system toggle)
+    /// persists the preference, and flipping it from Settings collapses
+    /// / restores the sidebar here.
+    @ObservedObject private var avatarSettings = AvatarSettings.shared
     @State private var tab: Tab = .today
     /// Lifted up from `MainNotesList` so the detail header (DORIS
     /// brand + tab buttons) can hide while editing — the editor gets
@@ -55,6 +60,24 @@ struct MainWindowView: View {
         }
         .frame(minWidth: 760, minHeight: 520)
         .preferredColorScheme(theme.mode.colorScheme)
+        // Restore the saved avatar-sidebar preference on open.
+        .onAppear {
+            columnVisibility = avatarSettings.avatarVisible ? .all : .detailOnly
+        }
+        // Settings toggle → collapse / restore the sidebar here.
+        .onChange(of: avatarSettings.avatarVisible) { _, visible in
+            withAnimation(.smooth(duration: 0.2)) {
+                columnVisibility = visible ? .all : .detailOnly
+            }
+        }
+        // User dragged/clicked the system sidebar toggle → remember it.
+        // Guarded so the two onChange handlers don't ping-pong.
+        .onChange(of: columnVisibility) { _, vis in
+            let nowVisible = (vis != .detailOnly)
+            if nowVisible != avatarSettings.avatarVisible {
+                avatarSettings.avatarVisible = nowVisible
+            }
+        }
         // Cmd-+ / Cmd-− / Cmd-0 are intercepted by
         // `MainWindowController.installZoomKeyMonitor` (NSEvent
         // local monitor). The keypress mutates `ZoomSettings.shared.scale`;
@@ -376,8 +399,13 @@ private struct EventRow: View {
                             .foregroundStyle(.primary.opacity(0.55))
                         Text("·")
                             .foregroundStyle(.primary.opacity(0.4))
-                        Text(message.receivedAt, style: .relative)
-                            .font(.caption2)
+                        // Absolute timestamp; see EventsRowView for
+                        // rationale.
+                        Text(message.receivedAt,
+                             format: .dateTime.month(.twoDigits).day(.twoDigits)
+                                              .hour(.twoDigits(amPM: .omitted))
+                                              .minute(.twoDigits))
+                            .font(.caption2.monospacedDigit())
                             .foregroundStyle(.primary.opacity(0.45))
                     }
                 }
@@ -620,8 +648,23 @@ private struct MainNotesList: View {
     }
 
     private func emptyTrash() {
+        // `n.deleted` is already the soft-delete flag — by the time a
+        // note is in Trash it's already deleted=true. To "empty" the
+        // trash we want a hard delete via CloudKit, but `ctx.delete`
+        // races against other devices' mirror (same root cause as the
+        // Settings Recently Deleted bug: notes resurrect when iOS
+        // still has them in its local store and uploads its copy
+        // before our tombstone propagates).
+        //
+        // Workaround: bump deletedAt to 31 days ago so `purgeTombstones`
+        // picks them up on the next 60-second poke. By then all
+        // devices have surely seen the deleted=true flag, so the hard
+        // delete is safe. User loses "instant emptiness" but gains
+        // "actually deleted, doesn't come back".
+        let purgeMarker = Date().addingTimeInterval(-31 * 24 * 60 * 60)
         for n in notes where n.deleted {
-            ctx.delete(n)
+            n.deletedAt = purgeMarker
+            n.updatedAt = purgeMarker
         }
         try? ctx.save()
     }

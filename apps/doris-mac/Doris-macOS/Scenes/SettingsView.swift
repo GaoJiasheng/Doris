@@ -9,6 +9,8 @@ import KeyboardShortcuts
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @ObservedObject private var theme = ThemeSettings.shared
+    @ObservedObject private var avatarSettings = AvatarSettings.shared
+    @ObservedObject private var desktopPanel = DesktopPanelSettings.shared
     @Query private var settingsQuery: [UserSettings]
 
     private var settings: UserSettings {
@@ -51,8 +53,37 @@ struct SettingsView: View {
             }
             Toggle(L("Show hex color preview", "显示十六进制颜色预览"), isOn: showHexColorPreview)
             Toggle(L("Auto-backup daily", "每日自动备份"), isOn: autoBackupEnabled)
+            // Default visibility of the cyber-girl avatar pane (main
+            // window sidebar + menu-bar dropdown). Can also be toggled
+            // live from the dropdown header / sidebar collapse button.
+            Toggle(L("Show avatar", "显示卡通助手"),
+                   isOn: Binding(get: { avatarSettings.avatarVisible },
+                                 set: { avatarSettings.avatarVisible = $0 }))
+            // Always-on-desktop dashboard panel (pinned + today). The
+            // binding drives the window controller so flipping it here
+            // actually shows / hides the floating panel.
+            Toggle(L("Desktop panel", "桌面面板"),
+                   isOn: Binding(get: { desktopPanel.visible },
+                                 set: { $0 ? DesktopPanelController.shared.show()
+                                           : DesktopPanelController.shared.hide() }))
+            // Version row — reads CFBundleShortVersionString +
+            // CFBundleVersion via Bundle.main so it tracks
+            // project.yml without manual touch-ups.
+            LabeledContent(L("Version", "版本")) {
+                Text(Self.appVersionString)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .textSelection(.enabled)
+            }
         }
         .scrollContentBackground(.hidden)
+    }
+
+    private static var appVersionString: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let short = (info["CFBundleShortVersionString"] as? String) ?? "?"
+        let build = (info["CFBundleVersion"] as? String) ?? "?"
+        return "\(short) (\(build))"
     }
 
     /// Sync tab — controls iCloud-backed CloudKit mirroring + manual
@@ -342,7 +373,13 @@ private struct MacRecentlyDeletedTab: View {
     @Environment(\.modelContext) private var ctx
 
     @Query(
-        filter: #Predicate<Note> { note in note.archived },
+        // Exclude trashed notes so "Delete All" (which soft-deletes
+        // archived items by setting `deleted = true`) makes them
+        // disappear from this view immediately. Without the
+        // `!note.deleted` clause the records linger here because
+        // `archived` stays true after soft-delete, and the user sees
+        // "nothing happened".
+        filter: #Predicate<Note> { note in note.archived && !note.deleted },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var archived: [Note]
@@ -371,7 +408,25 @@ private struct MacRecentlyDeletedTab: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                     Button(L("Delete All", "全部删除"), role: .destructive) {
-                        for n in archived { ctx.delete(n) }
+                        // SOFT delete, not ctx.delete — see SchemaV1/Note.swift
+                        // notes on the two-flag scheme. Hard-deleting via
+                        // `ctx.delete` here races against the other
+                        // device's CloudKit mirror: if iOS still has these
+                        // notes locally and does a sync poke before our
+                        // tombstone propagates, its "still-alive" copy
+                        // resurrects the records on the cloud and they
+                        // re-appear on every device. Setting deleted=true
+                        // + touch is a regular CloudKit update — every
+                        // device sees "this is now in trash" with a
+                        // monotonic updatedAt. `SyncTimer.purgeTombstones`
+                        // will hard-delete after 30 days once we know all
+                        // devices have caught up.
+                        let now = Date()
+                        for n in archived {
+                            n.deleted = true
+                            n.deletedAt = now
+                            n.updatedAt = now
+                        }
                         try? ctx.save()
                     }
                     .foregroundStyle(.red)
@@ -396,7 +451,15 @@ private struct MacRecentlyDeletedTab: View {
                             .controlSize(.small)
                             .foregroundStyle(Color.accentColor)
                             Button(L("Delete Forever", "彻底删除")) {
-                                ctx.delete(note)
+                                // Same soft-delete reasoning as Delete All
+                                // above. Single-note hard delete used to
+                                // race CloudKit mirror sync too, just less
+                                // visibly because one note re-appearing
+                                // looked like "I forgot to click delete".
+                                let now = Date()
+                                note.deleted = true
+                                note.deletedAt = now
+                                note.updatedAt = now
                                 try? ctx.save()
                             }
                             .controlSize(.small)

@@ -24,6 +24,13 @@ final class VoiceController {
     private var recognizer: SpeechRecognizer?
     private var activeBinding: VoiceBinding?
     private var settingsCancellables = Set<AnyCancellable>()
+    /// One-shot guard for `SpeechRecognizer.requestAuthorization()`.
+    /// Without it, every hotkey trigger spawns a fresh `Task` that
+    /// re-fires the system mic prompt — if the user dismisses (rather
+    /// than answers) the prompt, the next press queues another one,
+    /// and a held / rapidly-tapped hotkey causes runaway prompts.
+    /// Set true on dispatch, cleared in `defer` when the task finishes.
+    private var authorizationRequestInFlight = false
     /// Global ESC key monitor — only registered while a recording is in
     /// flight, so Escape is a universal "abort" for users who can't
     /// re-trigger the modifier release (e.g. their keyboard is sending
@@ -94,8 +101,7 @@ final class VoiceController {
 
         let auth = SpeechRecognizer.currentAuthorization()
         if auth != .granted {
-            Task { _ = await SpeechRecognizer.requestAuthorization() }
-            showError(message: errorMessage(for: auth), autoDismiss: 2.5)
+            handleMissingAuthorization(auth)
             return
         }
 
@@ -142,7 +148,20 @@ final class VoiceController {
             floater.hide(after: 0.6)
         } catch {
             DorisLog.voice.error("router send failed: \(error.localizedDescription, privacy: .public)")
-            showError(message: error.localizedDescription, autoDismiss: 3.0)
+            // Surface accessibility-missing as an actionable banner —
+            // user taps once and lands directly on the Privacy settings
+            // pane where they can flip Doris's toggle on. Generic
+            // errors keep the old plain banner.
+            if case AppRouter.RouterError.accessibilityNotGranted = error {
+                let phase = VoiceFloater.accessibilityError(
+                    message: L("Doris needs Accessibility permission to paste.",
+                               "Doris 需要辅助功能权限来粘贴。"))
+                floater.show(initial: phase)
+                // Longer dismiss so the user has time to read + tap.
+                floater.hide(after: 8.0)
+            } else {
+                showError(message: error.localizedDescription, autoDismiss: 3.0)
+            }
         }
     }
 
@@ -198,22 +217,52 @@ final class VoiceController {
         floater.hide(after: autoDismiss)
     }
 
-    private func errorMessage(for auth: SpeechRecognizer.Authorization) -> String {
+    /// Surface a permission-missing state to the user without spamming
+    /// system prompts. There are two cases:
+    ///
+    /// - **notYetDetermined**: user hasn't been asked yet. Fire the
+    ///   system prompt exactly ONCE (gated by `authorizationRequestInFlight`)
+    ///   so rapid hotkey presses don't queue a stack of dialogs.
+    /// - **denied / restricted**: prompt won't show again no matter how
+    ///   many times we call `requestAuthorization`. Surface an
+    ///   actionable banner with a deep-link to the right Privacy pane
+    ///   so a tap lands the user directly on the toggle they need.
+    private func handleMissingAuthorization(_ auth: SpeechRecognizer.Authorization) {
         switch auth {
-        case .granted, .notYetDetermined:
-            return L("Granting permission… try again.", "正在请求权限,请重试。")
-        case .deniedSpeech:
-            return L(
-                "Speech recognition denied. Enable in System Settings › Privacy › Speech Recognition.",
-                "语音识别已拒绝。请在系统设置 › 隐私与安全性 › 语音识别中开启。"
-            )
+        case .granted:
+            return // shouldn't reach
+        case .notYetDetermined:
+            // Fire the system prompt exactly once. Subsequent presses
+            // are no-ops until the user responds; that's the whole point
+            // of the in-flight flag — otherwise queued prompts read as
+            // an "infinite loop".
+            guard !authorizationRequestInFlight else { return }
+            authorizationRequestInFlight = true
+            Task {
+                defer { authorizationRequestInFlight = false }
+                _ = await SpeechRecognizer.requestAuthorization()
+            }
+            showError(
+                message: L("Requesting permission… answer the system prompt, then press the hotkey again.",
+                           "正在请求权限,请在系统弹窗中选择,然后再次按下热键。"),
+                autoDismiss: 4.0)
         case .deniedMicrophone:
-            return L(
-                "Microphone denied. Enable in System Settings › Privacy › Microphone.",
-                "麦克风已拒绝。请在系统设置 › 隐私与安全性 › 麦克风中开启。"
-            )
+            let phase = VoiceFloater.micPermissionError(
+                message: L("Doris needs microphone access.",
+                           "Doris 需要麦克风权限。"))
+            floater.show(initial: phase)
+            floater.hide(after: 8.0)
+        case .deniedSpeech:
+            let phase = VoiceFloater.speechPermissionError(
+                message: L("Doris needs Speech Recognition access.",
+                           "Doris 需要语音识别权限。"))
+            floater.show(initial: phase)
+            floater.hide(after: 8.0)
         case .restricted:
-            return L("Speech recognition is restricted on this Mac.", "本机已限制语音识别。")
+            showError(
+                message: L("Speech recognition is restricted on this Mac.",
+                           "本机已限制语音识别。"),
+                autoDismiss: 3.0)
         }
     }
 }

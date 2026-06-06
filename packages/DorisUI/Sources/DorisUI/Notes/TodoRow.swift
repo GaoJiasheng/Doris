@@ -69,6 +69,7 @@ public struct TodoRow: View {
                 // is no separate drag handle.
                 Button {
                     note.pinned.toggle()
+                    if !note.pinned { note.longTerm = false }  // don't leave a dangling long-term flag
                     note.updatedAt = Date()
                 } label: {
                     Image(systemName: note.pinned ? "pin.fill" : "pin")

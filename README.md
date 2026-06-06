@@ -1,6 +1,37 @@
-# doris
+# Doris
 
-A native macOS + iOS notification, notes, and notch helper. Replaces a paid SideNotes-style sidebar with cross-device push, a CLI bridge, and minute-level iCloud sync.
+A native **macOS + iOS** notes, tasks, and agent-notification companion. A
+menu-bar / notch helper on the Mac and a full editor on iPhone, sharing one
+iCloud-synced store — it replaces a paid SideNotes-style sidebar with
+cross-device push, agent task-completion banners, desktop widgets, and a CLI
+bridge.
+
+## What it does
+
+- **Notes & tasks** — plain notes and checklists in one editor. Checklists
+  show live sub-task progress; ticking the last item completes the note (and
+  un-ticking reopens it). Long items wrap, Enter makes a new item with the
+  cursor already in it, Backspace on an empty item merges into the previous.
+- **Today** — a focus surface with three buckets: **置顶 / Pinned**,
+  **长期 / Long-term** (things you keep around indefinitely), and
+  **日程 / Upcoming** (due-dated). Pinned cards drag to reorder and the
+  order is remembered + synced.
+- **macOS desktop surfaces** — pin any note as a floating **desktop sticky**
+  (remembers its size; resets to default when re-stuck), or keep an
+  always-on-desktop **dashboard panel** of pinned + today's tasks with inline
+  tap-to-complete. Both are toggleable in Settings.
+- **iOS widgets** — home-screen + lock-screen **Tasks** widget (置顶 + 日程,
+  with tap-to-complete via an interactive App Intent) and an **Events** widget,
+  capability-matched to the macOS desktop panel.
+- **Agent notifications** — route **Claude Code** and **Codex**
+  task-completion notifications through Doris instead of macOS Notification
+  Center. One-click register in Settings → 应用集成; banners carry the real
+  Claude / Codex brand logo so a glance tells you which agent finished.
+- **The cartoon assistant** — a menu-bar / notch character (collapsible, and
+  width-responsive in the dropdown) that reacts to clicks and notifications.
+- **Cross-device** — minute-level iCloud (CloudKit) sync across every Mac and
+  iPhone signed into the same Apple Account, plus a `doris` CLI for firing
+  notifications and adding notes from scripts.
 
 See [plan/v1-design.md](plan/v1-design.md) for the v1 architecture and [docs/](docs/) for module-level docs.
 
@@ -23,7 +54,8 @@ plan/                        Design docs
 ## Bootstrap (first time)
 
 ```bash
-# 1. Install Xcode 15+ from the Mac App Store. Command Line Tools alone is not enough —
+# 1. Install Xcode 16+ from the Mac App Store (iOS 18 / macOS 14 SDKs +
+#    interactive-widget App Intents). Command Line Tools alone is not enough —
 #    SwiftData macros and SwiftUI #Preview macros need Xcode.
 xcode-select -p   # should point at /Applications/Xcode.app/Contents/Developer
 

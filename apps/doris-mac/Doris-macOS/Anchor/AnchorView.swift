@@ -9,10 +9,28 @@ struct AnchorView: View {
     @ObservedObject var model: AnchorModel
     @ObservedObject private var lang = LanguageSettings.shared
     @ObservedObject private var theme = ThemeSettings.shared
+    @ObservedObject private var avatarSettings = AvatarSettings.shared
     /// Lifted up from `AnchorNotesView` so the parent can hide the
     /// brand row + tab bar when editing is active — the editor gets
     /// the full right-pane height for itself.
     @State private var editingNote: Note?
+    /// Live width of the expanded panel, used to auto-hide the avatar
+    /// pane when the panel is dragged too narrow (otherwise the 200pt
+    /// avatar crowds out the content + clips the header toggle). Seeded
+    /// wide so the avatar shows immediately on open before the first
+    /// geometry measurement lands.
+    @State private var expandedWidth: CGFloat = 600
+    /// Below this width the avatar pane + its toggle auto-hide and the
+    /// content takes the full panel; above it the avatar follows the
+    /// user's `avatarVisible` setting.
+    private let avatarMinPanelWidth: CGFloat = 440
+    /// Avatar shows only when the user wants it AND there's room.
+    private var showAvatarInExpanded: Bool {
+        avatarSettings.avatarVisible && expandedWidth >= avatarMinPanelWidth
+    }
+    /// The header collapse toggle is only meaningful (and only fits)
+    /// when the panel is wide enough to host the avatar.
+    private var avatarToggleVisible: Bool { expandedWidth >= avatarMinPanelWidth }
     let position: AnchorPosition
     /// True when the screen the anchor lives on has a real camera notch. Drives whether
     /// the idle visual is a small circle (next to the real notch) or a fake-notch pill.
@@ -144,6 +162,27 @@ struct AnchorView: View {
 
     // MARK: - Expanded message (banner / fix)
 
+    /// Leading glyph for a banner / fix card. Known agent sources
+    /// (Claude Code, Codex) show their real brand logo so a glance
+    /// tells you which agent finished; everything else falls back to
+    /// the animated Doris avatar.
+    @ViewBuilder
+    private func bannerLeadingGlyph(for m: AnchorMessage) -> some View {
+        if let asset = m.source?.brandLogoAssetName {
+            Image(asset)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                )
+        } else {
+            AnchorAvatarView(state: model.avatarState, size: 20)
+        }
+    }
+
     private func expandedMessageView(_ m: AnchorMessage) -> some View {
         let useFakeNotch = rendersAsFakeNotch
         let levelTint = EventLevelStyle.color(for: m.level)
@@ -168,7 +207,7 @@ struct AnchorView: View {
         // squeezed in below the title; banner mode drops the body
         // entirely — there's literally no room for two lines of text.
         return HStack(alignment: .center, spacing: 10) {
-            AnchorAvatarView(state: model.avatarState, size: 20)
+            bannerLeadingGlyph(for: m)
                 .frame(width: 22, height: 22)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {
@@ -348,34 +387,40 @@ struct AnchorView: View {
             // panel's outer border draws the chrome). selfChrome=false to
             // skip its built-in rounded clip so our UnevenRoundedRectangle
             // is the only clip.
-            AvatarHero(
-                mood: heroMood(for: model.avatarState),
-                showWeather: true,
-                selfChrome: false
-            )
-            .frame(width: 200)
-            .clipShape(
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 22,
-                    bottomLeadingRadius: 22,
-                    bottomTrailingRadius: 0,
-                    topTrailingRadius: 0,
-                    style: .continuous
+            // Avatar pane is collapsible — hidden when the user turned
+            // it off (header toggle / Settings) OR when the panel is too
+            // narrow to fit it without crowding the content.
+            if showAvatarInExpanded {
+                AvatarHero(
+                    mood: heroMood(for: model.avatarState),
+                    showWeather: true,
+                    selfChrome: false
                 )
-            )
+                .frame(width: 200)
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 22,
+                        bottomLeadingRadius: 22,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 0,
+                        style: .continuous
+                    )
+                )
+                .transition(.move(edge: .leading).combined(with: .opacity))
 
-            // Vertical divider with a neon accent
-            Rectangle()
-                .fill(LinearGradient(
-                    colors: [
-                        Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.0),
-                        Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.6),
-                        Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.6),
-                        Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.0)
-                    ],
-                    startPoint: .top, endPoint: .bottom
-                ))
-                .frame(width: 1)
+                // Vertical divider with a neon accent
+                Rectangle()
+                    .fill(LinearGradient(
+                        colors: [
+                            Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.0),
+                            Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.6),
+                            Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.6),
+                            Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.0)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                    .frame(width: 1)
+            }
 
             // RIGHT: header + tabs + content. When the user is editing
             // a note, hide the brand row + tab bar + divider so the
@@ -414,6 +459,28 @@ struct AnchorView: View {
                                   dark: CyberPalette.neonCyan.opacity(0.7))
                         )
                     Spacer()
+                    // Collapse / restore the avatar pane. Hidden when
+                    // the panel is too narrow to host the avatar at all
+                    // (the avatar auto-hides by width there, so the
+                    // toggle would be a no-op). Persisted via
+                    // AvatarSettings; mirrors the Settings toggle.
+                    if avatarToggleVisible {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                avatarSettings.avatarVisible.toggle()
+                            }
+                        } label: {
+                            Image(systemName: "sidebar.left")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(avatarSettings.avatarVisible
+                                    ? AnyShapeStyle(CyberPalette.neonCyan.opacity(0.85))
+                                    : AnyShapeStyle(Color.primary.opacity(0.45)))
+                        }
+                        .buttonStyle(.plain)
+                        .help(avatarSettings.avatarVisible
+                              ? L("Hide avatar", "隐藏卡通助手")
+                              : L("Show avatar", "显示卡通助手"))
+                    }
                     // Theme toggle moved to Settings; the panel auto-
                     // dismisses on outside clicks, so no X button either.
                 }
@@ -460,6 +527,15 @@ struct AnchorView: View {
         // saved size is persisted in `AnchorScreenStore`, so the
         // SwiftUI content shouldn't hard-code the baseline 560×380.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Track the live panel width so the avatar pane auto-hides when
+        // the panel is dragged too narrow (and reappears when widened).
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { expandedWidth = proxy.size.width }
+                    .onChange(of: proxy.size.width) { _, w in expandedWidth = w }
+            }
+        )
         .background(panelBackground(useFakeNotch: useFakeNotch))
         .overlay(panelBorder)
         // Resize is now handled at the NSPanel level via the
@@ -729,8 +805,12 @@ private struct AnchorEventsView: View {
                 }
             }
             Spacer(minLength: 0)
-            Text(m.receivedAt, style: .relative)
-                .font(.caption2)
+            // Absolute timestamp; see EventsRowView for rationale.
+            Text(m.receivedAt,
+                 format: .dateTime.month(.twoDigits).day(.twoDigits)
+                                  .hour(.twoDigits(amPM: .omitted))
+                                  .minute(.twoDigits))
+                .font(.caption2.monospacedDigit())
                 .foregroundStyle(.primary.opacity(0.4))
         }
         .padding(.horizontal, 12)
@@ -988,9 +1068,20 @@ private struct AnchorNotesView: View {
 
     /// Permanently delete every row currently in the trash. Confirmed
     /// before reaching this — the alert lives in `filterBar`.
+    ///
+    /// Uses the same "queue-for-purge" pattern as the main window: drop
+    /// `updatedAt` and `deletedAt` to 31 days ago so the next
+    /// `SyncTimer.purgeTombstones` cycle (≤60 s) hard-deletes them.
+    /// Direct `ctx.delete` races against the other device's CloudKit
+    /// mirror upload of its still-local copy, which resurrects the
+    /// rows on the cloud and they come back on this device. Soft-stamp
+    /// + 60 s purge gives the deleted=true flag time to propagate to
+    /// every device first.
     private func emptyTrash() {
+        let purgeMarker = Date().addingTimeInterval(-31 * 24 * 60 * 60)
         for n in notes where n.deleted {
-            ctx.delete(n)
+            n.deletedAt = purgeMarker
+            n.updatedAt = purgeMarker
         }
         try? ctx.save()
     }
@@ -1093,9 +1184,14 @@ private struct AnchorTodayView: View {
             }
     }
 
+    /// Mirrors `MainTodayView.calendarNotes`: drop past + completed
+    /// rows so the popup's Today tab doesn't carry yesterday's
+    /// finished work. Overdue (past + not done) stays visible — the
+    /// popup is the highest-frequency surface and the user needs to
+    /// see what's still on their plate.
     private var calendarNotes: [Note] {
         allNotes
-            .filter { $0.dueDate != nil }
+            .filter { $0.dueDate != nil && !$0.isPastAndCompleted() }
             .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
     }
 

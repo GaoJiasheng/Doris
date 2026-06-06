@@ -1,17 +1,34 @@
 // The whole integrations layer is macOS-only — Claude Code, Codex,
-// ChatGPT, etc. integrations target the desktop versions of those
-// apps (write to ~/.claude/settings.json, install shell wrappers,
-// etc.). iOS has no analogue and lacks `homeDirectoryForCurrentUser`
+// etc. integrations target the desktop versions of those apps
+// (write to ~/.claude/settings.json, install shell wrappers, etc.).
+// iOS has no analogue and lacks `homeDirectoryForCurrentUser`
 // anyway, so we compile this entire module out on iOS to keep
 // DorisCore cross-platform.
 #if os(macOS)
 
 import Foundation
+import Darwin
 import DorisIPC
 
+/// The user's **real** home directory, bypassing App Sandbox container
+/// redirection. Inside a sandboxed app `homeDirectoryForCurrentUser` /
+/// `NSHomeDirectory()` return the container (`~/Library/Containers/<id>/
+/// Data`), so writing `~/.claude` / `~/.codex` there lands in the jail
+/// and never reaches the files Claude Code / Codex actually read.
+/// `getpwuid` reports the true home (`/Users/<you>`) even under the
+/// sandbox; access is granted by the `temporary-exception.files.
+/// home-relative-path` entitlements for `/.claude/` and `/.codex/`.
+func integrationsRealHome() -> URL {
+    if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir {
+        let path = String(cString: dir)
+        if !path.isEmpty { return URL(fileURLWithPath: path, isDirectory: true) }
+    }
+    return FileManager.default.homeDirectoryForCurrentUser
+}
+
 /// One pluggable "send your task-done notifications through Doris"
-/// integration with an external AI app (Claude Code, Codex, ChatGPT,
-/// future Trae/Cursor/Feishu/…).
+/// integration with an external AI app (Claude Code, Codex, future
+/// Trae/Cursor/Feishu/…).
 ///
 /// The UI binds against this protocol uniformly: every Integrations
 /// row shows status + an action button, regardless of whether the

@@ -34,8 +34,15 @@ public struct EventsRowView: View {
                         levelBadge(for: message.level)
                     }
                     Spacer()
-                    Text(message.receivedAt, style: .relative)
-                        .font(.caption)
+                    // Absolute timestamp (MM/dd HH:mm). Relative
+                    // ("5 min ago") was hard to scan when triaging
+                    // a long event list — the eye keeps adding up
+                    // offsets in its head. Absolute reads in O(1).
+                    Text(message.receivedAt,
+                         format: .dateTime.month(.twoDigits).day(.twoDigits)
+                                          .hour(.twoDigits(amPM: .omitted))
+                                          .minute(.twoDigits))
+                        .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
                 if let body = message.bodyMarkdown, !body.isEmpty {

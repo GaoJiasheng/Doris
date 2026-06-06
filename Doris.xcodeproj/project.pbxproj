@@ -27,6 +27,7 @@
 		2940649DA54FBE297BAA1B5A /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4739E02B1BDFA6BEFF3F866E /* ShareViewController.swift */; };
 		294983F21EEEC7DFB7A5E538 /* AppearanceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8D4FCB090245F62C745832 /* AppearanceSettings.swift */; };
 		2B1E7665B38A5332C54C6414 /* Doris.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B5396492AF76E484A7B09C /* Doris.swift */; };
+		300EC0F3B6FB60CF9D44D400 /* DorisWidget-iOS.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 25C8267A2810EE34195F1355 /* DorisWidget-iOS.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		35112A479B47FFB163F1F9E9 /* DorisMacChrome in Frameworks */ = {isa = PBXBuildFile; productRef = D0FDF7CCD62DD6C044AF0CA7 /* DorisMacChrome */; };
 		3D8EAB7F8B417ED258C0765B /* AnchorController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F917FF55F7AE753CE04C0714 /* AnchorController.swift */; };
 		434DB57A49A8B0D99FDC2FC4 /* SidebarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165BF99C90BB28EB26A5D3D1 /* SidebarController.swift */; };
@@ -38,8 +39,10 @@
 		4D1DACEE3B5F8E6A874A90A7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECD70CD58C18BA0CEC81EB /* SettingsView.swift */; };
 		513597108B56CFB5759C787A /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C0A5F483ACA3F72ED343586 /* RootTabView.swift */; };
 		51389334F27B6EF35EB52DEC /* Doris.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 64155F5EDC6DD796F45AED03 /* Doris.sdef */; };
+		521B0B2B1B54209E339769ED /* StickyNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9EEC8CD45FAA99FBBBB0ECA /* StickyNoteView.swift */; };
 		54F5154519AC049C9E0EB47D /* AddNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 158FE15ABF0D2A4C3DC8BAC3 /* AddNoteIntent.swift */; };
 		585D3E3760BE6A4849A2A6D3 /* NotesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EBAD6C975AC7AE7F032E9F4 /* NotesScreen.swift */; };
+		59310758E0D2AC22BD34CFE0 /* DesktopPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C4DE902F3C872A2FDCE137D /* DesktopPanelController.swift */; };
 		5C3EF76E0DD7FB08F51AC55C /* AnchorAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68DA5B4E4262C02B2CEA72DF /* AnchorAvatarView.swift */; };
 		6058073F1675ED142AFD6CB8 /* FixNotchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5943A6757B5692B643221E /* FixNotchView.swift */; };
 		60B07988B1B44CDEA7BF386A /* AuthCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA9B7F3E7B56E2FE2927C83 /* AuthCommand.swift */; };
@@ -67,6 +70,7 @@
 		876FD52E07C7DC2ED1B0F03C /* InstallCLIWizardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C701D79642DC9F6DFC725C /* InstallCLIWizardView.swift */; };
 		89C061EF7EC3EE97B38441FA /* Info-iOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 33E29E09A7E0346CA78ADE04 /* Info-iOS.plist */; };
 		8ED5DFED5A53891D5722EA26 /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4124A40499C64EAE53B1128A /* DorisCore */; };
+		92077813352F0A182AFE7846 /* DesktopPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A441596ECFF0B8C4809CC75 /* DesktopPanelView.swift */; };
 		982C365E820E9632BE11F092 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 4B931B0521591438F422CD68 /* KeyboardShortcuts */; };
 		99A039F0737F80C5295506D0 /* StatusBarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9124431BB7A8127A5AE105A1 /* StatusBarItem.swift */; };
 		9AAE1CBD17DBEFE210DA3277 /* DorisIPC in Frameworks */ = {isa = PBXBuildFile; productRef = 4F0B0839FD54D49732A1C8B1 /* DorisIPC */; };
@@ -76,9 +80,12 @@
 		AC5618F120AE8AEA3954A591 /* doris-avatar.png in Resources */ = {isa = PBXBuildFile; fileRef = CE1DB98BBE156A6C003C5363 /* doris-avatar.png */; };
 		BE57B57CE9DCCD7F9B1E5175 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1428A4010334504409D6401 /* MainWindowController.swift */; };
 		C0E36B64A06FE09BF55B87AA /* MarkMessageDoneIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEB137662D3DAC600C955D36 /* MarkMessageDoneIntent.swift */; };
+		C3E00F27D14EA198A7029CE7 /* DesktopPanelSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5C2DAC65F1EB16C5017423 /* DesktopPanelSettings.swift */; };
 		C597EEBAAAF4373EE7F54D85 /* EventsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94332B9CD417EEC812A1F43 /* EventsScreen.swift */; };
+		C69045DE3256A44939AC43A1 /* StickyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ABC8FF8127AE2864BFD08BE /* StickyStore.swift */; };
 		C8A90F820AABDC6FE94E2417 /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 807EB227D46D06301C8887E2 /* DorisCore */; };
 		C925620D6935B31ED0C947F8 /* OpenSidebarIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1DCF61C45573AFCC4F934A3 /* OpenSidebarIntent.swift */; };
+		CBDFE415BC2CB5CA5E2B67FF /* TasksWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C7B70C5FCD86527B9D5FD2 /* TasksWidget.swift */; };
 		CEB4D62898B42D02C13B7429 /* DorisIntentsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC3F2A4FFB36D66A3B4097B /* DorisIntentsBundle.swift */; };
 		D01C3F8225DA23A3FCD01FD6 /* VoiceFloater.swift in Sources */ = {isa = PBXBuildFile; fileRef = F95CBB9E79FDA43E0755BF23 /* VoiceFloater.swift */; };
 		D401050CDE48DE017E2AC2F9 /* DorisWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACC181989765CFA4AACB513 /* DorisWidgetBundle.swift */; };
@@ -88,6 +95,7 @@
 		DC3062E4DFBF622D3BAD70ED /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2DBDD4CD5705CFC775419428 /* DorisCore */; };
 		DEDAD6EE1603ABB0F65DE5FA /* TodayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8B8DA6961CB3BF53478514 /* TodayScreen.swift */; };
 		E04B3E365C9DB9EDDA3F16B9 /* OpenBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1447CB53626E37F1DD855B25 /* OpenBarController.swift */; };
+		E0CA0E00846F392054F5E13B /* StickyWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */; };
 		E9874DBDAB1A27FE48686FCB /* SpeechRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8853F1317B2486DAB7E291 /* SpeechRecognizer.swift */; };
 		ECE71D8218A7B7F75330A156 /* PushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA6D6367889FF95F93F720F /* PushCommand.swift */; };
 		EDA1F10972E0C809C89C3DA5 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = 71109000BAFF694A906BECD1 /* ArgumentParser */; };
@@ -97,11 +105,19 @@
 		F351A5EDD34E87DEF0EFC0A1 /* AnchorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED774E489BE2AD3814737812 /* AnchorState.swift */; };
 		F44F0262B381BA936FD37F16 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0457AEB878C7FB706DFC7635 /* SettingsScreen.swift */; };
 		F548C0123D3DCE76BD293315 /* NoteDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7263649E21CCBD2C930F4317 /* NoteDetailScreen.swift */; };
+		F87B15508619139626BAB672 /* AvatarSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */; };
 		FCE5B30D06A345D7F7F149AD /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC6D9364F0DDD9193D0C20C8 /* MainWindowView.swift */; };
 		FCF68FD5D0FF4E8842C08219 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E06A5801ADADFF5C8CC26B70 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		0CB1C647699F8EA9EF20AE1B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 710F6DDF3A3AC8E25C1AAB9C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6D98964E81A5DE833DBB77C4;
+			remoteInfo = "DorisWidget-iOS";
+		};
 		D295586964E40C6FCF03A98C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 710F6DDF3A3AC8E25C1AAB9C /* Project object */;
@@ -112,6 +128,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		8F8EDD2DD124BD025F4BFBCC /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				300EC0F3B6FB60CF9D44D400 /* DorisWidget-iOS.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F36D91201313BB221653F206 /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -152,10 +179,13 @@
 		4739E02B1BDFA6BEFF3F866E /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		49787817ECF3EE4EB1D6E5CC /* DevicesCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesCommand.swift; sourceTree = "<group>"; };
 		4ABABD988A1B81A6F7DC411C /* NotifyCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyCommand.swift; sourceTree = "<group>"; };
+		4F5C2DAC65F1EB16C5017423 /* DesktopPanelSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPanelSettings.swift; sourceTree = "<group>"; };
 		50476AECFF2B8FC223258807 /* DorisMacChrome */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisMacChrome; path = packages/DorisMacChrome; sourceTree = SOURCE_ROOT; };
+		510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyWindowManager.swift; sourceTree = "<group>"; };
 		5207402EE925DF6E240B5132 /* ExitCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExitCodes.swift; sourceTree = "<group>"; };
 		57AA392218328D9FF434AF27 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		5860F89D0929C6440DEA0036 /* PushNotificationIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationIntent.swift; sourceTree = "<group>"; };
+		5ABC8FF8127AE2864BFD08BE /* StickyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyStore.swift; sourceTree = "<group>"; };
 		5AC3F2A4FFB36D66A3B4097B /* DorisIntentsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DorisIntentsBundle.swift; sourceTree = "<group>"; };
 		5FFE8BFB4CAA1D8CE956C57D /* IPCFSEventReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IPCFSEventReader.swift; sourceTree = "<group>"; };
 		64155F5EDC6DD796F45AED03 /* Doris.sdef */ = {isa = PBXFileReference; path = Doris.sdef; sourceTree = "<group>"; };
@@ -163,6 +193,7 @@
 		68DA5B4E4262C02B2CEA72DF /* AnchorAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorAvatarView.swift; sourceTree = "<group>"; };
 		69D39344FFE8CEDB3EBCAF47 /* Doris-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Doris-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A8D4FCB090245F62C745832 /* AppearanceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettings.swift; sourceTree = "<group>"; };
+		6C4DE902F3C872A2FDCE137D /* DesktopPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPanelController.swift; sourceTree = "<group>"; };
 		7263649E21CCBD2C930F4317 /* NoteDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteDetailScreen.swift; sourceTree = "<group>"; };
 		731C0A7D3A8391C199356BFB /* VoiceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSettings.swift; sourceTree = "<group>"; };
 		7441423CEB7BB2DEB9E04F7F /* DorisCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DorisCommands.swift; sourceTree = "<group>"; };
@@ -182,6 +213,7 @@
 		977DBCC8D26ABB074DFF788B /* VoiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceController.swift; sourceTree = "<group>"; };
 		98A3FC079DDFBF06BE116BE0 /* DorisShareExtension-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "DorisShareExtension-macOS.entitlements"; sourceTree = "<group>"; };
 		9A35E4AD7194BBDC008223FF /* doris-avatar-fullbody.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "doris-avatar-fullbody.png"; sourceTree = "<group>"; };
+		9A441596ECFF0B8C4809CC75 /* DesktopPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPanelView.swift; sourceTree = "<group>"; };
 		9ABB340E9D12DD0046C284D2 /* CalendarTimelineScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarTimelineScreen.swift; sourceTree = "<group>"; };
 		9BC4E4D9520090DC1F0AAF0A /* DorisIntents-macOS.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DorisIntents-macOS.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9CCE4FF1D8E965309B159C1A /* EventsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsWidget.swift; sourceTree = "<group>"; };
@@ -196,6 +228,7 @@
 		BB71668C471E5FF4D4AF7C06 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BC455D587B89C7FF473794D7 /* Doris-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Doris-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEA9B7F3E7B56E2FE2927C83 /* AuthCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthCommand.swift; sourceTree = "<group>"; };
+		CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarSettings.swift; sourceTree = "<group>"; };
 		CC6D9364F0DDD9193D0C20C8 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		CE1DB98BBE156A6C003C5363 /* doris-avatar.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "doris-avatar.png"; sourceTree = "<group>"; };
 		D0ECD70CD58C18BA0CEC81EB /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -216,6 +249,8 @@
 		F2A0CEF0A5026DBA42892F9F /* DorisUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisUI; path = packages/DorisUI; sourceTree = SOURCE_ROOT; };
 		F917FF55F7AE753CE04C0714 /* AnchorController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorController.swift; sourceTree = "<group>"; };
 		F95CBB9E79FDA43E0755BF23 /* VoiceFloater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFloater.swift; sourceTree = "<group>"; };
+		F9C7B70C5FCD86527B9D5FD2 /* TasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksWidget.swift; sourceTree = "<group>"; };
+		F9EEC8CD45FAA99FBBBB0ECA /* StickyNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyNoteView.swift; sourceTree = "<group>"; };
 		FA324399D378502240BA8470 /* AnchorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -366,6 +401,19 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		2476B72ECD8DADD53952F5AA /* Sticky */ = {
+			isa = PBXGroup;
+			children = (
+				6C4DE902F3C872A2FDCE137D /* DesktopPanelController.swift */,
+				4F5C2DAC65F1EB16C5017423 /* DesktopPanelSettings.swift */,
+				9A441596ECFF0B8C4809CC75 /* DesktopPanelView.swift */,
+				F9EEC8CD45FAA99FBBBB0ECA /* StickyNoteView.swift */,
+				5ABC8FF8127AE2864BFD08BE /* StickyStore.swift */,
+				510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */,
+			);
+			path = Sticky;
+			sourceTree = "<group>";
+		};
 		27949FE873C0E086881C25C4 /* doris-ios */ = {
 			isa = PBXGroup;
 			children = (
@@ -482,6 +530,7 @@
 				235E4E6BF62F710B10B2A744 /* DorisWidgetBundle.swift */,
 				9CCE4FF1D8E965309B159C1A /* EventsWidget.swift */,
 				BB71668C471E5FF4D4AF7C06 /* Info.plist */,
+				F9C7B70C5FCD86527B9D5FD2 /* TasksWidget.swift */,
 			);
 			path = "DorisWidget-iOS";
 			sourceTree = "<group>";
@@ -561,6 +610,7 @@
 				ED774E489BE2AD3814737812 /* AnchorState.swift */,
 				FA324399D378502240BA8470 /* AnchorView.swift */,
 				6A8D4FCB090245F62C745832 /* AppearanceSettings.swift */,
+				CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */,
 				0239401BE0698A4354F48B33 /* MenuBarAvatarWindow.swift */,
 				AD66496AECE70963437B750C /* SettingsWindow.swift */,
 				9124431BB7A8127A5AE105A1 /* StatusBarItem.swift */,
@@ -597,6 +647,7 @@
 				20E53C999CEB05428C13BC95 /* Resources */,
 				6CDCCB245A7BF7C0F83EA9DD /* Scenes */,
 				558FA949130E3E3007A7074B /* Sidebar */,
+				2476B72ECD8DADD53952F5AA /* Sticky */,
 				6F04757BBA688D3295A98AE8 /* Voice */,
 				EB0CC25ABC1FEFF7EB8E7F34 /* AppDelegate.swift */,
 				203CFD2E1C735CEEA3435589 /* Doris-macOS-dev.entitlements */,
@@ -710,10 +761,12 @@
 				07BCB0D33BC576A33CED326A /* Sources */,
 				01E873DA253C1918A0532E56 /* Resources */,
 				829E34DD5D2215201F867D4E /* Frameworks */,
+				8F8EDD2DD124BD025F4BFBCC /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				465346522A2C7FF8B179B45C /* PBXTargetDependency */,
 			);
 			name = "Doris-iOS";
 			packageProductDependencies = (
@@ -1061,6 +1114,7 @@
 			files = (
 				063391B1AD51BEFF94090ED9 /* DorisWidgetBundle.swift in Sources */,
 				9AC1BB149284034A65540B33 /* EventsWidget.swift in Sources */,
+				CBDFE415BC2CB5CA5E2B67FF /* TasksWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1093,7 +1147,11 @@
 				47ED5B5F98BD3CE3BB6745D4 /* AppDelegate.swift in Sources */,
 				25036E4CBA4693D9116F0370 /* AppRouter.swift in Sources */,
 				294983F21EEEC7DFB7A5E538 /* AppearanceSettings.swift in Sources */,
+				F87B15508619139626BAB672 /* AvatarSettings.swift in Sources */,
 				762208DDC9AAE1996EF6F987 /* ClickActionRouter.swift in Sources */,
+				59310758E0D2AC22BD34CFE0 /* DesktopPanelController.swift in Sources */,
+				C3E00F27D14EA198A7029CE7 /* DesktopPanelSettings.swift in Sources */,
+				92077813352F0A182AFE7846 /* DesktopPanelView.swift in Sources */,
 				80D2E4BE6C0981FAD23590B1 /* DorisApp.swift in Sources */,
 				6785932C8C20FE6106D45907 /* DorisCommands.swift in Sources */,
 				75A567DCBBD5A17176094D43 /* DorisScriptCommands.swift in Sources */,
@@ -1113,6 +1171,9 @@
 				466612C4F9BF3A250E8F0963 /* SidebarRootView.swift in Sources */,
 				E9874DBDAB1A27FE48686FCB /* SpeechRecognizer.swift in Sources */,
 				99A039F0737F80C5295506D0 /* StatusBarItem.swift in Sources */,
+				521B0B2B1B54209E339769ED /* StickyNoteView.swift in Sources */,
+				C69045DE3256A44939AC43A1 /* StickyStore.swift in Sources */,
+				E0CA0E00846F392054F5E13B /* StickyWindowManager.swift in Sources */,
 				67321342134C8C94E59F7225 /* VoiceController.swift in Sources */,
 				D01C3F8225DA23A3FCD01FD6 /* VoiceFloater.swift in Sources */,
 				60F8A5E4F93A9559EE50D3E0 /* VoiceSettings.swift in Sources */,
@@ -1122,6 +1183,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		465346522A2C7FF8B179B45C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6D98964E81A5DE833DBB77C4 /* DorisWidget-iOS */;
+			targetProxy = 0CB1C647699F8EA9EF20AE1B /* PBXContainerItemProxy */;
+		};
 		D87B56846117A75713700E6C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 81C1F9D600A935CC3AEC7970 /* doris-cli */;
@@ -1134,12 +1200,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/DorisWidget-iOS/DorisWidget-iOS.entitlements";
+				CURRENT_PROJECT_VERSION = 13;
 				INFOPLIST_FILE = "apps/doris-ios/DorisWidget-iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios.widget;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1278,12 +1346,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/DorisWidget-iOS/DorisWidget-iOS.entitlements";
+				CURRENT_PROJECT_VERSION = 13;
 				INFOPLIST_FILE = "apps/doris-ios/DorisWidget-iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios.widget;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1319,14 +1389,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-mac/Doris-macOS/Doris-macOS.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 5;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "apps/doris-mac/Doris-macOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris;
 				PRODUCT_NAME = Doris;
 				SDKROOT = macosx;
@@ -1371,13 +1441,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 13;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios;
 				PRODUCT_NAME = Doris;
 				SDKROOT = iphoneos;
@@ -1391,13 +1461,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 13;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios;
 				PRODUCT_NAME = Doris;
 				SDKROOT = iphoneos;
@@ -1505,14 +1575,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-mac/Doris-macOS/Doris-macOS.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 5;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "apps/doris-mac/Doris-macOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris;
 				PRODUCT_NAME = Doris;
 				SDKROOT = macosx;

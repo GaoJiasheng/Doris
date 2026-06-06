@@ -107,6 +107,28 @@ struct NoteDetailScreen: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            // Prominent Complete toggle in the nav bar — the
+            // Done switch in metaRow was too easy to miss next to
+            // Pin / Checklist / Due. A standalone toolbar button
+            // keeps the "I finished this" gesture one-tap accessible
+            // and reuses the same `doneBinding` mutation path so
+            // `completedAt` + `updatedAt` stay consistent.
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    doneBinding.wrappedValue.toggle()
+                    try? ctx.save()
+                } label: {
+                    Image(systemName: note.done
+                          ? "checkmark.circle.fill"
+                          : "checkmark.circle")
+                        .foregroundStyle(note.done
+                                         ? CyberPalette.doneAccent
+                                         : .primary.opacity(0.65))
+                }
+                .accessibilityLabel(note.done
+                                    ? L("Mark not done", "标为未完成")
+                                    : L("Mark as done", "标为已完成"))
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 // Markdown preview toggle (only for non-checklist notes)
                 if !note.isChecklist {
@@ -215,7 +237,9 @@ struct NoteDetailScreen: View {
                 Spacer()
             }
 
-            Text(note.updatedAt, style: .relative)
+            // Creation time, to the minute (no live ticking) — the list
+            // rows stay clean; the timestamp lives here.
+            Text(L("Created ", "创建于 ") + note.createdAt.formatted(date: .abbreviated, time: .shortened))
                 .font(.caption2)
                 .foregroundStyle(.primary.opacity(0.45))
                 .monospacedDigit()

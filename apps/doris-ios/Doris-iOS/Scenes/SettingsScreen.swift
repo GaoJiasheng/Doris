@@ -17,7 +17,6 @@ struct SettingsScreen: View {
                 themeSection
                 languageSection
                 syncSection
-                recentlyDeletedSection
                 aboutSection
             }
             .scrollContentBackground(.hidden)
@@ -104,19 +103,13 @@ struct SettingsScreen: View {
         .listRowBackground(Color.primary.opacity(0.05))
     }
 
-    /// Recently Deleted — shows archived notes so the user can restore or
-    /// permanently delete them. SyncTimer auto-purges after 30 days.
-    private var recentlyDeletedSection: some View {
-        IOSRecentlyDeletedSection()
-    }
-
     private var aboutSection: some View {
         Section {
             HStack {
                 Text(L("Version", "版本"))
                     .foregroundStyle(.primary)
                 Spacer()
-                Text("0.7.0")
+                Text(Self.appVersionString)
                     .foregroundStyle(.primary.opacity(0.6))
                     .monospacedDigit()
             }
@@ -125,6 +118,18 @@ struct SettingsScreen: View {
                 .foregroundStyle(.primary.opacity(0.7))
         }
         .listRowBackground(Color.primary.opacity(0.05))
+    }
+
+    /// "1.0.0 (2)" style — reads MARKETING_VERSION and
+    /// CURRENT_PROJECT_VERSION via the standard Info.plist keys, so
+    /// the Settings row tracks `project.yml` without manual edits.
+    /// Earlier we hardcoded "0.7.0" and it drifted three releases out
+    /// of date before anyone noticed.
+    private static var appVersionString: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let short = (info["CFBundleShortVersionString"] as? String) ?? "?"
+        let build = (info["CFBundleVersion"] as? String) ?? "?"
+        return "\(short) (\(build))"
     }
 }
 
@@ -197,73 +202,11 @@ private struct IOSSyncNowRow: View {
     }
 }
 
-/// Recently Deleted section — lists archived notes with Restore + hard-delete.
-/// Isolated struct so its @Query doesn't churn the parent Settings body.
-private struct IOSRecentlyDeletedSection: View {
-    @Environment(\.modelContext) private var ctx
-
-    @Query(
-        filter: #Predicate<Note> { note in note.archived },
-        sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
-    )
-    private var archived: [Note]
-
-    var body: some View {
-        Section {
-            if archived.isEmpty {
-                Text(L("No recently deleted notes.", "没有最近删除的笔记。"))
-                    .font(.caption)
-                    .foregroundStyle(.primary.opacity(0.5))
-            } else {
-                ForEach(archived) { note in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(note.title.isEmpty
-                                 ? L("Untitled", "无标题")
-                                 : note.title)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Text(note.updatedAt, style: .relative)
-                                .font(.caption2)
-                                .foregroundStyle(.primary.opacity(0.5))
-                        }
-                        Spacer()
-                        Button(L("Restore", "恢复")) {
-                            note.archived = false
-                            note.touch()
-                            try? ctx.save()
-                        }
-                        .font(.caption)
-                        .foregroundStyle(CyberPalette.neonCyan)
-                        .buttonStyle(.plain)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            ctx.delete(note)
-                            try? ctx.save()
-                        } label: {
-                            Label(L("Delete Forever", "永久删除"), systemImage: "trash")
-                        }
-                    }
-                }
-                Button(role: .destructive) {
-                    for note in archived { ctx.delete(note) }
-                    try? ctx.save()
-                } label: {
-                    Text(L("Delete All (\(archived.count))",
-                           "全部删除 (\(archived.count))"))
-                        .foregroundStyle(.red)
-                }
-            }
-        } header: {
-            Text(L("Recently Deleted", "最近删除"))
-                .foregroundStyle(.primary.opacity(0.7))
-        } footer: {
-            Text(L("Notes are permanently deleted after 30 days.",
-                   "笔记将在 30 天后自动永久删除。"))
-                .foregroundStyle(.primary.opacity(0.5))
-        }
-        .listRowBackground(Color.primary.opacity(0.05))
-    }
-}
+// IOSRecentlyDeletedSection removed in 1.0.0 — the section header
+// said "Recently Deleted" but the @Query was `note.archived &&
+// !note.deleted`, surfacing the *archived* list (which the Notes-tab
+// "已归档" sheet already covers via the top-right archivebox icon).
+// Two surfaces for the same data confused users about what each one
+// actually did. If a real Trash UI for `note.deleted == true` is
+// ever wanted, build it as a new section / sheet with the correct
+// predicate and header — don't revive this struct.

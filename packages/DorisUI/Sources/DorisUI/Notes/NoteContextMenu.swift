@@ -2,6 +2,13 @@ import SwiftUI
 import SwiftData
 import DorisCore
 
+public extension Notification.Name {
+    /// Posted (object = note `UUID`) when the user picks "Stick to
+    /// desktop" from a note's context menu on macOS. The app-level
+    /// StickyWindowManager observes it and floats a sticky window.
+    static let dorisStickToDesktop = Notification.Name("doris.stickToDesktop")
+}
+
 /// Right-click context menu shared by every note row on macOS. Centralises
 /// the scheduling quick picks (Today / Tomorrow / This Weekend / Next
 /// Week / Pick date / Clear), the Pin · Open editor · Archive · Move to
@@ -75,10 +82,42 @@ private struct NoteContextMenuModifier: ViewModifier {
         } else {
             scheduleMenu
             Divider()
+            // Done toggle — sits right after Schedule because "I just
+            // finished this" is the second most common quick action
+            // after "schedule it for later". Stamps `completedAt` like
+            // every other Done-toggle surface, so the Today tab's
+            // "hide past + completed" filter sees it immediately.
+            Button { toggleDone() } label: {
+                Label(
+                    note.done ? L("Mark not done", "标为未完成") : L("Mark as done", "标为已完成"),
+                    systemImage: note.done ? "arrow.uturn.backward" : "checkmark.circle.fill"
+                )
+            }
+            // One-shot "complete + archive" shortcut for the workflow
+            // where finishing a task should also clear it from active
+            // lists. Only offered when the row isn't already archived
+            // — re-using it as "unarchive" would be confusing.
+            if !note.archived {
+                Button { completeAndArchive() } label: {
+                    Label(L("Done & archive", "完成并归档"),
+                          systemImage: "checkmark.seal.fill")
+                }
+            }
+            // Two pin buckets — regular "置顶" and "长期" (long-term).
+            // A note sits in exactly one (or neither); both set
+            // note.pinned so the Today pinned area + "pinned first"
+            // sort still pick them up, while note.longTerm chooses the
+            // bucket.
             Button { togglePin() } label: {
                 Label(
-                    note.pinned ? L("Unpin", "取消置顶") : L("Pin to top", "置顶"),
-                    systemImage: note.pinned ? "pin.slash" : "pin"
+                    (note.pinned && !note.longTerm) ? L("Unpin", "取消置顶") : L("Pin to top", "置顶"),
+                    systemImage: (note.pinned && !note.longTerm) ? "pin.slash" : "pin"
+                )
+            }
+            Button { toggleLongTerm() } label: {
+                Label(
+                    (note.pinned && note.longTerm) ? L("Remove long-term", "取消长期") : L("Long-term", "长期"),
+                    systemImage: "infinity"
                 )
             }
             if let openEditor = onOpenEditor {
@@ -86,6 +125,21 @@ private struct NoteContextMenuModifier: ViewModifier {
                     Label(L("Open editor", "打开编辑器"), systemImage: "doc.text")
                 }
             }
+            #if os(macOS)
+            // Float this note as a sticky window on the desktop. The
+            // mac app's StickyWindowManager observes this notification
+            // (DorisUI has no AppKit dependency, so we decouple via
+            // NotificationCenter rather than a direct call).
+            if !note.archived {
+                Button {
+                    NotificationCenter.default.post(
+                        name: .dorisStickToDesktop, object: note.id
+                    )
+                } label: {
+                    Label(L("Stick to desktop", "贴到桌面"), systemImage: "macwindow.on.rectangle")
+                }
+            }
+            #endif
             Divider()
             Button { toggleArchive() } label: {
                 Label(
@@ -93,7 +147,7 @@ private struct NoteContextMenuModifier: ViewModifier {
                     systemImage: note.archived ? "tray.and.arrow.up" : "archivebox"
                 )
             }
-            Button {
+            Button(role: .destructive) {
                 let now = Date()
                 note.deleted = true
                 note.deletedAt = now
@@ -216,7 +270,23 @@ private struct NoteContextMenuModifier: ViewModifier {
     }
 
     private func togglePin() {
-        note.pinned.toggle()
+        if note.pinned && !note.longTerm {
+            note.pinned = false          // regular-pinned → unpin
+        } else {
+            note.pinned = true           // → regular pin (demote from long-term if needed)
+            note.longTerm = false
+        }
+        note.touch()
+    }
+
+    private func toggleLongTerm() {
+        if note.pinned && note.longTerm {
+            note.pinned = false          // long-term → unpin entirely
+            note.longTerm = false
+        } else {
+            note.pinned = true           // → long-term pin
+            note.longTerm = true
+        }
         note.touch()
     }
 
@@ -224,6 +294,33 @@ private struct NoteContextMenuModifier: ViewModifier {
         let now = Date()
         note.archived.toggle()
         note.archivedAt = note.archived ? now : nil
+        note.updatedAt = now
+    }
+
+    /// Flip `note.done` and stamp/clear `completedAt`. Same semantics
+    /// as the Done toggle in the editor sheet so the calendar filter
+    /// & strikethrough visuals react instantly.
+    private func toggleDone() {
+        let now = Date()
+        note.done.toggle()
+        note.completedAt = note.done ? now : nil
+        note.updatedAt = now
+    }
+
+    /// One-click "complete + archive" — workflow shortcut for users who
+    /// want "I'm done with this, get it off my active list" in one
+    /// action instead of two menu trips. Idempotent if either flag is
+    /// already in the target state.
+    private func completeAndArchive() {
+        let now = Date()
+        if !note.done {
+            note.done = true
+            note.completedAt = now
+        }
+        if !note.archived {
+            note.archived = true
+            note.archivedAt = now
+        }
         note.updatedAt = now
     }
 }

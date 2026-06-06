@@ -7,12 +7,79 @@ import DorisUI
 /// transcript while speaking, and a brief "→ ChatGPT" hand-off animation
 /// before disappearing. Lives across all spaces and full-screen apps so the
 /// user sees it no matter what's frontmost.
+///
+/// Errors with a `Phase.ErrorAction` flip the panel from click-through to
+/// interactive so the user can tap to fix the underlying problem (e.g.
+/// open the Accessibility settings pane).
 @MainActor
 final class VoiceFloater {
     enum Phase: Equatable {
         case listening(partial: String)
         case sending(text: String, target: String)
-        case error(message: String)
+        case error(message: String, action: ErrorAction? = nil)
+
+        /// True for errors that carry a CTA. The panel uses this to flip
+        /// `ignoresMouseEvents` so users can click the floater to open
+        /// the Settings page that fixes the underlying problem.
+        var isActionable: Bool {
+            if case .error(_, let action) = self, action != nil { return true }
+            return false
+        }
+    }
+
+    /// Optional CTA attached to an error phase. When set, the floater
+    /// becomes clickable and a "→ <label>" hint renders under the
+    /// message. Currently only used for missing-Accessibility-permission,
+    /// but the shape is generic so future permission errors (mic, screen
+    /// recording, etc.) can plug in the same way.
+    struct ErrorAction: Equatable {
+        let label: String
+        let url: URL
+    }
+
+    /// Convenience: build an error phase whose CTA opens the
+    /// Accessibility settings pane. Single chokepoint so future callers
+    /// don't have to remember the (long, fragile) URL.
+    static func accessibilityError(message: String) -> Phase {
+        .error(message: message, action: settingsAction(.accessibility))
+    }
+
+    /// Microphone-denied error → "Tap to open Settings" jumps to the
+    /// Microphone privacy pane.
+    static func micPermissionError(message: String) -> Phase {
+        .error(message: message, action: settingsAction(.microphone))
+    }
+
+    /// Speech-recognition-denied error → jumps to the Speech Recognition
+    /// privacy pane.
+    static func speechPermissionError(message: String) -> Phase {
+        .error(message: message, action: settingsAction(.speechRecognition))
+    }
+
+    /// Deep-link URLs for the System Settings privacy panes we care
+    /// about. Apple's URL scheme is `x-apple.systempreferences:`
+    /// followed by the bundle id of the prefpane (kept stable across
+    /// versions; macOS Ventura+ rebranded Settings but the URLs work).
+    private enum SettingsTarget {
+        case accessibility, microphone, speechRecognition
+
+        var url: URL {
+            switch self {
+            case .accessibility:
+                return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+            case .microphone:
+                return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!
+            case .speechRecognition:
+                return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition")!
+            }
+        }
+    }
+
+    private static func settingsAction(_ target: SettingsTarget) -> ErrorAction {
+        ErrorAction(
+            label: NSLocalizedString("Tap to open Settings", comment: ""),
+            url: target.url
+        )
     }
 
     private var window: NSPanel?
@@ -21,11 +88,16 @@ final class VoiceFloater {
     func show(initial: Phase) {
         model.phase = initial
         if window == nil { build() }
+        // Click-through when there's nothing to act on, intercept clicks
+        // when the current phase is an actionable error. Toggling on
+        // every show keeps the listening / sending phases overlay-only.
+        window?.ignoresMouseEvents = !initial.isActionable
         positionAndDisplay()
     }
 
     func update(_ phase: Phase) {
         model.phase = phase
+        window?.ignoresMouseEvents = !phase.isActionable
     }
 
     func hide(after delay: TimeInterval = 0.0) {
@@ -52,6 +124,7 @@ final class VoiceFloater {
         panel.hasShadow = true
         panel.backgroundColor = .clear
         panel.isOpaque = false
+        // Default to click-through; flipped per-phase in `show`/`update`.
         panel.ignoresMouseEvents = true
         panel.contentView = NSHostingView(rootView: FloaterView(model: model))
         self.window = panel
@@ -130,6 +203,17 @@ private struct FloaterView: View {
         )
         .frame(width: 280, height: 64)
         .colorScheme(.dark)
+        // Tap anywhere on the floater while it's an actionable error →
+        // open the bundled URL (e.g. the Accessibility settings pane).
+        // SwiftUI's `.onTapGesture` only fires when the host window has
+        // `ignoresMouseEvents = false`, which `VoiceFloater.show/update`
+        // toggles based on `phase.isActionable`.
+        .contentShape(Capsule(style: .continuous))
+        .onTapGesture {
+            if case .error(_, let action?) = model.phase {
+                NSWorkspace.shared.open(action.url)
+            }
+        }
         .onAppear {
             withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
                 pulse = true
@@ -181,7 +265,7 @@ private struct FloaterView: View {
                     .lineLimit(1)
                     .truncationMode(.head)
             }
-        case .error(let message):
+        case .error(let message, let action):
             VStack(alignment: .leading, spacing: 1) {
                 Text(L("Voice error", "语音错误"))
                     .font(.caption.monospaced())
@@ -190,6 +274,15 @@ private struct FloaterView: View {
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(.white.opacity(0.85))
                     .lineLimit(2)
+                // CTA hint — only renders when the error carries an
+                // action. Looks like a tappable secondary line so the
+                // user knows the whole pill is clickable.
+                if let action {
+                    Text("→ \(action.label)")
+                        .font(.caption.weight(.semibold).monospaced())
+                        .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.95))
+                        .padding(.top, 1)
+                }
             }
         }
     }

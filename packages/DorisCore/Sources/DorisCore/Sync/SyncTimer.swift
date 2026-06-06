@@ -197,16 +197,44 @@ public actor SyncTimer {
         return mode == "en" ? en : zh
     }
 
-    /// Hard-deletes notes that have been soft-deleted (`archived = true`)
-    /// for more than 30 days. Must be called on the main actor (since
-    /// `ModelContext` operations are main-actor bound).
+    /// Hard-deletes notes that have been soft-deleted (either `archived
+    /// = true` or `deleted = true`) for long enough that we trust every
+    /// device has seen the soft-delete and won't resurrect the record
+    /// via CloudKit mirror race.
+    ///
+    /// Two cutoffs because the two flags carry different intent:
+    /// - `archived` = "Recently Deleted" — user can still restore, so
+    ///   we give it a full 30 days before hard-deleting.
+    /// - `deleted` = "Trash" — explicit user-intent to permanently
+    ///   delete, just gated by a quorum window. 24 hours is enough for
+    ///   any active device to pull the tombstone update on its next
+    ///   sync cycle.
+    ///
+    /// Must be called on the main actor (`ModelContext` is main-bound).
     @MainActor
     private static func purgeTombstones(context: ModelContext) {
-        let cutoff = Date().addingTimeInterval(-30 * 24 * 60 * 60)
-        let descriptor = FetchDescriptor<Note>(
-            predicate: #Predicate<Note> { $0.archived && $0.updatedAt < cutoff }
+        let now = Date()
+        let archivedCutoff = now.addingTimeInterval(-30 * 24 * 60 * 60)
+        let trashCutoff = now.addingTimeInterval(-24 * 60 * 60)
+        // Two FetchDescriptors instead of one OR-predicate because
+        // SwiftData's #Predicate has limited support for complex
+        // boolean compositions involving multiple optional Dates.
+        let archivedDesc = FetchDescriptor<Note>(
+            predicate: #Predicate<Note> { $0.archived && $0.updatedAt < archivedCutoff }
         )
-        guard let stale = try? context.fetch(descriptor), !stale.isEmpty else { return }
+        let deletedDesc = FetchDescriptor<Note>(
+            predicate: #Predicate<Note> { $0.deleted && $0.updatedAt < trashCutoff }
+        )
+        let staleArchived = (try? context.fetch(archivedDesc)) ?? []
+        let staleDeleted = (try? context.fetch(deletedDesc)) ?? []
+        // Dedupe — a record can satisfy both predicates (archived AND
+        // deleted) — to avoid double-deleting.
+        var seen = Set<UUID>()
+        var stale: [Note] = []
+        for n in staleArchived + staleDeleted where seen.insert(n.id).inserted {
+            stale.append(n)
+        }
+        guard !stale.isEmpty else { return }
         for note in stale {
             context.delete(note)
         }

@@ -40,7 +40,15 @@ struct NotesScreen: View {
     @State private var nowTick: Date = Date()
     @State private var searchText: String = ""
     @State private var dueDateNoteID: UUID?
-    private let tickTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    /// Drives keyboard dismissal: bind to the bottom search TextField so
+    /// we can pop the keyboard via the `.toolbar(.keyboard)` "Done"
+    /// button without relying on the user finding the Search key on the
+    /// IME (which on Chinese keyboards is huge but on English defaults
+    /// to "return", confusing the affordance).
+    @FocusState private var searchFocused: Bool
+    // Drives the "synced X ago" label. 60s cadence → minute granularity,
+    // not a per-second stopwatch.
+    private let tickTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     private var filteredNotes: [Note] {
         guard !searchText.isEmpty else { return sortedNotes }
@@ -62,92 +70,32 @@ struct NotesScreen: View {
                         .listRowSeparator(.hidden)
                 } else {
                     ForEach(filteredNotes) { n in
-                        NavigationLink(value: n.id) {
-                            NoteRow(note: n)
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 14, bottom: 4, trailing: 14))
-                        // Trailing (left-swipe) → toggle completed. Used
-                        // to be Archive, but completing is a far more
-                        // frequent action and the destructive red read
-                        // wrong for "I'm done with this." Archive moved
-                        // into the long-press menu where it belongs.
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button {
-                                n.done.toggle()
-                                n.completedAt = n.done ? Date() : nil
-                                n.touch()
-                                try? ctx.save()
-                            } label: {
-                                Label(
-                                    n.done ? L("Undo", "取消完成") : L("Done", "完成"),
-                                    systemImage: n.done ? "arrow.uturn.backward" : "checkmark.circle.fill"
-                                )
-                            }
-                            .tint(CyberPalette.doneAccent)
-                        }
-                        // Leading (right-swipe): toggle pin
-                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                            Button {
-                                n.pinned.toggle()
-                                n.touch()
-                                try? ctx.save()
-                            } label: {
-                                Label(
-                                    n.pinned ? L("Unpin", "取消置顶") : L("Pin", "置顶"),
-                                    systemImage: n.pinned ? "pin.slash" : "pin"
-                                )
-                            }
-                            .tint(CyberPalette.neonPink)
-                        }
-                        // Long-press context menu — full action set lives
-                        // here. Archive is now ONLY reachable through
-                        // long-press so casual left-swipes can't soft-
-                        // delete a note by accident.
-                        .contextMenu {
-                            Button {
-                                n.pinned.toggle()
-                                n.touch()
-                                try? ctx.save()
-                            } label: {
-                                Label(
-                                    n.pinned ? L("Unpin", "取消置顶") : L("Pin", "置顶"),
-                                    systemImage: n.pinned ? "pin.slash" : "pin.fill"
-                                )
-                            }
-                            Button {
-                                n.done.toggle()
-                                n.completedAt = n.done ? Date() : nil
-                                n.touch()
-                                try? ctx.save()
-                            } label: {
-                                Label(
-                                    n.done ? L("Mark as undone", "标为未完成") : L("Mark as done", "标为已完成"),
-                                    systemImage: n.done ? "circle" : "checkmark.circle.fill"
-                                )
-                            }
-                            Button {
-                                dueDateNoteID = n.id
-                            } label: {
-                                Label(L("Set due date", "设置截止日期"), systemImage: "calendar")
-                            }
-                            Divider()
-                            Button(role: .destructive) {
-                                n.archive()
-                                try? ctx.save()
-                            } label: {
-                                Label(L("Archive", "归档"), systemImage: "archivebox")
-                            }
-                        }
+                        noteListRow(for: n)
                     }
                 }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            // Native iOS pattern: drag the list down → keyboard
+            // dismisses interactively. Pairs with the keyboard-toolbar
+            // Done button below so users have two ways out: gesture OR
+            // explicit tap.
+            .scrollDismissesKeyboard(.interactively)
             .refreshable { await runSync() }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Keyboard accessory: a single "完成" button on the
+                // trailing side that pops focus. Critical on Chinese
+                // IMEs where the keyboard's green "搜索" key reads as
+                // another submit, not a dismissal.
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(L("Done", "完成")) {
+                        searchFocused = false
+                    }
+                    .fontWeight(.semibold)
+                    .foregroundStyle(CyberPalette.neonCyan)
+                }
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
                         Text("DORIS")
@@ -228,9 +176,109 @@ struct NotesScreen: View {
         }
     }
 
+    // MARK: - Bulk archive (done items)
+
+    /// Count of notes that are completed but not yet archived. Drives
+    /// the "归档已完成 (N)" chip in the status bar: chip only appears
+    /// when there's something to archive, matching macOS behaviour.
+    private var doneActiveCount: Int {
+        notes.filter { !$0.archived && $0.done }.count
+    }
+
+    /// Bulk-archive every active+done note in one pass. Morning-routine
+    /// shortcut: yesterday's finished items vanish with one tap;
+    /// undone ones stay rolled over to today.
+    private func archiveAllDone() {
+        let now = Date()
+        for n in notes where !n.archived && n.done {
+            n.archived = true
+            n.archivedAt = now
+            n.updatedAt = now
+        }
+        try? ctx.save()
+    }
+
     private func runSync() async {
         AppCommands.syncNow()
         try? await Task.sleep(nanoseconds: 600_000_000)
+    }
+
+    // MARK: - List row (extracted so the body's type-checker doesn't
+    //              choke on the nested ForEach + swipe + contextMenu)
+
+    @ViewBuilder
+    private func noteListRow(for n: Note) -> some View {
+        NavigationLink(value: n.id) {
+            NoteRow(note: n)
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: 4, leading: 14, bottom: 4, trailing: 14))
+        // Trailing (left-swipe) → toggle completed. Archive moved into
+        // the long-press menu where it belongs (destructive-red on
+        // common swipe read wrong for "I'm done with this").
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button {
+                n.done.toggle()
+                n.completedAt = n.done ? Date() : nil
+                n.touch()
+                try? ctx.save()
+            } label: {
+                Label(
+                    n.done ? L("Undo", "取消完成") : L("Done", "完成"),
+                    systemImage: n.done ? "arrow.uturn.backward" : "checkmark.circle.fill"
+                )
+            }
+            .tint(CyberPalette.doneAccent)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                n.pinned.toggle()
+                n.touch()
+                try? ctx.save()
+            } label: {
+                Label(
+                    n.pinned ? L("Unpin", "取消置顶") : L("Pin", "置顶"),
+                    systemImage: n.pinned ? "pin.slash" : "pin"
+                )
+            }
+            .tint(CyberPalette.neonPink)
+        }
+        .contextMenu {
+            Button {
+                n.pinned.toggle()
+                n.touch()
+                try? ctx.save()
+            } label: {
+                Label(
+                    n.pinned ? L("Unpin", "取消置顶") : L("Pin", "置顶"),
+                    systemImage: n.pinned ? "pin.slash" : "pin.fill"
+                )
+            }
+            Button {
+                n.done.toggle()
+                n.completedAt = n.done ? Date() : nil
+                n.touch()
+                try? ctx.save()
+            } label: {
+                Label(
+                    n.done ? L("Mark as undone", "标为未完成") : L("Mark as done", "标为已完成"),
+                    systemImage: n.done ? "circle" : "checkmark.circle.fill"
+                )
+            }
+            Button {
+                dueDateNoteID = n.id
+            } label: {
+                Label(L("Set due date", "设置截止日期"), systemImage: "calendar")
+            }
+            Divider()
+            Button(role: .destructive) {
+                n.archive()
+                try? ctx.save()
+            } label: {
+                Label(L("Archive", "归档"), systemImage: "archivebox")
+            }
+        }
     }
 
     // MARK: - Quick due-date sheet (from contextMenu)
@@ -300,6 +348,12 @@ struct NotesScreen: View {
             .submitLabel(.search)
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
+            // Bind to @FocusState so the keyboard toolbar Done button +
+            // submit gesture can pop the keyboard. Without this hook
+            // the field doesn't surrender focus and the keyboard stays
+            // up forever (no tap-outside-to-dismiss for custom fields).
+            .focused($searchFocused)
+            .onSubmit { searchFocused = false }
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
@@ -365,7 +419,32 @@ struct NotesScreen: View {
 
             Spacer(minLength: 8)
 
-            // Right: archived notes button
+            // Right: archive-done button (shown only when there's at
+            // least one completed-but-not-yet-archived note) followed
+            // by the always-on Archived link.
+            if doneActiveCount > 0 {
+                Button { archiveAllDone() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(L("Archive done (\(doneActiveCount))",
+                               "归档已完成 (\(doneActiveCount))"))
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(CyberPalette.doneAccent)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(CyberPalette.doneAccent.opacity(0.10))
+                    )
+                    .overlay(
+                        Capsule().stroke(CyberPalette.doneAccent.opacity(0.45), lineWidth: 0.6)
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 6)
+            }
+
             Button { showArchived = true } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "archivebox")
@@ -402,6 +481,11 @@ struct NotesScreen: View {
         guard sync.cloudKitEnabled else { return L("Local only", "仅本地") }
         guard let last = sync.lastSyncedAt else { return L("Never synced", "尚未同步") }
         _ = nowTick
+        // Minute granularity — no seconds stopwatch. Under a minute reads
+        // "just now"; past that, RelativeDateTimeFormatter shows min/hr/day.
+        if Date().timeIntervalSince(last) < 60 {
+            return L("Synced · just now", "已同步 · 刚刚")
+        }
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .short
         return L("Synced ", "已同步 ") + f.localizedString(for: last, relativeTo: Date())
@@ -437,7 +521,11 @@ private struct ArchivedNotesSheet: View {
     @Environment(\.modelContext) private var ctx
 
     @Query(
-        filter: #Predicate<Note> { note in note.archived },
+        // Exclude trashed entries — see SettingsView.MacRecentlyDeletedTab
+        // for the rationale. After "Delete All" the row is set to
+        // `deleted = true` (soft-delete) so it survives sync race; the
+        // archived sheet should treat it as gone immediately.
+        filter: #Predicate<Note> { note in note.archived && !note.deleted },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var archived: [Note]
@@ -481,7 +569,15 @@ private struct ArchivedNotesSheet: View {
                             .listRowBackground(Color.primary.opacity(0.04))
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
-                                    ctx.delete(note)
+                                    // Soft-delete instead of ctx.delete so
+                                    // CloudKit mirror doesn't resurrect
+                                    // the row from another device's local
+                                    // copy. SyncTimer.purgeTombstones
+                                    // hard-deletes 24h after deletedAt.
+                                    let now = Date()
+                                    note.deleted = true
+                                    note.deletedAt = now
+                                    note.updatedAt = now
                                     try? ctx.save()
                                 } label: {
                                     Label(L("Delete", "删除"), systemImage: "trash")
@@ -505,7 +601,17 @@ private struct ArchivedNotesSheet: View {
                 if !archived.isEmpty {
                     ToolbarItem(placement: .topBarLeading) {
                         Button(role: .destructive) {
-                            for n in archived { ctx.delete(n) }
+                            // Soft-delete; see equivalent comment in
+                            // SettingsView.swift (Mac) for the CloudKit
+                            // race rationale. Items disappear from this
+                            // view immediately because the @Query for
+                            // `archived` excludes `deleted=true`.
+                            let now = Date()
+                            for n in archived {
+                                n.deleted = true
+                                n.deletedAt = now
+                                n.updatedAt = now
+                            }
                             try? ctx.save()
                         } label: {
                             Text(L("Delete All", "全部删除"))
@@ -523,18 +629,10 @@ private struct ArchivedNotesSheet: View {
 private struct NoteRow: View {
     let note: Note
 
-    /// Treat the row as completed if either the note's own done flag is
-    /// set OR it's a checklist whose items are all checked. Matches the
-    /// `isCompleted` logic in TodayPinnedCard/Row so the entire app
-    /// agrees on what "done" looks like.
-    private var isCompleted: Bool {
-        if note.done { return true }
-        if note.isChecklist {
-            let items = note.checklistItems ?? []
-            return !items.isEmpty && items.allSatisfy(\.done)
-        }
-        return false
-    }
+    /// Delegate to the shared model-level computed property so every
+    /// surface (Today pinned/calendar, Notes list, calendar timeline)
+    /// reads "completed" from the same source of truth.
+    private var isCompleted: Bool { note.isCompleted }
 
     var body: some View {
         CyberCard {
@@ -572,18 +670,14 @@ private struct NoteRow: View {
                             .foregroundStyle(.primary.opacity(0.55))
                             .lineLimit(2)
                     }
-                    HStack(spacing: 6) {
-                        Text(note.updatedAt, style: .relative)
-                            .font(.caption2)
-                            .foregroundStyle(.primary.opacity(0.4))
-                        // When completed, replace the due-date chip with
-                        // a "DONE" pill so completion is the dominant
-                        // signal on the row's meta line.
-                        if isCompleted {
-                            donePill
-                        } else if let due = note.dueDate {
-                            dueDateChip(due)
-                        }
+                    // Cleaner rows: no running relative timer here — the
+                    // creation time lives in the detail page. Only show the
+                    // DONE pill (completed) or the due-date chip, and only
+                    // when there's actually one to show.
+                    if isCompleted {
+                        HStack(spacing: 6) { donePill }
+                    } else if let due = note.dueDate {
+                        HStack(spacing: 6) { dueDateChip(due) }
                     }
                 }
                 Spacer(minLength: 0)

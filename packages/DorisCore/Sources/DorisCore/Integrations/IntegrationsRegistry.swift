@@ -7,12 +7,20 @@ import Combine
 /// nested under the @MainActor registry) so the SwiftUI default-
 /// parameter call site can reach it without crossing an actor
 /// boundary. Order matters — this is the order rows appear in
-/// Settings. Most-supported (.full) entries first so the "good case"
-/// is what the user sees first; .manual entries follow.
+/// Settings.
+///
+/// ChatGPT used to live here as a `.manual` tier provider that
+/// pointed at a macOS-Shortcuts tutorial, but the desktop app
+/// exposes no callback surface (no hook API, no AppleScript event,
+/// no URL-scheme-out) so the row was a dead-end UX — there was
+/// nothing to click "register" against. Removed entirely. Users
+/// who still want a ChatGPT completion ping can fire
+/// `open "doris://notify?...&source=chatgpt&click=chatgpt://"`
+/// manually from a hotkey or script; `SourceKind.chatgpt` stays in
+/// the IPC enum so that path remains valid.
 public let dorisDefaultIntegrationProviders: [any IntegrationProvider] = [
     ClaudeCodeIntegration(),
-    CodexIntegration(),
-    ChatGPTIntegration()
+    CodexIntegration()
 ]
 
 /// Single source of truth for the Settings "应用集成" section. Holds

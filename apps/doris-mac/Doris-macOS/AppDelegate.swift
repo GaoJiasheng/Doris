@@ -95,6 +95,13 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
             self.syncTimer = SyncTimer(container: container, interval: 60)
             await self.syncTimer?.start()
 
+            // Desktop sticky notes — observe "Stick to desktop" context-
+            // menu requests and re-float any notes still stuck from a
+            // previous session.
+            StickyWindowManager.shared.start()
+            // Desktop dashboard panel — re-show if left visible.
+            DesktopPanelController.shared.start()
+
             // Avatar's right-click menu calls into these hooks. Sync
             // completion fires a celebration so the cyber girl reacts.
             // Both manual buttons (toolbar + avatar menu) take this path.
