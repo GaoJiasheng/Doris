@@ -2,6 +2,9 @@ import Foundation
 import DorisIPC
 import SwiftData
 import CloudKit
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 /// Periodically calls `ModelContext.save()` to flush pending writes and let
 /// SwiftData's CloudKit mirror push them upstream — then verifies CloudKit
@@ -103,7 +106,26 @@ public actor SyncTimer {
             SyncSettings.shared.markSyncedNow()
             SyncSettings.shared.lastSyncError = nil
             DorisLog.sync.debug("sync poke ok (cloudKit=\(cloudKitEnabled))")
+            // 4. Kick the home-screen widgets. SQLite just got fresh
+            //    data (either local edits we just flushed or CloudKit
+            //    inbound rows the mirror has been quietly applying).
+            //    Without this, widgets only refresh on iOS's own
+            //    15-minute policy and the user sees stale tasks for
+            //    far longer than they'd expect.
+            Self.reloadWidgetTimelines()
         }
+    }
+
+    /// Tell every installed widget to refresh its timeline. Cheap —
+    /// WidgetKit just enqueues a refresh request, iOS schedules the
+    /// actual reload subject to its own budget. Safe to call from
+    /// every sync tick.
+    @MainActor
+    private static func reloadWidgetTimelines() {
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadAllTimelines()
+        DorisLog.sync.debug("widget timelines reload requested")
+        #endif
     }
 
     /// Reachability probe for the private CloudKit container. Two cheap
