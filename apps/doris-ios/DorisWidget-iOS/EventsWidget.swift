@@ -43,8 +43,20 @@ struct EventsProvider: TimelineProvider {
         completion(Timeline(entries: [load()], policy: .after(next)))
     }
 
+    /// Read directly from the local SQLite store shared via the App
+    /// Group. Critical that this is `useCloudKit: false`:
+    ///   · The main app owns the CloudKit mirror — it keeps the SQLite
+    ///     file fresh. The widget piggybacks on whatever the app last
+    ///     synced.
+    ///   · `useCloudKit: true` in a widget extension means iOS has to
+    ///     stand up an `NSPersistentCloudKitContainer` inside the
+    ///     widget process every timeline tick. That blows past the
+    ///     widget's tight CPU/time budget and on unsigned dev builds
+    ///     traps the process (same brk 1 we hit in the main app).
+    ///   · The widget process is short-lived. There's no time for a
+    ///     CloudKit fetch to actually complete before iOS suspends us.
     private func load() -> EventsEntry {
-        guard let container = try? ModelContainerFactory.make(useCloudKit: true) else {
+        guard let container = try? ModelContainerFactory.make(useCloudKit: false) else {
             return EventsEntry(date: .now, messages: [])
         }
         let context = ModelContext(container)

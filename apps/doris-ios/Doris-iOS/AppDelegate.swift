@@ -1,4 +1,5 @@
 import UIKit
+import WidgetKit
 import SwiftData
 import DorisCore
 import DorisIPC
@@ -50,5 +51,16 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
             }
         }
         return true
+    }
+
+    /// Called every time the user brings the app to the foreground —
+    /// switching back from Mac, after a long screen-off, etc. By the
+    /// time they're looking at the app, the home-screen widget they
+    /// just glanced at is already stale. Kick a fresh timeline reload
+    /// so the widget catches up on whatever CloudKit pulled in while
+    /// the app was suspended. Cheap; WidgetKit just enqueues a
+    /// request and iOS schedules the actual refresh.
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }
