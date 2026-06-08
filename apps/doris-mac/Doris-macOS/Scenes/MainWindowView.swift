@@ -441,7 +441,17 @@ private struct MainNotesList: View {
     private var notes: [Note]
 
     @Binding var editing: Note?
-    @FocusState private var focusedNoteID: UUID?
+    /// Plain @State (not @FocusState): the TODO rows are AppKit title
+    /// fields that drive first-responder themselves. A @FocusState set
+    /// with no matching `.focused()` modifier reverts to nil, so the
+    /// newly-created row never received the caret.
+    @State private var focusedNoteID: UUID?
+    /// A note we just created (Enter on a row, or the add button) that we
+    /// want to focus *once it actually appears* in `sortedNotes`. The
+    /// SwiftData @Query refresh is async, so assigning `focusedNoteID`
+    /// straight after insert races the new row's first render and the
+    /// focus is silently dropped — we apply it from `.onChange` instead.
+    @State private var pendingFocusNoteID: UUID?
     @State private var filter: TodoFilter = .active
     @State private var confirmingEmptyTrash = false
 
@@ -529,6 +539,7 @@ private struct MainNotesList: View {
                                 focused: $focusedNoteID,
                                 onSubmit: { addNoteAfter(n) },
                                 onExpand: { editing = n },
+                                onDeleteEmpty: { deleteEmptyAndFocusPrev(n) },
                                 onDropBefore: { dragged in
                                     moveDraggedBefore(n.id, dragged: dragged)
                                 }
@@ -542,6 +553,16 @@ private struct MainNotesList: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
+        }
+        // Apply deferred focus once the freshly-created note shows up in
+        // the list. Fires only on structural changes (insert/remove/
+        // reorder) — editing a title leaves identity + order unchanged, so
+        // this stays quiet during typing.
+        .onChange(of: sortedNotes) { _, newValue in
+            guard let target = pendingFocusNoteID,
+                  newValue.contains(where: { $0.id == target }) else { return }
+            pendingFocusNoteID = nil
+            focusedNoteID = target
         }
     }
 
@@ -703,20 +724,43 @@ private struct MainNotesList: View {
     ///     `createdAt` jumps past every existing row.
     private func addNoteAfter(_ previous: Note?) {
         let n = Note(title: "")
-        let stamp: Date
-        if let previous {
-            stamp = previous.createdAt.addingTimeInterval(0.001)
+        // Position the new row by `order` so it lands directly BELOW
+        // `previous` (or at the end when added from the + button). The
+        // active sort is pinned > done > order > createdAt; once any row
+        // has a non-zero `order` (after a drag) a fresh note left at
+        // order 0 would jump to the top. Renumber the visible sequence —
+        // same approach as drag-reorder — so the insert point is exact.
+        // Pinned rows keep their relative order (they're already at the
+        // front of the sequence), so the Today pinned grid isn't disturbed.
+        var seq = sortedNotes
+        if let previous, let pIdx = seq.firstIndex(where: { $0.id == previous.id }) {
+            seq.insert(n, at: pIdx + 1)
         } else {
-            let maxCreated = notes.map(\.createdAt).max() ?? Date()
-            stamp = maxCreated.addingTimeInterval(1)
+            seq.append(n)
         }
-        n.createdAt = stamp
-        n.updatedAt = stamp
         ctx.insert(n)
+        for (i, note) in seq.enumerated() { note.order = Double(i) }
         try? ctx.save()
-        DispatchQueue.main.async {
-            focusedNoteID = n.id
-        }
+        // Don't focus here — the row isn't in `sortedNotes` yet (async
+        // @Query refresh). `.onChange(of: sortedNotes)` lands the cursor
+        // in the new row the moment it renders, at the start of its
+        // (empty) title field.
+        pendingFocusNoteID = n.id
+    }
+
+    /// Backspace on an empty task row → delete it and land the caret at
+    /// the END of the previous row. No-op on the first row (nothing to
+    /// merge into). Mirrors the checklist editor's backspace-merge.
+    private func deleteEmptyAndFocusPrev(_ n: Note) {
+        let rows = sortedNotes
+        guard let idx = rows.firstIndex(where: { $0.id == n.id }), idx > 0 else { return }
+        let prev = rows[idx - 1]
+        ctx.delete(n)
+        try? ctx.save()
+        // AppKit title field self-focuses + drops the caret at the end
+        // when focusedNoteID matches; pendingFocus applies it once the
+        // list settles after the delete.
+        pendingFocusNoteID = prev.id
     }
 
     private var emptyState: some View {

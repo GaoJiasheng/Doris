@@ -166,41 +166,26 @@ struct MainTodayView: View {
     /// CloudKit).
     @ViewBuilder
     private func pinnedGrid(_ notes: [Note]) -> some View {
-        LazyVGrid(
-            // Bumped from 180 → 270 (+50%) so cards read chunkier; at the
-            // default 760pt window width that lands 1 column, fanning out
-            // to 2+ as the window widens.
+        ReorderableNoteGrid(
+            notes,
+            // Card min width 270 so cards read chunkier; at the default
+            // 760pt window width that lands 1-2 columns, fanning out as
+            // the window widens.
             columns: [GridItem(.adaptive(minimum: 270), spacing: 10)],
-            spacing: 10
-        ) {
-            ForEach(notes) { n in
+            spacing: 10,
+            card: { n in
                 Button { editing = n } label: {
                     TodayPinnedCard(note: n)
                 }
                 .buttonStyle(.plain)
                 .noteContextMenu(for: n, onOpenEditor: { editing = n })
-                .draggable(n.id.uuidString)
-                .dropDestination(for: String.self) { items, _ in
-                    guard let raw = items.first,
-                          let dragged = UUID(uuidString: raw),
-                          dragged != n.id else { return false }
-                    reorderPinned(dragged: dragged, before: n.id, within: notes)
-                    return true
-                }
+            },
+            commit: { ordered, moved in
+                for (i, n) in ordered.enumerated() { n.order = Double(i) }
+                moved.touch()
+                try? ctx.save()
             }
-        }
-    }
-
-    /// Renumber `order` across the bucket so the dragged card lands
-    /// before `targetID`. Mirrors MainWindowView.moveDraggedBefore.
-    private func reorderPinned(dragged: UUID, before targetID: UUID, within notes: [Note]) {
-        guard let draggedNote = notes.first(where: { $0.id == dragged }) else { return }
-        var arr = notes.filter { $0.id != dragged }
-        let idx = arr.firstIndex(where: { $0.id == targetID }) ?? arr.count
-        arr.insert(draggedNote, at: idx)
-        for (i, n) in arr.enumerated() { n.order = Double(i) }
-        draggedNote.touch()
-        try? ctx.save()
+        )
     }
 
     // MARK: - Section header

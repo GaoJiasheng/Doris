@@ -179,6 +179,21 @@ struct TasksProvider: TimelineProvider {
     }
 }
 
+// ============================================================================
+//  TasksWidget.swift — VIEW LAYER ONLY.
+//  Final redesign: "Calm Focus" (hero ledger header + hairline-divided calm
+//  list with quiet accent dots) + grafts from "Glassy Depth":
+//    • 16pt progress ring in place of the capsule bar
+//    • 4pt "LED" tint dot on section captions (colorblind-friendly)
+//    • rebuilt accessoryRectangular with per-row state glyphs + overdue mark
+//
+//  Drop-in replacement for `struct TasksWidgetView` and its private helpers
+//  (the original lines 184–399). Everything above line 182 — TasksProvider,
+//  TaskSnapshot, TasksEntry, ToggleTaskIntent, TasksWidget, and the private
+//  `CyberPalette.longTermViolet` extension — stays EXACTLY as-is.
+//  Targets iOS 18 WidgetKit.
+// ============================================================================
+
 // MARK: - View
 
 struct TasksWidgetView: View {
@@ -187,6 +202,8 @@ struct TasksWidgetView: View {
 
     private var isAccessory: Bool { family == .accessoryRectangular }
 
+    // One fewer row than the original on small to buy breathing room for the
+    // hero line; medium/large unchanged.
     private var visibleCount: Int {
         switch family {
         case .systemSmall:          return 3
@@ -197,30 +214,44 @@ struct TasksWidgetView: View {
         }
     }
 
+    // Cached so we don't allocate a DateFormatter every render.
+    private static let heroDateFormatterFull: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "M月d日 EEE"
+        return f
+    }()
+    private static let heroDateFormatterShort: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "M/d"
+        return f
+    }()
+
+    // MARK: Body
+
     var body: some View {
         content
             .containerBackground(for: .widget) {
-                if isAccessory {
-                    Color.clear
-                } else {
-                    background
-                }
+                if isAccessory { Color.clear } else { background }
             }
     }
 
-    // Adaptive cyber backdrop + a soft pink→cyan glow in the top-trailing
-    // corner so the card reads as "Doris" at a glance.
+    // Single soft diagonal pink→cyan sheen — neon as ambient atmosphere, not
+    // two competing spotlights. Additive over the dark backdrop.
     private var background: some View {
         ZStack {
             CyberPalette.backdrop
-            RadialGradient(
-                colors: [CyberPalette.neonCyan.opacity(0.18), .clear],
-                center: .topTrailing, startRadius: 0, endRadius: 180
+            LinearGradient(
+                colors: [
+                    CyberPalette.neonPink.opacity(0.10),
+                    .clear,
+                    CyberPalette.neonCyan.opacity(0.12)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            RadialGradient(
-                colors: [CyberPalette.neonPink.opacity(0.14), .clear],
-                center: .bottomLeading, startRadius: 0, endRadius: 160
-            )
+            .blendMode(.plusLighter)
         }
     }
 
@@ -242,87 +273,128 @@ struct TasksWidgetView: View {
         let pinnedRows = visible.filter { $0.section == .pinned }
         let upcomingRows = visible.filter { $0.section == .upcoming }
         let hidden = entry.total - visible.count
-        let showHeaders = family != .systemSmall
+        let showCaptions = family != .systemSmall
 
-        return VStack(alignment: .leading, spacing: family == .systemSmall ? 7 : 9) {
-            header
+        return VStack(alignment: .leading, spacing: 0) {
+            heroLine
+            divider.padding(.top, family == .systemSmall ? 6 : 8)
 
-            if showHeaders {
-                if !pinnedRows.isEmpty {
-                    sectionLabel("置顶", tint: CyberPalette.neonPink)
-                    ForEach(pinnedRows) { row($0) }
+            VStack(alignment: .leading, spacing: 0) {
+                if showCaptions {
+                    if !pinnedRows.isEmpty {
+                        sectionCaption("置顶", tint: CyberPalette.neonPink)
+                        rowStack(pinnedRows)
+                    }
+                    if !upcomingRows.isEmpty {
+                        sectionCaption("日程", tint: CyberPalette.neonCyan)
+                            .padding(.top, pinnedRows.isEmpty ? 0 : 4)
+                        rowStack(upcomingRows)
+                    }
+                } else {
+                    rowStack(visible)
                 }
-                if !upcomingRows.isEmpty {
-                    sectionLabel("日程", tint: CyberPalette.neonCyan)
-                    ForEach(upcomingRows) { row($0) }
-                }
-            } else {
-                ForEach(visible) { row($0) }
             }
+            .padding(.top, family == .systemSmall ? 5 : 7)
 
             if hidden > 0 {
-                Text("还有 \(hidden) 项")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 1)
+                Text("+\(hidden) 更多")
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.top, 4)
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, family == .systemSmall ? 12 : 14)
-        .padding(.vertical, family == .systemSmall ? 11 : 13)
+        .padding(.horizontal, family == .systemSmall ? 13 : 15)
+        .padding(.vertical, family == .systemSmall ? 12 : 14)
     }
 
-    private var header: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(CyberPalette.neonCyan)
-            Text(family == .systemSmall ? "今日" : "Doris · 今日")
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
-            Spacer(minLength: 4)
-            Text("\(entry.total)")
-                .font(.system(size: 11, weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(CyberPalette.neonCyan)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 2)
-                .background(
-                    Capsule().fill(CyberPalette.neonCyan.opacity(0.16))
-                )
+    // Rows share one VStack so the inter-row hairlines are uniform.
+    @ViewBuilder
+    private func rowStack(_ rows: [TaskSnapshot]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.element.id) { idx, t in
+                if idx > 0 { divider }
+                row(t)
+            }
         }
     }
 
-    private func sectionLabel(_ text: String, tint: Color) -> some View {
-        Text(text)
-            .font(.system(size: 10, weight: .black, design: .rounded))
-            .kerning(1.0)
-            .foregroundStyle(tint)
-            .padding(.top, 1)
+    // MARK: Hero
+
+    // The single loudest element on the card: count + label, date trailing.
+    private var heroLine: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Text("\(entry.total)")
+                .font(.system(size: family == .systemSmall ? 19 : 22,
+                              weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundStyle(CyberPalette.neonCyan)
+            Text("件待办")
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 6)
+            Text(dateLabel)
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundStyle(.tertiary)
+        }
     }
+
+    private var dateLabel: String {
+        let f = family == .systemSmall
+            ? Self.heroDateFormatterShort
+            : Self.heroDateFormatterFull
+        return f.string(from: entry.date)
+    }
+
+    // The one structural line in the design.
+    private var divider: some View {
+        Rectangle()
+            .fill(HierarchicalShapeStyle.primary.opacity(0.08))
+            .frame(height: 0.5)
+    }
+
+    // Graft (2): a 4pt "LED" tint dot prefix makes 置顶/日程 scannable without
+    // relying on color alone — colorblind-friendly at near-zero visual cost.
+    private func sectionCaption(_ text: String, tint: Color) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(tint.opacity(0.85))
+                .frame(width: 4, height: 4)
+            Text(text)
+                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint.opacity(0.7))
+        }
+        .padding(.bottom, 2)
+    }
+
+    // MARK: Row
 
     @ViewBuilder
     private func row(_ t: TaskSnapshot) -> some View {
         HStack(spacing: 8) {
-            // Section accent rail.
-            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                .fill(t.isCompleted ? AnyShapeStyle(CyberPalette.doneAccent.opacity(0.4))
-                                    : AnyShapeStyle(t.tint))
-                .frame(width: 3)
-
-            // Interactive checkbox — the one piece of capability parity.
+            // Interactive checkbox — capability parity, behaviour unchanged.
             Button(intent: ToggleTaskIntent(noteID: t.id.uuidString)) {
                 Image(systemName: t.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 15, weight: .regular))
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(t.isCompleted ? AnyShapeStyle(CyberPalette.doneAccent)
-                                                   : AnyShapeStyle(t.tint))
+                    .foregroundStyle(t.isCompleted
+                        ? AnyShapeStyle(CyberPalette.doneAccent)
+                        : AnyShapeStyle(t.tint.opacity(0.85)))
             }
             .buttonStyle(.plain)
 
+            // Quiet bucket signal: a small accent dot, not a slab rail.
+            Circle()
+                .fill(t.isCompleted
+                    ? AnyShapeStyle(CyberPalette.doneAccent.opacity(0.35))
+                    : AnyShapeStyle(t.tint))
+                .frame(width: 5, height: 5)
+
             Text(t.title)
-                .font(.system(size: 12.5, weight: .medium, design: .rounded))
-                .strikethrough(t.isCompleted, color: CyberPalette.doneAccent.opacity(0.85))
+                .font(.system(size: 13, weight: .regular, design: .rounded))
+                .strikethrough(t.isCompleted, color: CyberPalette.doneAccent.opacity(0.8))
                 .foregroundStyle(t.isCompleted
-                    ? AnyShapeStyle(HierarchicalShapeStyle.primary.opacity(0.42))
+                    ? AnyShapeStyle(HierarchicalShapeStyle.primary.opacity(0.4))
                     : AnyShapeStyle(HierarchicalShapeStyle.primary))
                 .lineLimit(1)
 
@@ -330,68 +402,92 @@ struct TasksWidgetView: View {
 
             trailingAccessory(t)
         }
-        .padding(.vertical, 4)
-        .padding(.trailing, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(.white.opacity(0.001))   // keep row hit/visual rect stable
-                .background(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(t.tint.opacity(t.isCompleted ? 0.0 : 0.06))
-                )
-        )
+        .padding(.vertical, family == .systemSmall ? 5 : 6)
     }
 
     @ViewBuilder
     private func trailingAccessory(_ t: TaskSnapshot) -> some View {
         if t.checklistTotal > 0 {
-            // Compact checklist progress pill with a thin fill bar.
+            // Graft (1): checklist progress as a 16pt ring + micro count —
+            // more elegant and legible at widget scale than a 3px bar.
             let frac = Double(t.checklistDone) / Double(max(t.checklistTotal, 1))
-            HStack(spacing: 4) {
+            let ringTint = (t.checklistDone >= t.checklistTotal)
+                ? CyberPalette.doneAccent : t.tint
+            HStack(spacing: 5) {
                 Text("\(t.checklistDone)/\(t.checklistTotal)")
-                    .font(.system(size: 9.5, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(t.tint)
-                Capsule()
-                    .fill(t.tint.opacity(0.2))
-                    .frame(width: 22, height: 3)
-                    .overlay(alignment: .leading) {
-                        Capsule().fill(t.tint).frame(width: 22 * frac, height: 3)
-                    }
+                    .font(.system(size: 10, weight: .medium, design: .rounded).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                progressRing(fraction: frac, tint: ringTint)
             }
         } else if let due = t.dueDate {
             Text(due, format: .dateTime.month(.twoDigits).day(.twoDigits))
-                .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(t.overdue ? .red : .secondary)
+                .font(.system(size: 10, weight: .medium, design: .rounded).monospacedDigit())
+                .foregroundStyle(t.overdue ? AnyShapeStyle(Color.red) : AnyShapeStyle(.secondary))
         }
     }
 
-    // MARK: Empty + accessory
+    // 16pt progress ring: track + trimmed arc swept from 12 o'clock; the
+    // arc fills to doneAccent when the checklist completes.
+    private func progressRing(fraction: Double, tint: Color) -> some View {
+        ZStack {
+            Circle()
+                .stroke(tint.opacity(0.18), lineWidth: 2.5)
+            Circle()
+                .trim(from: 0, to: max(0.0001, min(fraction, 1)))
+                .stroke(tint, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+        }
+        .frame(width: 16, height: 16)
+    }
+
+    // MARK: Empty (same grammar as the populated card, at rest)
 
     private var emptyView: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 26))
-                .foregroundStyle(CyberPalette.neonCyan)
-            Text("全部完成")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-            Text("没有置顶或今日任务")
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 0) {
+            heroLine
+            divider.padding(.top, family == .systemSmall ? 6 : 8)
+            Spacer(minLength: 0)
+            HStack(spacing: 5) {
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(CyberPalette.neonCyan.opacity(0.85))
+                Text("今天没有待办")
+                    .font(.system(size: 12, weight: .regular, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, family == .systemSmall ? 13 : 15)
+        .padding(.vertical, family == .systemSmall ? 12 : 14)
     }
 
+    // MARK: Lock-screen accessory (rebuilt — graft 3, vibrancy-safe)
+
+    // Per-row circle/checkmark state glyph + overdue "!" marker; only
+    // .primary/.secondary foregrounds + SF Symbols so the system recolors
+    // it cleanly under any wallpaper tint. No brand colors leak in.
     private var accessoryView: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
-                Image(systemName: "pin.fill").font(.caption2)
-                Text("\(entry.total) 项待办").font(.caption2.weight(.semibold))
+                Image(systemName: "checklist").font(.caption2)
+                Text("\(entry.total) 件待办").font(.caption2.weight(.semibold))
             }
-            if let first = entry.tasks.first {
-                Text(first.title).font(.caption2).lineLimit(1)
-            }
-            if entry.tasks.count > 1 {
-                Text(entry.tasks[1].title).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+            ForEach(Array(entry.tasks.prefix(2).enumerated()), id: \.element.id) { idx, t in
+                HStack(spacing: 4) {
+                    Image(systemName: t.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 9, weight: .semibold))
+                        .symbolRenderingMode(.hierarchical)
+                    Text(t.title)
+                        .font(.caption2)
+                        .lineLimit(1)
+                        .strikethrough(t.isCompleted)
+                    if t.overdue {
+                        Image(systemName: "exclamationmark")
+                            .font(.system(size: 8, weight: .black))
+                    }
+                }
+                .foregroundStyle(idx == 0 ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

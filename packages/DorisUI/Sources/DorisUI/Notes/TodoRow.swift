@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 import DorisCore
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// View mode for the TODO list. Three filters partition every note:
 ///   - `.active`   →  not archived, not deleted
@@ -20,12 +23,19 @@ public enum TodoFilter {
 /// should create a fresh empty task below and route focus to it.
 public struct TodoRow: View {
     @Bindable public var note: Note
-    /// Host-managed focus state — pass a `@FocusState` projected
-    /// binding from the parent so the parent can move focus to a newly
-    /// inserted row after `onSubmit`.
-    public var focused: FocusState<UUID?>.Binding
+    /// Host-managed focus target — the id of the row whose title field
+    /// should hold the keyboard. A PLAIN `Binding`, not a `@FocusState`
+    /// binding: the macOS title field is an AppKit `NSTextField` that
+    /// drives first-responder itself, so the parent uses `@State` (a
+    /// `@FocusState` set with no matching `.focused()` modifier would
+    /// revert to nil and the row would never focus). TodoRow is macOS-only.
+    public var focused: Binding<UUID?>
     /// Called when the user presses Enter while editing the title.
     public var onSubmit: () -> Void
+    /// Called when the user presses Backspace on an EMPTY title. The host
+    /// should delete this (empty) task and move focus to the END of the
+    /// previous row. macOS only — the AppKit field intercepts the key.
+    public var onDeleteEmpty: () -> Void
     /// Called when the user clicks the expand icon — the host opens
     /// the full inline editor for body / sub-checklist editing.
     public var onExpand: () -> Void
@@ -43,15 +53,17 @@ public struct TodoRow: View {
 
     public init(
         note: Note,
-        focused: FocusState<UUID?>.Binding,
+        focused: Binding<UUID?>,
         onSubmit: @escaping () -> Void,
         onExpand: @escaping () -> Void,
+        onDeleteEmpty: @escaping () -> Void = {},
         onDropBefore: @escaping (UUID) -> Void = { _ in }
     ) {
         self.note = note
         self.focused = focused
         self.onSubmit = onSubmit
         self.onExpand = onExpand
+        self.onDeleteEmpty = onDeleteEmpty
         self.onDropBefore = onDropBefore
     }
 
@@ -107,7 +119,34 @@ public struct TodoRow: View {
                       : L("Mark done", "标记完成"))
             }
 
-            // Inline-editable title
+            // Inline-editable title.
+            #if os(macOS)
+            // AppKit-backed so we can intercept the field editor's keys:
+            //   Return            → onSubmit       (new task below)
+            //   Backspace (empty) → onDeleteEmpty  (delete + merge up)
+            // SwiftUI's TextField can't — the field editor eats those keys
+            // before .onSubmit / .onKeyPress see them. Focus is driven by
+            // `focused` (the parent's @FocusState), exactly like the
+            // checklist editor's ChecklistItemField. On focus the caret
+            // lands at the END of the text, which gives both behaviors we
+            // want for free: a new (empty) row → caret at start; a merge
+            // target (has text) → caret at end.
+            TodoTitleField(
+                text: $note.title,
+                placeholder: L("New task", "新任务"),
+                done: note.done,
+                isFocused: focused.wrappedValue == note.id,
+                onFocusChange: { gained in
+                    if gained { focused.wrappedValue = note.id }
+                    else if focused.wrappedValue == note.id { focused.wrappedValue = nil }
+                },
+                onSubmit: onSubmit,
+                onDeleteEmpty: onDeleteEmpty
+            )
+            .onChange(of: note.title) { _, _ in note.updatedAt = Date() }
+            #else
+            // iOS path is dead code (iOS uses NoteRow) but must compile.
+            // No `.focused()` — `focused` is a plain Binding now.
             TextField(
                 L("New task", "新任务"),
                 text: $note.title
@@ -118,9 +157,9 @@ public struct TodoRow: View {
             .foregroundStyle(note.done
                              ? Color.primary.opacity(0.45)
                              : Color.primary)
-            .focused(focused, equals: note.id)
             .onSubmit(onSubmit)
             .onChange(of: note.title) { _, _ in note.updatedAt = Date() }
+            #endif
 
             Spacer(minLength: 0)
 
@@ -325,3 +364,86 @@ public struct TodoRow: View {
         !note.bodyMarkdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
+
+#if os(macOS)
+
+/// Single-line AppKit title field for a TODO row. Mirrors the checklist
+/// editor's `ChecklistItemField`: it exists only so we can intercept the
+/// field editor's command keys (Return → new task, Backspace-on-empty →
+/// delete-and-merge-up), which a SwiftUI `TextField` can't. On focus it
+/// drops the caret at the END of the text — for a freshly-created empty
+/// row that's position 0 (the start), and for a merge target it's the end.
+struct TodoTitleField: NSViewRepresentable {
+    @Binding var text: String
+    var placeholder: String
+    var done: Bool
+    var isFocused: Bool
+    var onFocusChange: (Bool) -> Void
+    var onSubmit: () -> Void
+    var onDeleteEmpty: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSTextField {
+        let tf = NSTextField()
+        tf.isEditable = true
+        tf.isSelectable = true
+        tf.isBordered = false
+        tf.drawsBackground = false
+        tf.focusRingType = .none
+        tf.usesSingleLineMode = true
+        tf.lineBreakMode = .byTruncatingTail
+        tf.cell?.wraps = false
+        tf.cell?.isScrollable = true
+        tf.font = NSFont.preferredFont(forTextStyle: .subheadline)
+        tf.placeholderString = placeholder
+        tf.delegate = context.coordinator
+        tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return tf
+    }
+
+    func updateNSView(_ tf: NSTextField, context: Context) {
+        context.coordinator.parent = self
+        if tf.stringValue != text { tf.stringValue = text }
+        tf.placeholderString = placeholder
+        // Done → dimmed. The checkbox carries the "done" signal; AppKit
+        // strikethrough on an editable field fights the field editor, so
+        // we dim like the checklist editor instead of striking through.
+        tf.textColor = done ? NSColor.labelColor.withAlphaComponent(0.45) : .labelColor
+
+        // Self-healing focus: whenever SwiftUI marks this row focused we
+        // become first responder and drop the caret at the end. The
+        // shared helper retries until the field is in a window — without
+        // that, a new row inside the menu-bar panel (whose NSView has a
+        // nil window for a few ticks) never grabs the caret.
+        if isFocused { dorisFocusFieldToEnd(tf) }
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: TodoTitleField
+        init(_ parent: TodoTitleField) { self.parent = parent }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let tf = obj.object as? NSTextField else { return }
+            parent.text = tf.stringValue
+        }
+        func controlTextDidBeginEditing(_ obj: Notification) { parent.onFocusChange(true) }
+        func controlTextDidEndEditing(_ obj: Notification) { parent.onFocusChange(false) }
+
+        func control(_ control: NSControl, textView: NSTextView,
+                     doCommandBy selector: Selector) -> Bool {
+            if selector == #selector(NSResponder.insertNewline(_:)) {
+                parent.onSubmit()
+                return true
+            }
+            if selector == #selector(NSResponder.deleteBackward(_:)), textView.string.isEmpty {
+                parent.onDeleteEmpty()
+                return true
+            }
+            return false
+        }
+    }
+}
+
+#endif // os(macOS)

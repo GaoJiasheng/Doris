@@ -915,7 +915,11 @@ private struct AnchorNotesView: View {
         }
     }
 
-    @FocusState private var focusedNoteID: UUID?
+    // Plain @State (not @FocusState): TodoRow's macOS title field is an
+    // AppKit NSTextField that drives first-responder itself. A @FocusState
+    // set with no matching `.focused()` modifier reverts to nil, so the
+    // new row never grabbed the caret.
+    @State private var focusedNoteID: UUID?
 
     private var listBody: some View {
         VStack(spacing: 0) {
@@ -945,6 +949,7 @@ private struct AnchorNotesView: View {
                                 focused: $focusedNoteID,
                                 onSubmit: { addNoteAfter(n) },
                                 onExpand: { editing = n },
+                                onDeleteEmpty: { deleteEmptyAndFocusPrev(n) },
                                 onDropBefore: { dragged in
                                     moveDraggedBefore(n.id, dragged: dragged)
                                 }
@@ -1126,21 +1131,37 @@ private struct AnchorNotesView: View {
     ///     bumping past the largest existing `createdAt`.
     private func addNoteAfter(_ previous: Note?) {
         let n = Note(title: "")
-        let stamp: Date
-        if let previous {
-            stamp = previous.createdAt.addingTimeInterval(0.001)
+        // Position by `order` so the new row lands directly BELOW
+        // `previous` (mirrors MainWindowView) — see the note there. The
+        // active sort is pinned > done > order > createdAt, so a fresh
+        // note left at order 0 would jump to the top once anything has
+        // been dragged. Renumber the visible sequence to make it exact.
+        var seq = sortedNotes
+        if let previous, let pIdx = seq.firstIndex(where: { $0.id == previous.id }) {
+            seq.insert(n, at: pIdx + 1)
         } else {
-            let maxCreated = notes.map(\.createdAt).max() ?? Date()
-            stamp = maxCreated.addingTimeInterval(1)
+            seq.append(n)
         }
-        n.createdAt = stamp
-        n.updatedAt = stamp
         ctx.insert(n)
+        for (i, note) in seq.enumerated() { note.order = Double(i) }
         try? ctx.save()
         // Focus the new row so the user can type immediately.
         DispatchQueue.main.async {
             focusedNoteID = n.id
         }
+    }
+
+    /// Backspace on an empty task row → delete it and land the caret at
+    /// the END of the previous row. No-op on the first row. The AppKit
+    /// title field self-focuses + drops the caret at the end when
+    /// focusedNoteID matches.
+    private func deleteEmptyAndFocusPrev(_ n: Note) {
+        let rows = sortedNotes
+        guard let idx = rows.firstIndex(where: { $0.id == n.id }), idx > 0 else { return }
+        let prev = rows[idx - 1]
+        ctx.delete(n)
+        try? ctx.save()
+        DispatchQueue.main.async { focusedNoteID = prev.id }
     }
 }
 
@@ -1175,6 +1196,9 @@ private struct AnchorTodayView: View {
         allNotes
             .filter { $0.pinned }
             .sorted { a, b in
+                // Manual drag-order wins first (0 until dragged, so
+                // un-reordered sets fall through to due-date / recency).
+                if a.order != b.order { return a.order < b.order }
                 switch (a.dueDate, b.dueDate) {
                 case let (l?, r?): return l < r
                 case (_?, nil):    return true
@@ -1228,22 +1252,26 @@ private struct AnchorTodayView: View {
                         title: L("Pinned", "置顶"),
                         tint: CyberPalette.neonPink
                     )
-                    // Bumped from 150 → 225 (+50%) to match the main
-                    // window's wider pinned cards. At default popup
-                    // size (~330pt content) this lands 1 column;
-                    // user-resized wider popups fan out to 2.
-                    LazyVGrid(
+                    // Card min width 225 to match the main window's wider
+                    // pinned cards. At default popup size (~330pt content)
+                    // this lands 1 column; wider popups fan out to 2.
+                    ReorderableNoteGrid(
+                        pinnedNotes,
                         columns: [GridItem(.adaptive(minimum: 225), spacing: 8)],
-                        spacing: 8
-                    ) {
-                        ForEach(pinnedNotes) { n in
+                        spacing: 8,
+                        card: { n in
                             Button { editing = n } label: {
                                 TodayPinnedCard(note: n)
                             }
                             .buttonStyle(.plain)
                             .noteContextMenu(for: n, onOpenEditor: { editing = n })
+                        },
+                        commit: { ordered, moved in
+                            for (i, n) in ordered.enumerated() { n.order = Double(i) }
+                            moved.touch()
+                            try? ctx.save()
                         }
-                    }
+                    )
                 }
 
                 if !calendarNotes.isEmpty {

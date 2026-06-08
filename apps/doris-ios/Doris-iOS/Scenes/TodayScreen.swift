@@ -159,14 +159,14 @@ struct TodayScreen: View {
     /// `note.order` so the manual order persists + syncs.
     @ViewBuilder
     private func pinnedGrid(_ notes: [Note]) -> some View {
-        LazyVGrid(
+        ReorderableNoteGrid(
+            notes,
             columns: [
                 GridItem(.flexible(), spacing: 10),
                 GridItem(.flexible(), spacing: 10)
             ],
-            spacing: 10
-        ) {
-            ForEach(notes) { n in
+            spacing: 10,
+            card: { n in
                 Button { path.append(n.id) } label: {
                     TodayPinnedCard(note: n)
                 }
@@ -174,26 +174,13 @@ struct TodayScreen: View {
                 // Long-press = the same actions the Mac right-click
                 // surfaces (Schedule, Mark done, Pin, Long-term, …).
                 .noteContextMenu(for: n) { path.append(n.id) }
-                .draggable(n.id.uuidString)
-                .dropDestination(for: String.self) { items, _ in
-                    guard let raw = items.first,
-                          let dragged = UUID(uuidString: raw),
-                          dragged != n.id else { return false }
-                    reorderPinned(dragged: dragged, before: n.id, within: notes)
-                    return true
-                }
+            },
+            commit: { ordered, moved in
+                for (i, n) in ordered.enumerated() { n.order = Double(i) }
+                moved.touch()
+                try? ctx.save()
             }
-        }
-    }
-
-    private func reorderPinned(dragged: UUID, before targetID: UUID, within notes: [Note]) {
-        guard let draggedNote = notes.first(where: { $0.id == dragged }) else { return }
-        var arr = notes.filter { $0.id != dragged }
-        let idx = arr.firstIndex(where: { $0.id == targetID }) ?? arr.count
-        arr.insert(draggedNote, at: idx)
-        for (i, n) in arr.enumerated() { n.order = Double(i) }
-        draggedNote.touch()
-        try? ctx.save()
+        )
     }
 
     // MARK: - Section header

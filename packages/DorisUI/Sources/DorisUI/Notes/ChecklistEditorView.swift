@@ -25,7 +25,18 @@ public struct ChecklistEditorView: View {
     /// Index of the checklist row whose text field should hold the
     /// keyboard. Set right after inserting a row so the cursor lands in
     /// the freshly-created item (Enter / "Add item" both route here).
+    ///
+    /// macOS uses a PLAIN `@State`, not `@FocusState`: the macOS rows are
+    /// AppKit fields that manage first-responder themselves. `@FocusState`
+    /// only retains a programmatically-set value when a SwiftUI
+    /// `.focused()` modifier claims it — there is none on macOS, so the
+    /// set reverted to nil and the new row never focused. iOS keeps
+    /// `@FocusState` for its native `.focused()` modifier.
+    #if os(macOS)
+    @State private var focusedLine: Int?
+    #else
     @FocusState private var focusedLine: Int?
+    #endif
 
     public init(note: Note) {
         self.note = note
@@ -247,6 +258,40 @@ public struct ChecklistEditorView: View {
 
 #if os(macOS)
 
+/// Make `tf` the first responder and drop the caret at the END of its
+/// text, retrying briefly if the view isn't in a window yet.
+///
+/// Why the retry: a freshly-created field inside the menu-bar **panel**
+/// (NSPanel hosting) has a `nil` `window` for a few runloop ticks while
+/// SwiftUI lays it out. The earlier single-shot attempt bailed on the
+/// nil window and never tried again, so the new row never got the caret
+/// (Enter created the row but focus was lost). In a regular NSWindow the
+/// window was always ready, which is why it only broke in the dropdown.
+///
+/// "Caret at end" gives both behaviors we want for free: an empty new
+/// row → caret at position 0 (the start); a backspace-merge target with
+/// text → caret at the end.
+func dorisFocusFieldToEnd(_ tf: NSTextField, tries: Int = 8) {
+    DispatchQueue.main.async {
+        guard let window = tf.window else {
+            if tries > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                    dorisFocusFieldToEnd(tf, tries: tries - 1)
+                }
+            }
+            return
+        }
+        // Already the focused field → leave the caret alone (don't yank
+        // it to the end while the user is typing mid-string).
+        guard window.firstResponder !== tf.currentEditor() else { return }
+        window.makeFirstResponder(tf)
+        if let editor = tf.currentEditor() {
+            let end = (tf.stringValue as NSString).length
+            editor.selectedRange = NSRange(location: end, length: 0)
+        }
+    }
+}
+
 // MARK: - macOS checklist item field (AppKit)
 
 /// Self-sizing, word-wrapping NSTextField. Reports its wrapped height to
@@ -306,18 +351,9 @@ struct ChecklistItemField: NSViewRepresentable {
         tf.textColor = checked ? NSColor.labelColor.withAlphaComponent(0.45) : .labelColor
 
         // Become first responder when SwiftUI marks this row focused —
-        // and drop the cursor at the END (so a backspace-merge lands the
-        // caret at the previous line's end).
-        if isFocused {
-            DispatchQueue.main.async {
-                guard let window = tf.window, window.firstResponder !== tf.currentEditor() else { return }
-                window.makeFirstResponder(tf)
-                if let editor = tf.currentEditor() {
-                    let end = (tf.stringValue as NSString).length
-                    editor.selectedRange = NSRange(location: end, length: 0)
-                }
-            }
-        }
+        // and drop the cursor at the END. Retries until the view is in a
+        // window (crucial inside the menu-bar panel — see helper).
+        if isFocused { dorisFocusFieldToEnd(tf) }
     }
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
