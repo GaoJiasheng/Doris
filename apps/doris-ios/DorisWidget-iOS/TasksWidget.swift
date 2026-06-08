@@ -24,7 +24,7 @@ struct ToggleTaskIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         guard let uuid = UUID(uuidString: noteID),
-              let container = try? ModelContainerFactory.make(useCloudKit: true) else {
+              let container = try? ModelContainerFactory.make(useCloudKit: false) else {
             return .result()
         }
         let context = ModelContext(container)
@@ -123,7 +123,13 @@ struct TasksProvider: TimelineProvider {
     }
 
     private func load() -> TasksEntry {
-        guard let container = try? ModelContainerFactory.make(useCloudKit: true) else {
+        // useCloudKit: false — read the local App-Group SQLite directly.
+        // Standing up NSPersistentCloudKitContainer inside a widget extension
+        // blows the CPU budget, can't finish a fetch before iOS suspends, and
+        // traps on unsigned builds. The app owns the CloudKit mirror + keeps
+        // the SQLite fresh; the widget piggybacks + is reloaded on app
+        // sync/foreground (see SyncTimer.poke / applicationDidBecomeActive).
+        guard let container = try? ModelContainerFactory.make(useCloudKit: false) else {
             return TasksEntry(date: .now, tasks: [], pinnedTotal: 0, upcomingTotal: 0)
         }
         let context = ModelContext(container)
