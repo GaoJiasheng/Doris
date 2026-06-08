@@ -63,4 +63,19 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
     func applicationDidBecomeActive(_ application: UIApplication) {
         WidgetCenter.shared.reloadAllTimelines()
     }
+
+    /// Called as the app leaves the foreground — the user swiped to the
+    /// home screen (very likely to glance at the widget), opened the app
+    /// switcher, or locked the device. This is the moment the previous
+    /// build missed: `didBecomeActive` only fires when they RETURN to the
+    /// app, and the 60-second `SyncTimer` is suspended in the background,
+    /// so an edit-then-leave left the widget stale until WidgetKit's
+    /// ~hourly floor. Flush any pending in-app edits to the shared store
+    /// FIRST (so the widget reads fresh rows), then ask WidgetKit to
+    /// reload — by the time they're looking at the home screen the widget
+    /// reflects what they just changed.
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        try? DorisRuntime.shared.container.mainContext.save()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
 }
