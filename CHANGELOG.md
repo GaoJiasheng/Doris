@@ -6,6 +6,50 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.1.2 — 2026-06-08
+
+Tactile Today cards, a more elegant widget, and sturdier task editing.
+
+### Added
+
+- **Live drag-reorder for pinned cards** (iOS + macOS, shared
+  `ReorderableNoteGrid`). Drag a 置顶 / 长期 card and its neighbours
+  **slide out of the way under your cursor** (spring-animated, reorder on
+  hover); the dragged card leaves a dashed gap and the order persists on
+  release. Replaces the old reorder-only-on-drop behavior.
+
+### Changed
+
+- **iOS Tasks widget redesign ("Calm Focus")** — hero count/date ledger
+  header, a calm hairline-divided list with quiet accent dots, a 16pt
+  checklist progress ring, LED section dots, and a rebuilt
+  vibrancy-safe lock-screen layout. Tap-to-complete + all families kept.
+- **macOS task & checklist editing** now uses AppKit-backed fields so
+  the field editor's keys are interceptable: **Return** adds a new row
+  directly below (cursor at its start); **Backspace on an empty row**
+  deletes it and lands the cursor at the end of the previous row. New
+  top-level tasks position by `order` so Enter always inserts below the
+  current row, even after a drag.
+- **iOS notes list decluttered** — sync status shows minute granularity
+  (no live-ticking "X sec ago"); rows drop the running relative time;
+  the note's creation time (to the minute) moves to the detail page.
+
+### Fixed
+
+- **iOS widgets read the local App-Group store directly**
+  (`useCloudKit: false`). Standing up CloudKit inside a widget extension
+  overran the CPU budget, couldn't finish a fetch before suspension,
+  trapped on unsigned builds, and left the widget stale. The app owns
+  the CloudKit mirror and now reloads the widgets on every sync tick and
+  on app foreground.
+
+### Known issues
+
+- A macOS-only "Enter creates two rows" in the TODO list is under
+  investigation (does not affect iOS).
+
+---
+
 ## 1.1.0 — 2026-06-03
 
 Desktop surfaces everywhere — float your tasks onto the Mac desktop and
