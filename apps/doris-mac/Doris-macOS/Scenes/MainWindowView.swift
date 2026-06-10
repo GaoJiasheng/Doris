@@ -452,6 +452,10 @@ private struct MainNotesList: View {
     /// straight after insert races the new row's first render and the
     /// focus is silently dropped — we apply it from `.onChange` instead.
     @State private var pendingFocusNoteID: UUID?
+    /// Debounce guard: tracks when the last note was created so rapid
+    /// successive calls to addNoteAfter (e.g. Enter keypress leaking into
+    /// the newly-focused row) are ignored within a 300ms window.
+    @State private var lastNoteAddedAt: Date = .distantPast
     @State private var filter: TodoFilter = .active
     @State private var confirmingEmptyTrash = false
 
@@ -723,6 +727,14 @@ private struct MainNotesList: View {
     ///   - `previous` nil → at the very BOTTOM of the list (button click).
     ///     `createdAt` jumps past every existing row.
     private func addNoteAfter(_ previous: Note?) {
+        // Debounce: ignore rapid successive calls within 300ms. The AppKit
+        // field editor can fire insertNewline AND then the newly-focused row
+        // may receive a stale Return event from the event queue — without
+        // this guard that creates two rows in quick succession.
+        let now = Date()
+        guard now.timeIntervalSince(lastNoteAddedAt) > 0.3 else { return }
+        lastNoteAddedAt = now
+
         let n = Note(title: "")
         // Position the new row by `order` so it lands directly BELOW
         // `previous` (or at the end when added from the + button). The

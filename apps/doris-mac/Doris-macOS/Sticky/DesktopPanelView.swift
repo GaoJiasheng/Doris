@@ -79,7 +79,7 @@ struct DesktopPanelView: View {
         .background(panelBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(CyberPalette.panelStroke, lineWidth: 0.9)
+                .strokeBorder(CyberPalette.dimPanelStroke, lineWidth: 0.9)
         )
         .preferredColorScheme(theme.mode.colorScheme)
     }

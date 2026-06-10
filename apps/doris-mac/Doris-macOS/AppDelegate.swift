@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
 import SwiftData
+import Combine
+import UserNotifications
 import DorisCore
 import DorisIPC
 import DorisMacChrome
@@ -24,6 +26,9 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
     /// need a per-window gate (and the previous per-window gate is
     /// exactly what kept the popup from honoring the shortcut).
     private var zoomKeyMonitor: Any?
+    /// Combine subscription: propagates AvatarSettings.activityLevel
+    /// into HeroEvents so one-shot reactions respect the user's preference.
+    private var activityLevelSink: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // When launched directly (not via launchd / `open`) the process is a background
@@ -141,6 +146,27 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
             // route to ChatGPT (or web fallback).
             self.voiceController = VoiceController()
             self.voiceController?.start()
+
+            // Sync activity level preference → HeroEvents gate (0/1/2).
+            // Also keep it live so toggling in Settings takes effect immediately.
+            let applyActivity = {
+                switch AvatarSettings.shared.activityLevel {
+                case .quiet:    HeroEvents.shared.activityLevel = 0
+                case .standard: HeroEvents.shared.activityLevel = 1
+                case .lively:   HeroEvents.shared.activityLevel = 2
+                }
+            }
+            applyActivity()
+            self.activityLevelSink = AvatarSettings.shared.$activityLevel
+                .receive(on: DispatchQueue.main)
+                .sink { _ in applyActivity() }
+
+            // Morning greeting — fire once per calendar day on first expand.
+            DailyRitual.greetIfNewDay()
+
+            // Request permission for local due-date reminders. Shows a
+            // one-time system alert; subsequent calls are no-ops.
+            DueDateNotifier.requestAuthorization()
 
             self.installZoomKeyMonitor()
 

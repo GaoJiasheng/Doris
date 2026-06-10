@@ -69,6 +69,15 @@ public struct DueDateChipButton: View {
         }
         .buttonStyle(.plain)
         .help(L("Schedule…", "排期…"))
+        .onChange(of: note.dueDate) { _, newDate in
+            if let date = newDate {
+                DueDateNotifier.schedule(
+                    noteID: note.id, title: note.title, dueDate: date, done: note.done
+                )
+            } else {
+                DueDateNotifier.cancel(noteID: note.id)
+            }
+        }
         #if os(macOS)
         .popover(isPresented: $showingPicker, arrowEdge: .bottom) {
             dueDatePopover

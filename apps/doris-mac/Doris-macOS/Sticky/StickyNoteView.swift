@@ -77,7 +77,7 @@ struct StickyNoteView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(CyberPalette.panelStroke, lineWidth: 0.9)
+                .strokeBorder(CyberPalette.dimPanelStroke, lineWidth: 0.9)
         )
         .preferredColorScheme(theme.mode.colorScheme)
     }

@@ -222,6 +222,8 @@ public struct ChecklistEditorView: View {
             note.done = true
             note.completedAt = Date()
             note.touch()
+            // All sub-tasks ticked → celebrate (the whole note is done).
+            Task { @MainActor in HeroEvents.shared.celebrate() }
         } else if !allDone && note.done {
             note.done = false
             note.completedAt = nil

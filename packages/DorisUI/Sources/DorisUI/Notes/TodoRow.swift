@@ -100,11 +100,22 @@ public struct TodoRow: View {
                 // Done checkbox. Toggling done also stamps / clears
                 // `completedAt` — that timestamp is what the upcoming
                 // "archive yesterday's done tasks" feature reads.
+                // Completing a task fires a HeroEvents celebration so
+                // the avatar reacts; unchecking is silent.
                 Button {
                     note.done.toggle()
                     let now = Date()
                     note.updatedAt = now
                     note.completedAt = note.done ? now : nil
+                    if note.done {
+                        // Cancel any pending due-date reminder — task is done.
+                        DueDateNotifier.cancel(noteID: note.id)
+                        Task { @MainActor in HeroEvents.shared.celebrate() }
+                    } else if let due = note.dueDate {
+                        // Re-schedule the reminder if the task is un-done.
+                        DueDateNotifier.schedule(noteID: note.id, title: note.title,
+                                                 dueDate: due, done: false)
+                    }
                 } label: {
                     Image(systemName: note.done ? "checkmark.square.fill" : "square")
                         .font(.system(size: 14, weight: .semibold))

@@ -920,6 +920,10 @@ private struct AnchorNotesView: View {
     // set with no matching `.focused()` modifier reverts to nil, so the
     // new row never grabbed the caret.
     @State private var focusedNoteID: UUID?
+    /// Debounce guard — same as MainNotesList's. Prevents a stale Return
+    /// keypress in the event queue from creating a second row when focus
+    /// jumps to the newly-created one.
+    @State private var lastNoteAddedAt: Date = .distantPast
 
     private var listBody: some View {
         VStack(spacing: 0) {
@@ -1130,6 +1134,12 @@ private struct AnchorNotesView: View {
     ///   - `previous` nil → place at the very BOTTOM. Done by
     ///     bumping past the largest existing `createdAt`.
     private func addNoteAfter(_ previous: Note?) {
+        // 300ms debounce: prevents a stale Return from the event queue
+        // creating a second row when focus moves to the newly-created row.
+        let now = Date()
+        guard now.timeIntervalSince(lastNoteAddedAt) > 0.3 else { return }
+        lastNoteAddedAt = now
+
         let n = Note(title: "")
         // Position by `order` so the new row lands directly BELOW
         // `previous` (mirrors MainWindowView) — see the note there. The

@@ -51,14 +51,19 @@ struct SettingsView: View {
             Picker(L("Theme", "主题"), selection: themeBinding) {
                 ForEach(DorisTheme.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
             }
-            Toggle(L("Show hex color preview", "显示十六进制颜色预览"), isOn: showHexColorPreview)
-            Toggle(L("Auto-backup daily", "每日自动备份"), isOn: autoBackupEnabled)
             // Default visibility of the cyber-girl avatar pane (main
             // window sidebar + menu-bar dropdown). Can also be toggled
             // live from the dropdown header / sidebar collapse button.
             Toggle(L("Show avatar", "显示卡通助手"),
                    isOn: Binding(get: { avatarSettings.avatarVisible },
                                  set: { avatarSettings.avatarVisible = $0 }))
+            Picker(L("Avatar activity", "助手活跃度"), selection: activityLevelBinding) {
+                Text(L("Quiet", "安静")).tag(AvatarActivityLevel.quiet)
+                Text(L("Standard", "标准")).tag(AvatarActivityLevel.standard)
+                Text(L("Lively", "活泼")).tag(AvatarActivityLevel.lively)
+            }
+            .help(L("Controls how often the avatar reacts to task events and notifications.",
+                    "控制助手对任务和通知的反应频率。"))
             // Always-on-desktop dashboard panel (pinned + today). The
             // binding drives the window controller so flipping it here
             // actually shows / hides the floating panel.
@@ -111,8 +116,6 @@ struct SettingsView: View {
                 Slider(value: sidebarWidth, in: 240...520, step: 10)
                 Text("\(Int(settings.sidebarWidth)) px")
             }
-            Toggle(L("Hot Side enabled", "启用边缘热区"), isOn: hotSideEnabled)
-            Toggle(L("Open Bar visible", "显示打开栏"), isOn: openBarVisible)
             Toggle(L("Pinned across spaces", "跨桌面置顶"), isOn: pinnedAcrossSpaces)
             Picker(L("Notch behavior", "刘海行为"), selection: notchBehavior) {
                 ForEach(NotchBehavior.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -163,20 +166,14 @@ struct SettingsView: View {
     private var sidebarWidth: Binding<Double> {
         Binding(get: { settings.sidebarWidth }, set: { settings.sidebarWidth = $0 })
     }
-    private var hotSideEnabled: Binding<Bool> {
-        Binding(get: { settings.hotSideEnabled }, set: { settings.hotSideEnabled = $0 })
-    }
-    private var openBarVisible: Binding<Bool> {
-        Binding(get: { settings.openBarVisible }, set: { settings.openBarVisible = $0 })
-    }
     private var pinnedAcrossSpaces: Binding<Bool> {
         Binding(get: { settings.pinnedAcrossSpaces }, set: { settings.pinnedAcrossSpaces = $0 })
     }
-    private var showHexColorPreview: Binding<Bool> {
-        Binding(get: { settings.showHexColorPreview }, set: { settings.showHexColorPreview = $0 })
-    }
-    private var autoBackupEnabled: Binding<Bool> {
-        Binding(get: { settings.autoBackupEnabled }, set: { settings.autoBackupEnabled = $0 })
+    private var activityLevelBinding: Binding<AvatarActivityLevel> {
+        Binding(
+            get: { avatarSettings.activityLevel },
+            set: { avatarSettings.activityLevel = $0 }
+        )
     }
 }
 

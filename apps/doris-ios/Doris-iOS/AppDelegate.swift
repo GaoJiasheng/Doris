@@ -3,6 +3,7 @@ import WidgetKit
 import SwiftData
 import DorisCore
 import DorisIPC
+import DorisUI
 
 /// iOS Doris is a **full read/write editor** sharing the same iCloud-mirrored
 /// SwiftData store as macOS. Both platforms write through the same
@@ -28,6 +29,7 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        DueDateNotifier.requestAuthorization()
         Task { @MainActor in
             // Single shared container — same one the SwiftUI scene sees,
             // configured with `.private(...)` CloudKit mirror inside

@@ -22,10 +22,18 @@ public enum DorisColors {
 /// — but get slightly muted overlay alpha-values when used on light
 /// backgrounds so they don't burn the eyes.
 public enum CyberPalette {
-    // MARK: Brand accents (constant across themes)
+    // MARK: Brand accents (adaptive for contrast)
 
-    public static let neonPink = Color(red: 1.0, green: 0.30, blue: 0.75)
-    public static let neonCyan = Color(red: 0.0, green: 0.85, blue: 1.0)
+    /// Neon pink — vivid in dark mode, deepened in light for legibility.
+    public static let neonPink = Color(
+        light: Color(red: 0.80, green: 0.10, blue: 0.55),
+        dark:  Color(red: 1.0,  green: 0.30, blue: 0.75)
+    )
+    /// Neon cyan — vivid in dark mode, ocean-teal in light for legibility.
+    public static let neonCyan = Color(
+        light: Color(red: 0.00, green: 0.55, blue: 0.75),
+        dark:  Color(red: 0.0,  green: 0.85, blue: 1.0)
+    )
     /// Accent used for "completed / done" UI — strikethrough color, DONE
     /// pill, completed-card border, seal icon. Earlier iterations used a
     /// vivid neon green which read as "alert" and visually fought with
@@ -70,9 +78,22 @@ public enum CyberPalette {
         )
     }
 
+    /// Full-brightness gradient stroke — use for the active banner and
+    /// pinned-first card only. Keeps the "glowing" effect rare so it
+    /// reads as meaningful rather than decorative noise.
     public static var panelStroke: LinearGradient {
         LinearGradient(
             colors: [neonPink.opacity(0.45), neonCyan.opacity(0.55)],
+            startPoint: .topLeading, endPoint: .bottomTrailing
+        )
+    }
+
+    /// Muted stroke for secondary cards and panels — same gradient but
+    /// at ~30% opacity so the eye can still see the cyber aesthetic
+    /// without every surface competing for attention.
+    public static var dimPanelStroke: LinearGradient {
+        LinearGradient(
+            colors: [neonPink.opacity(0.14), neonCyan.opacity(0.18)],
             startPoint: .topLeading, endPoint: .bottomTrailing
         )
     }
