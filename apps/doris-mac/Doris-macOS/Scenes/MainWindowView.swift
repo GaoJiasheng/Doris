@@ -546,7 +546,9 @@ private struct MainNotesList: View {
                                 onDeleteEmpty: { deleteEmptyAndFocusPrev(n) },
                                 onDropBefore: { dragged in
                                     moveDraggedBefore(n.id, dragged: dragged)
-                                }
+                                },
+                                onMoveUp: { focusAdjacentNote(of: n, direction: -1) },
+                                onMoveDown: { focusAdjacentNote(of: n, direction: +1) }
                             )
                         }
                     }
@@ -763,6 +765,14 @@ private struct MainNotesList: View {
     /// Backspace on an empty task row → delete it and land the caret at
     /// the END of the previous row. No-op on the first row (nothing to
     /// merge into). Mirrors the checklist editor's backspace-merge.
+    private func focusAdjacentNote(of n: Note, direction: Int) {
+        let rows = sortedNotes
+        guard let idx = rows.firstIndex(where: { $0.id == n.id }) else { return }
+        let next = idx + direction
+        guard rows.indices.contains(next) else { return }
+        focusedNoteID = rows[next].id
+    }
+
     private func deleteEmptyAndFocusPrev(_ n: Note) {
         let rows = sortedNotes
         guard let idx = rows.firstIndex(where: { $0.id == n.id }), idx > 0 else { return }

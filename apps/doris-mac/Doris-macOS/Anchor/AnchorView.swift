@@ -956,7 +956,9 @@ private struct AnchorNotesView: View {
                                 onDeleteEmpty: { deleteEmptyAndFocusPrev(n) },
                                 onDropBefore: { dragged in
                                     moveDraggedBefore(n.id, dragged: dragged)
-                                }
+                                },
+                                onMoveUp: { focusAdjacentNote(of: n, direction: -1) },
+                                onMoveDown: { focusAdjacentNote(of: n, direction: +1) }
                             )
                         }
                         if filter == .active {
@@ -1165,6 +1167,14 @@ private struct AnchorNotesView: View {
     /// the END of the previous row. No-op on the first row. The AppKit
     /// title field self-focuses + drops the caret at the end when
     /// focusedNoteID matches.
+    private func focusAdjacentNote(of n: Note, direction: Int) {
+        let rows = sortedNotes
+        guard let idx = rows.firstIndex(where: { $0.id == n.id }) else { return }
+        let next = idx + direction
+        guard rows.indices.contains(next) else { return }
+        focusedNoteID = rows[next].id
+    }
+
     private func deleteEmptyAndFocusPrev(_ n: Note) {
         let rows = sortedNotes
         guard let idx = rows.firstIndex(where: { $0.id == n.id }), idx > 0 else { return }

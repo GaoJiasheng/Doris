@@ -44,6 +44,12 @@ public struct TodoRow: View {
     /// Argument is the dragged note's UUID (encoded as String for
     /// transferable simplicity).
     public var onDropBefore: (UUID) -> Void
+    /// Called when the user presses ↑ while editing the title. The host
+    /// should move keyboard focus to the previous row.
+    public var onMoveUp: () -> Void
+    /// Called when the user presses ↓ while editing the title. The host
+    /// should move keyboard focus to the next row.
+    public var onMoveDown: () -> Void
 
     @Environment(\.modelContext) private var ctx
     @ObservedObject private var lang = LanguageSettings.shared
@@ -57,7 +63,9 @@ public struct TodoRow: View {
         onSubmit: @escaping () -> Void,
         onExpand: @escaping () -> Void,
         onDeleteEmpty: @escaping () -> Void = {},
-        onDropBefore: @escaping (UUID) -> Void = { _ in }
+        onDropBefore: @escaping (UUID) -> Void = { _ in },
+        onMoveUp: @escaping () -> Void = {},
+        onMoveDown: @escaping () -> Void = {}
     ) {
         self.note = note
         self.focused = focused
@@ -65,6 +73,8 @@ public struct TodoRow: View {
         self.onExpand = onExpand
         self.onDeleteEmpty = onDeleteEmpty
         self.onDropBefore = onDropBefore
+        self.onMoveUp = onMoveUp
+        self.onMoveDown = onMoveDown
     }
 
     public var body: some View {
@@ -152,7 +162,9 @@ public struct TodoRow: View {
                     else if focused.wrappedValue == note.id { focused.wrappedValue = nil }
                 },
                 onSubmit: onSubmit,
-                onDeleteEmpty: onDeleteEmpty
+                onDeleteEmpty: onDeleteEmpty,
+                onMoveUp: onMoveUp,
+                onMoveDown: onMoveDown
             )
             .onChange(of: note.title) { _, _ in note.updatedAt = Date() }
             #else
@@ -392,6 +404,8 @@ struct TodoTitleField: NSViewRepresentable {
     var onFocusChange: (Bool) -> Void
     var onSubmit: () -> Void
     var onDeleteEmpty: () -> Void
+    var onMoveUp: () -> Void = {}
+    var onMoveDown: () -> Void = {}
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -450,6 +464,14 @@ struct TodoTitleField: NSViewRepresentable {
             }
             if selector == #selector(NSResponder.deleteBackward(_:)), textView.string.isEmpty {
                 parent.onDeleteEmpty()
+                return true
+            }
+            if selector == #selector(NSResponder.moveUp(_:)) {
+                parent.onMoveUp()
+                return true
+            }
+            if selector == #selector(NSResponder.moveDown(_:)) {
+                parent.onMoveDown()
                 return true
             }
             return false
