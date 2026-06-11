@@ -81,6 +81,13 @@ public struct AvatarHero: View {
     /// fresh fetch.
     @ObservedObject private var weather = WeatherViewModel.shared
     @ObservedObject private var heroEvents = HeroEvents.shared
+    /// Drives the day/night look of the backdrop: light scheme → bright
+    /// daytime sky with faint dust motes; dark scheme → deep-space night
+    /// with a full starfield. Both windows that host the hero apply
+    /// `.preferredColorScheme(theme.mode.colorScheme)`, so this tracks the
+    /// user's 白天/夜间 (light/dark) setting.
+    @Environment(\.colorScheme) private var colorScheme
+    private var isDay: Bool { colorScheme == .light }
     /// Procedural starfield. Generated once on view init so positions stay
     /// stable across renders — only the per-star brightness twinkles.
     /// 100 stars still reads as a dense field in a 200pt-wide card and
@@ -134,7 +141,7 @@ public struct AvatarHero: View {
         // and cuts CPU enormously (was sitting at 60–80 % during launch
         // with the old 30fps full-tree re-eval).
         ZStack {
-            deepSpaceBackdrop      // static gradient, no re-render
+            ambientBackdrop        // day-sky / night-space gradient
             cursorHalo             // re-renders only on cursor move (Mac)
             animatedAmbientLayers  // 12fps Canvas layer for stars/particles/ripples
             scanlines              // CoreAnimation-driven offset, cheap
@@ -226,23 +233,52 @@ public struct AvatarHero: View {
         }
     }
 
-    /// Static deep-space gradient — never changes, never re-renders. Lives
-    /// outside the timeline so the layout engine doesn't touch it on
-    /// every tick.
-    private var deepSpaceBackdrop: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.04, green: 0.04, blue: 0.10),
-                Color(red: 0.01, green: 0.01, blue: 0.04)
-            ],
-            startPoint: .top, endPoint: .bottom
-        )
+    /// Ambient backdrop, switched by color scheme. Re-renders only when the
+    /// user flips 白天/夜间 (light/dark) — not per frame — so it stays outside
+    /// the timeline.
+    ///
+    /// - **Night (dark):** deep-space gradient, near-black. The starfield
+    ///   and neon glows read against it exactly as before.
+    /// - **Day (light):** a clear daytime sky (sky-blue → pale horizon) with
+    ///   a soft warm sun glow in the top-trailing corner. The character
+    ///   clips have transparent backgrounds, so they sit naturally on the
+    ///   brighter sky; the starfield fades to faint daylight dust motes.
+    @ViewBuilder
+    private var ambientBackdrop: some View {
+        if isDay {
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.46, green: 0.69, blue: 0.93),
+                        Color(red: 0.83, green: 0.90, blue: 0.98)
+                    ],
+                    startPoint: .top, endPoint: .bottom
+                )
+                // Soft sun glow, top-trailing.
+                RadialGradient(
+                    colors: [
+                        Color(red: 1.0, green: 0.95, blue: 0.80).opacity(0.85),
+                        .clear
+                    ],
+                    center: .topTrailing, startRadius: 0, endRadius: 150
+                )
+                .blendMode(.plusLighter)
+            }
+        } else {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.04, blue: 0.10),
+                    Color(red: 0.01, green: 0.01, blue: 0.04)
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+        }
     }
 
     // MARK: - Layers
 
-    // (Deep-space gradient + cursor halo were extracted out of the
-    //  per-frame TimelineView path — see `deepSpaceBackdrop` and
+    // (Backdrop gradient + cursor halo were extracted out of the
+    //  per-frame TimelineView path — see `ambientBackdrop` and
     //  `cursorHalo` layered directly in `body`. Only `starfield(now:)`
     //  stays inside the timeline because that's the layer that actually
     //  needs `now` to drive its twinkle.)
@@ -281,6 +317,12 @@ public struct AvatarHero: View {
         let boostRadius: CGFloat = 90
         let boostRadiusSq = boostRadius * boostRadius // skip sqrt in the hot loop
 
+        // In daytime the "stars" become faint white dust motes drifting in
+        // the sunlight — same positions + twinkle, but dimmed and
+        // decolored so they don't read as night-sky stars on a bright sky.
+        let dayMode = isDay
+        let dayDim = 0.28
+
         for star in stars {
             let twinkle = 0.5 + 0.5 * sin(t * star.twinkleSpeed + star.twinklePhase)
             let pos = CGPoint(x: star.x * size.width, y: star.y * size.height)
@@ -299,12 +341,14 @@ public struct AvatarHero: View {
                 }
             }
 
-            let opacity = min(1.0, star.baseOpacity * twinkle * (1.0 + boost * 0.6))
+            var opacity = min(1.0, star.baseOpacity * twinkle * (1.0 + boost * 0.6))
+            if dayMode { opacity *= dayDim }
             // Skip near-invisible stars entirely — at the bottom of the
             // sin wave they contribute nothing visible but still cost
             // two ellipse fills.
             if opacity < 0.04 { continue }
             let drawSize = star.size * CGFloat(1.0 + boost * 0.5)
+            let drawColor = dayMode ? Color.white : star.color
 
             if drawSize > 1.7 {
                 let glow = CGRect(
@@ -314,7 +358,7 @@ public struct AvatarHero: View {
                     height: drawSize * 2.8
                 )
                 context.fill(Path(ellipseIn: glow),
-                             with: .color(star.color.opacity(opacity * 0.30)))
+                             with: .color(drawColor.opacity(opacity * 0.30)))
             }
             let rect = CGRect(
                 x: pos.x - drawSize / 2,
@@ -323,7 +367,7 @@ public struct AvatarHero: View {
                 height: drawSize
             )
             context.fill(Path(ellipseIn: rect),
-                         with: .color(star.color.opacity(opacity)))
+                         with: .color(drawColor.opacity(opacity)))
         }
     }
 

@@ -88,11 +88,18 @@ struct DesktopPanelView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(CyberPalette.neonCyan)
-            Text(L("Doris · Today", "Doris · 今日"))
-                .font(.system(size: 12, weight: .heavy, design: .rounded))
+            Button { AppCommands.openMainWindow() } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(CyberPalette.neonCyan)
+                    Text(L("Doris · Today", "Doris · 今日"))
+                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(L("Open main window", "打开主窗口"))
             Spacer()
             Text(Date().formatted(.dateTime.month(.abbreviated).day()))
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
@@ -105,6 +112,13 @@ struct DesktopPanelView: View {
                     .padding(.vertical, 1.5)
                     .background(Capsule().fill(CyberPalette.neonCyan.opacity(0.16)))
             }
+            Button { AppCommands.openMainWindow() } label: {
+                Image(systemName: "macwindow")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(CyberPalette.neonCyan.opacity(0.8))
+            }
+            .buttonStyle(.plain)
+            .help(L("Open main window", "打开主窗口"))
             Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .semibold))
