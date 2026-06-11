@@ -6,6 +6,51 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.2.0 — 2026-06-11
+
+Doris gets a personality — she reacts to your work, runs a little daily
+ritual, and the desktop surfaces gain day/night moods.
+
+### Added
+
+- **The avatar reacts to your tasks.** She **celebrates** when you
+  complete a task (or finish the last item of a checklist), **greets you
+  once per day** the first time you open the app (morning ritual), and
+  **looks alerted** when an agent banner appears. All reactions are
+  gated by a new **Avatar activity** setting — **安静 / 标准 / 活泼**
+  (quiet silences reactions; lively lets the small ones through too).
+- **Due-date reminders.** Notes with a due date schedule a local
+  notification at 09:00 on the day they're due — Doris "递纸条" so a
+  deadline doesn't slip by. Cleared automatically when you complete or
+  un-set the date. (macOS + iOS.)
+- **Arrow-key row navigation in the macOS task list.** Press **↑ / ↓**
+  while editing a task title to move the cursor between rows.
+- **Open the main window from the desktop panel.** Click the panel's
+  "Doris · 今日" title or the new window button in its header.
+
+### Changed
+
+- **Day/night avatar backdrop.** The cartoon's backdrop now follows the
+  白天/夜间 (light/dark) theme: a daytime sky (sky-blue → pale horizon
+  with a soft sun glow, starfield faded to faint dust motes) in light
+  mode; the original deep-space night + full starfield in dark mode.
+- **Light-mode contrast pass.** Neon pink/cyan are deepened in light
+  mode for legibility, and the glow is made scarce — secondary panels
+  (sticky notes, desktop panel) now use a dimmer stroke so the
+  full-brightness glow reads as meaningful, not decorative.
+- **Settings decluttered.** Removed dead toggles that no longer did
+  anything (hex color preview, auto-backup daily, hot side, open bar).
+- **iOS reloads widgets on backgrounding** so leaving the app after an
+  edit gives a fresh widget immediately.
+
+### Fixed
+
+- **macOS Enter no longer creates a duplicate row.** A stale Return
+  keypress could land on the freshly-focused new row and spawn a second
+  empty task; a short debounce on row creation closes that race.
+
+---
+
 ## 1.1.2 — 2026-06-08
 
 Tactile Today cards, a more elegant widget, and sturdier task editing.
