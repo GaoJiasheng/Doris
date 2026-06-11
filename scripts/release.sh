@@ -149,11 +149,16 @@ codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | tail -3
 # in the CLI target's settings before we burn a notary submission.
 CLI="$APP/Contents/Resources/doris"
 [ -x "$CLI" ] || { echo "❌ bundled CLI missing at $CLI"; exit 1; }
-codesign -dvv "$CLI" 2>&1 \
-  | grep -q "Authority=Developer ID Application" \
+# Capture codesign's output once, then grep the variable — do NOT pipe
+# `codesign -dvv` straight into `grep -q`. `grep -q` closes the pipe on
+# its first match, `codesign` then takes SIGPIPE (exit 141), and with
+# `set -o pipefail` the whole pipeline reports failure even though the
+# pattern matched. That's a load-dependent flake that spuriously failed
+# the "embedded CLI not Developer ID signed" check mid-release.
+CLI_SIG="$(codesign -dvv "$CLI" 2>&1)"
+grep -q "Authority=Developer ID Application" <<<"$CLI_SIG" \
   || { echo "❌ embedded CLI not Developer ID signed"; exit 1; }
-codesign -dvv "$CLI" 2>&1 \
-  | grep -q "flags=.*runtime" \
+grep -q "flags=.*runtime" <<<"$CLI_SIG" \
   || { echo "❌ embedded CLI missing hardened-runtime flag"; exit 1; }
 echo "   ✓ CLI signed + hardened"
 
