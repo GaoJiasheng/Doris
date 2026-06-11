@@ -224,6 +224,11 @@ echo "   ✓ PDF: $DMG_STAGING/CLI Manual.pdf ($(du -h "$DMG_STAGING/CLI Manual.
 # Background blank PNG keeps create-dmg from grumbling about a missing
 # background; users see a clean install layout (just app → /Applications,
 # plus the PDF for reference).
+# `|| true`: create-dmg intermittently fails its FINAL step — unmounting
+# the staging volume — with "hdiutil: couldn't unmount … resource busy"
+# when Spotlight/Finder grabs the freshly-mounted volume before it can
+# detach + convert. Don't let that abort the release (set -e); recover
+# below instead.
 create-dmg \
   --volname "Doris $VERSION" \
   --window-size 600 400 \
@@ -233,7 +238,24 @@ create-dmg \
   --app-drop-link 460 180 \
   --no-internet-enable \
   "$DMG" \
-  "$DMG_STAGING" 2>&1 | tail -5
+  "$DMG_STAGING" 2>&1 | tail -5 || true
+
+# Recovery: when the unmount flake hits, the layout AppleScript has
+# already run, so create-dmg leaves a fully-populated read-write image
+# (rw.<pid>.Doris-<version>.dmg) — possibly still attached. Force-detach
+# any volume backed by it, then convert it to the final compressed DMG
+# ourselves. This preserves the icon layout that was already applied.
+if [ ! -f "$DMG" ]; then
+  echo "⚠️  create-dmg didn't finalize the DMG (busy-volume unmount). Recovering from the rw image..."
+  hdiutil info 2>/dev/null \
+    | awk '/^image-path/{p=($0 ~ /rw\..*Doris-/)} /\/dev\/disk[0-9]+\t/{if(p) print $1}' \
+    | while read -r dev; do hdiutil detach -force "$dev" 2>/dev/null || true; done
+  RW="$(ls -t "$BUILD_DIR"/rw.*.dmg 2>/dev/null | head -1)"
+  [ -n "$RW" ] || { echo "❌ DMG build failed and no rw image to recover from"; exit 1; }
+  hdiutil convert "$RW" -format UDZO -imagekey zlib-level=9 -o "$DMG" 2>&1 | tail -3
+  rm -f "$RW"
+fi
+[ -f "$DMG" ] || { echo "❌ DMG not produced at $DMG"; exit 1; }
 
 # Notarize the DMG itself too — without this, downloading the DMG and
 # offline-launching it on a fresh Mac still triggers a Gatekeeper
