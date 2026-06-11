@@ -9,36 +9,28 @@
     <key>method</key>
     <string>developer-id</string>
 
-    <!-- Manual signing = use the locally-installed Developer ID
-         Application identity in the login keychain, skip Apple's
-         cloud-managed signing service (which needs higher API key
-         scopes than "Developer" to access — `signingStyle: automatic`
-         was failing with "Cloud signing permission error"). -->
+    <!-- Automatic signing. We used to pin signingStyle: manual + an
+         explicit provisioningProfiles map ("Mac Team Direct Provisioning
+         Profile: com.gavin.doris") to dodge cloud-signing. But that
+         profile is Xcode-MANAGED, and Xcode 26.4.1's exportArchive now
+         hard-rejects a managed profile under manual signing:
+           "Provisioning profile … is Xcode managed, but signing
+            settings require a manually managed profile."
+         Automatic signing (with -allowProvisioningUpdates + the ASC API
+         key, both passed by release.sh) lets Xcode resolve the managed
+         Developer ID profile itself and sign with the locally-installed
+         "Developer ID Application" cert. Verified: the exported .app +
+         embedded CLI are Developer ID signed with hardened runtime and
+         pass `codesign --verify --deep --strict`. This mirrors the iOS
+         path (scripts/ExportOptions-iOS.plist), which is also automatic. -->
     <key>signingStyle</key>
-    <string>manual</string>
-
-    <key>signingCertificate</key>
-    <string>Developer ID Application</string>
+    <string>automatic</string>
 
     <!-- DORIS_TEAM_ID is exported by scripts/release.sh; xcodebuild
          interpolates $(DORIS_TEAM_ID) from project.yml settings too,
          so the two stay in lockstep. -->
     <key>teamID</key>
     <string>$(DORIS_TEAM_ID)</string>
-
-    <!-- Explicit profile map. Without this, manual export tries to
-         AUTO-CREATE a Developer ID profile via the ASC API and fails
-         because the API key (Admin role) lacks permission to provision
-         Developer ID profiles — only App Manager+ can. The "Mac Team
-         Direct Provisioning Profile: com.gavin.doris" was generated
-         locally by Xcode UI during the 0.2.0 release and lives in
-         ~/Library/Developer/Xcode/UserData/Provisioning Profiles/.
-         exportArchive picks it up by name. -->
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>com.gavin.doris</key>
-        <string>Mac Team Direct Provisioning Profile: com.gavin.doris</string>
-    </dict>
 
     <!-- Strip Swift debug symbols out of the exported bundle to keep
          the DMG small; the .xcarchive still has them if we ever need
