@@ -58,15 +58,23 @@ public actor SyncTimer {
     }
 
     /// Explicit user-driven sync. Always runs regardless of the auto-sync
-    /// setting; this is the path the "Sync Now" button takes.
+    /// setting; this is the path the "Sync Now" button takes. `force: true`
+    /// reloads the widgets unconditionally (the user asked for a refresh)
+    /// rather than only when the widget-visible data changed.
     public func pokeNow() async {
-        await poke(container: container)
+        await poke(container: container, force: true)
     }
 
-    private func poke(container: ModelContainer) async {
+    private func poke(container: ModelContainer, force: Bool = false) async {
         // 1. Local save (SwiftData ops must run on MainActor).
         let saveError: String? = await MainActor.run {
-            let context = ModelContext(container)
+            // Save the LIVE main context — the one the UI's edits live in.
+            // A throwaway `ModelContext(container)` has no pending changes,
+            // so saving it was a no-op; UI edits only reached disk via
+            // SwiftData autosave. Saving `mainContext` guarantees the shared
+            // SQLite is current before we push to CloudKit and reload the
+            // widgets (which read that same file from another process).
+            let context = container.mainContext
             do {
                 try context.save()
             } catch {
@@ -106,26 +114,19 @@ public actor SyncTimer {
             SyncSettings.shared.markSyncedNow()
             SyncSettings.shared.lastSyncError = nil
             DorisLog.sync.debug("sync poke ok (cloudKit=\(cloudKitEnabled))")
-            // 4. Kick the home-screen widgets. SQLite just got fresh
-            //    data (either local edits we just flushed or CloudKit
-            //    inbound rows the mirror has been quietly applying).
-            //    Without this, widgets only refresh on iOS's own
-            //    15-minute policy and the user sees stale tasks for
-            //    far longer than they'd expect.
-            Self.reloadWidgetTimelines()
+            // 4. Kick the home-screen widgets. SQLite just got fresh data
+            //    (local edits we flushed above, or CloudKit inbound rows the
+            //    mirror applied). A manual "Sync Now" forces a reload; the
+            //    60-second auto tick only reloads when the widget-visible
+            //    data actually changed, so we don't burn WidgetKit's reload
+            //    budget on no-op ticks (which would get the *meaningful*
+            //    reload throttled away).
+            if force {
+                WidgetReloadCoordinator.forceReload(container: container)
+            } else {
+                WidgetReloadCoordinator.reloadIfChanged(container: container)
+            }
         }
-    }
-
-    /// Tell every installed widget to refresh its timeline. Cheap —
-    /// WidgetKit just enqueues a refresh request, iOS schedules the
-    /// actual reload subject to its own budget. Safe to call from
-    /// every sync tick.
-    @MainActor
-    private static func reloadWidgetTimelines() {
-        #if canImport(WidgetKit)
-        WidgetCenter.shared.reloadAllTimelines()
-        DorisLog.sync.debug("widget timelines reload requested")
-        #endif
     }
 
     /// Reachability probe for the private CloudKit container. Two cheap

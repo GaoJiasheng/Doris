@@ -63,7 +63,10 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
     /// the app was suspended. Cheap; WidgetKit just enqueues a
     /// request and iOS schedules the actual refresh.
     func applicationDidBecomeActive(_ application: UIApplication) {
-        WidgetCenter.shared.reloadAllTimelines()
+        // Reflect anything CloudKit pulled in while we were suspended —
+        // but only actually reload if the widget-visible data changed, so
+        // we don't spend WidgetKit's reload budget on every app switch.
+        WidgetReloadCoordinator.reloadIfChanged(container: DorisRuntime.shared.container)
     }
 
     /// Called as the app leaves the foreground — the user swiped to the
@@ -77,7 +80,11 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
     /// reload — by the time they're looking at the home screen the widget
     /// reflects what they just changed.
     func applicationDidEnterBackground(_ application: UIApplication) {
-        try? DorisRuntime.shared.container.mainContext.save()
-        WidgetCenter.shared.reloadAllTimelines()
+        // Flush pending in-app edits to the shared store FIRST (so the
+        // widget reads fresh rows), then reload — but only if the
+        // widget-visible data actually changed since the last reload.
+        let container = DorisRuntime.shared.container
+        try? container.mainContext.save()
+        WidgetReloadCoordinator.reloadIfChanged(container: container)
     }
 }
