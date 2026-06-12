@@ -6,6 +6,26 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.2.1 — 2026-06-13
+
+Bug-fix release: the iOS home-screen widget now actually keeps up.
+
+### Fixed
+
+- **iOS widget no longer goes stale after an in-app sync.** Two causes:
+  (1) the app asked WidgetKit to reload on *every* 60-second sync tick
+  (plus every foreground/background) regardless of whether anything
+  changed — exhausting WidgetKit's limited daily reload budget, so the
+  one reload that mattered (right after you edit/sync) got throttled
+  away; (2) the sync path saved a throwaway empty `ModelContext` instead
+  of the live one, so edits reached the shared store only via autosave.
+  Now a `WidgetReloadCoordinator` reloads **only when the widget-visible
+  data actually changed** (a deterministic signature over pinned + dated
+  notes), the sync path saves the live context, and a manual **"Sync
+  Now" / pull-to-refresh forces an immediate widget reload**.
+
+---
+
 ## 1.2.0 — 2026-06-11
 
 Doris gets a personality — she reacts to your work, runs a little daily

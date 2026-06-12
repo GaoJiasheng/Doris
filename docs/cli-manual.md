@@ -1,5 +1,5 @@
 % Doris CLI Manual
-% Version 1.2.0
+% Version 1.2.1
 % Generated from `docs/cli-manual.md`
 
 # Doris CLI 使用手册
@@ -421,6 +421,7 @@ the file timestamp: maybe a different tool also rewrote it.
 
 | Version | Notable changes |
 |---------|-----------------|
+| 1.2.1   | Bug fix: iOS home-screen widget no longer goes stale after an in-app sync — reloads are now gated to real widget-visible data changes (so WidgetKit's reload budget isn't burned on no-op sync ticks), the sync path saves the live context, and manual "Sync Now" / pull-to-refresh forces an immediate widget reload. CLI surface unchanged. |
 | 1.2.0   | The avatar reacts to your work (celebrates task completion, daily greeting ritual, alerted on agent banners) gated by a new Avatar activity setting (安静/标准/活泼); due-date reminders via local notifications at 09:00; arrow-key (↑/↓) row navigation in the macOS task list; desktop panel can open the main window; day/night avatar backdrop tracking the light/dark theme; light-mode contrast pass + glow scarcity; settings decluttered; macOS Enter duplicate-row fix. CLI surface unchanged. |
 | 1.1.2   | Today pinned cards get a live drag-reorder (cards slide out of the way as you drag, both macOS + iOS); iOS Tasks widget redesign ("Calm Focus") + reads the local store directly (no CloudKit init in-extension) and reloads on app sync/foreground; macOS task + checklist editing via AppKit fields (Return = new row below, Backspace-on-empty = delete + merge to previous row's end); iOS notes list decluttered (minute-granular sync, creation time in detail). CLI surface unchanged. |
 | 1.1.0   | macOS desktop surfaces (floating sticky notes + always-on dashboard panel) and iOS home/lock-screen widgets with tap-to-complete; Today gains a 长期/Long-term bucket + drag-to-reorder pinned cards; checklist editor UX (wrap, Enter-to-new-item, Backspace-merge); collapsible / width-responsive menu-bar assistant; integrations now write the real `~/.codex` + `~/.claude` (sandbox-home fix). CLI surface unchanged from 1.0.0. |
@@ -430,4 +431,4 @@ the file timestamp: maybe a different tool also rewrote it.
 
 ---
 
-*Last updated: built into release 1.2.0.*
+*Last updated: built into release 1.2.1.*
