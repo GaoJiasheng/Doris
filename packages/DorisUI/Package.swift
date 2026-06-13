@@ -33,7 +33,8 @@ let package = Package(
             ],
             path: "Sources/DorisUI",
             resources: [
-                .copy("HeroAnim")
+                .copy("HeroAnim"),
+                .copy("Characters")
             ],
             swiftSettings: prefixMapFlags
         )

@@ -1,0 +1,225 @@
+import Foundation
+import SwiftUI
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
+
+/// A swappable visual identity for Doris — the animated character, the
+/// menu-bar portrait, an optional in-app logo, and a selection thumbnail,
+/// packaged together. Users pick a pack in Settings and the whole app's
+/// look changes. The built-in "小姑娘" is pack `girl`.
+///
+/// Adding a pack is data-only: drop a folder into
+/// `DorisUI/Sources/DorisUI/Characters/<id>/` with a `pack.json` manifest
+/// and assets (see `docs/character-packs.md`). `CharacterPackStore`
+/// discovers it at launch — no code change.
+///
+/// Asset layout inside `Bundle.module`:
+/// ```
+/// Characters/<id>/pack.json
+/// Characters/<id>/portrait.png            (menu-bar head)
+/// Characters/<id>/anim/<mood>/<mood>_0001.png …   (frame sequences)
+/// Characters/<id>/logo.png   (optional, in-app branding)
+/// Characters/<id>/thumb.png  (optional, selector thumbnail)
+/// ```
+
+// MARK: - Manifest (pack.json)
+
+/// Decoded `pack.json`. Only `id` + `displayName` are required.
+public struct CharacterManifest: Decodable {
+    public let id: String
+    public let displayName: String
+    public let displayNameEN: String?
+    public let moods: [String]?
+    public let fps: Double?
+    public let loopFps: Double?
+    /// Internal escape hatch for the built-in `girl` pack, whose frames
+    /// live in the legacy `HeroAnim/` directory rather than
+    /// `Characters/girl/anim/`. New packs omit this.
+    public let animDirectoryOverride: String?
+}
+
+// MARK: - Pack
+
+public struct CharacterPack: Identifiable, Equatable {
+    public let id: String
+    public let displayName: String
+    public let displayNameEN: String
+    /// Moods this pack actually ships frames for. A requested mood not in
+    /// this set falls back to `idle` (see `clip(for:)`).
+    public let availableMoods: Set<String>
+    /// Frame rate for one-shot moods (greeting/celebrating/…).
+    public let fps: Double
+    /// Frame rate for looping moods (idle/listening/…).
+    public let loopFps: Double
+    /// Subdirectory in `Bundle.module` holding the per-mood frame folders.
+    /// Default `Characters/<id>/anim`; `girl` overrides to legacy `HeroAnim`.
+    public let animDirectory: String
+    /// Subdirectory in `Bundle.module` holding portrait/thumb/logo PNGs.
+    public let resourceDirectory: String
+
+    public static func == (a: CharacterPack, b: CharacterPack) -> Bool { a.id == b.id }
+
+    /// Resolve a requested mood-clip to one this pack can actually play,
+    /// falling back to `idle` so a half-finished pack never renders blank.
+    public func clip(for mood: String) -> String {
+        availableMoods.contains(mood) ? mood : "idle"
+    }
+
+    /// The always-present built-in. Used as the default selection and as a
+    /// safety net if discovery finds nothing.
+    public static let girl = CharacterPack(
+        id: "girl",
+        displayName: "小姑娘",
+        displayNameEN: "Doris",
+        availableMoods: ["idle", "greeting", "alerted", "listening", "celebrating", "walking", "confused"],
+        fps: 16,
+        loopFps: 12,
+        animDirectory: "HeroAnim",
+        resourceDirectory: "Characters/girl"
+    )
+}
+
+// MARK: - Store
+
+/// Discovers the installed character packs, owns the user's selection, and
+/// resolves a pack's images. Observe it (`@ObservedObject`) so the avatar +
+/// portrait switch live when the selection changes.
+@MainActor
+public final class CharacterPackStore: ObservableObject {
+    public static let shared = CharacterPackStore()
+
+    @Published public private(set) var available: [CharacterPack]
+    @Published public var selectedID: String {
+        didSet {
+            guard selectedID != oldValue else { return }
+            UserDefaults.standard.set(selectedID, forKey: Self.key)
+        }
+    }
+
+    private static let key = "doris.character.selectedPack"
+
+    private init() {
+        let packs = Self.discover()
+        self.available = packs
+        let saved = UserDefaults.standard.string(forKey: Self.key) ?? CharacterPack.girl.id
+        self.selectedID = packs.contains(where: { $0.id == saved }) ? saved : (packs.first?.id ?? CharacterPack.girl.id)
+    }
+
+    /// The currently-selected pack (never nil — falls back to `girl`).
+    public var selected: CharacterPack {
+        available.first(where: { $0.id == selectedID })
+            ?? available.first
+            ?? .girl
+    }
+
+    /// Re-scan the bundle for packs (e.g. after a hot asset drop in dev).
+    public func reload() { available = Self.discover() }
+
+    // MARK: Image resolution
+
+    public func portraitImage(for pack: CharacterPack? = nil) -> HeroPlatformImage? {
+        let p = pack ?? selected
+        return Self.image(named: "portrait", in: p.resourceDirectory)
+            ?? Self.legacyGirlPortrait(p)
+    }
+
+    public func thumbImage(for pack: CharacterPack) -> HeroPlatformImage? {
+        Self.image(named: "thumb", in: pack.resourceDirectory) ?? portraitImage(for: pack)
+    }
+
+    public func logoImage(for pack: CharacterPack? = nil) -> HeroPlatformImage? {
+        Self.image(named: "logo", in: (pack ?? selected).resourceDirectory)
+    }
+
+    /// Portrait of the currently-selected pack, resolvable from any thread
+    /// without main-actor isolation — it reads only `UserDefaults` + the
+    /// bundle. For AppKit call sites (status-bar item, anchor view) that
+    /// build an `NSImage` outside SwiftUI's observation. SwiftUI surfaces
+    /// should observe the store and use the instance `portraitImage()` so
+    /// they update live when the selection changes.
+    public nonisolated static func currentPortraitImage() -> HeroPlatformImage? {
+        let id = UserDefaults.standard.string(forKey: key) ?? CharacterPack.girl.id
+        if let img = image(named: "portrait", in: "Characters/\(id)") { return img }
+        #if os(macOS)
+        if id == CharacterPack.girl.id {
+            for sub in ["Avatar", nil] as [String?] {
+                if let url = Bundle.main.url(forResource: "doris-avatar", withExtension: "png", subdirectory: sub),
+                   let img = NSImage(contentsOf: url) { return img }
+            }
+        }
+        #endif
+        return nil
+    }
+
+    // MARK: Discovery
+
+    private static func discover() -> [CharacterPack] {
+        var packs: [CharacterPack] = []
+        if let root = Bundle.module.resourceURL?.appendingPathComponent("Characters"),
+           FileManager.default.fileExists(atPath: root.path) {
+            let dirs = (try? FileManager.default.contentsOfDirectory(
+                at: root, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
+            for dir in dirs {
+                guard let data = try? Data(contentsOf: dir.appendingPathComponent("pack.json")),
+                      let m = try? JSONDecoder().decode(CharacterManifest.self, from: data)
+                else { continue }
+                let resourceDir = "Characters/\(m.id)"
+                let animDir = m.animDirectoryOverride ?? "\(resourceDir)/anim"
+                let moods = Set(m.moods ?? detectMoods(animDir: animDir))
+                packs.append(CharacterPack(
+                    id: m.id,
+                    displayName: m.displayName,
+                    displayNameEN: m.displayNameEN ?? m.displayName,
+                    availableMoods: moods.isEmpty ? ["idle"] : moods,
+                    fps: m.fps ?? 16,
+                    loopFps: m.loopFps ?? 12,
+                    animDirectory: animDir,
+                    resourceDirectory: resourceDir
+                ))
+            }
+        }
+        if !packs.contains(where: { $0.id == CharacterPack.girl.id }) {
+            packs.insert(.girl, at: 0)
+        }
+        // Stable order: built-in girl first, then alphabetical.
+        return packs.sorted {
+            ($0.id == "girl" ? "\u{0}" : $0.displayName) < ($1.id == "girl" ? "\u{0}" : $1.displayName)
+        }
+    }
+
+    private static func detectMoods(animDir: String) -> [String] {
+        guard let root = Bundle.module.resourceURL?.appendingPathComponent(animDir),
+              FileManager.default.fileExists(atPath: root.path) else { return [] }
+        let dirs = (try? FileManager.default.contentsOfDirectory(
+            at: root, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
+        return dirs
+            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            .map { $0.lastPathComponent }
+    }
+
+    nonisolated private static func image(named: String, in subdir: String) -> HeroPlatformImage? {
+        guard let url = Bundle.module.url(forResource: named, withExtension: "png", subdirectory: subdir)
+        else { return nil }
+        #if os(macOS)
+        return NSImage(contentsOf: url)
+        #else
+        return (try? Data(contentsOf: url)).flatMap(UIImage.init(data:))
+        #endif
+    }
+
+    /// macOS app-bundle fallback for the original girl portrait, in case
+    /// the packaged `Characters/girl/portrait.png` is ever missing.
+    private static func legacyGirlPortrait(_ pack: CharacterPack) -> HeroPlatformImage? {
+        guard pack.id == "girl" else { return nil }
+        #if os(macOS)
+        for sub in ["Avatar", nil] as [String?] {
+            if let url = Bundle.main.url(forResource: "doris-avatar", withExtension: "png", subdirectory: sub),
+               let img = NSImage(contentsOf: url) { return img }
+        }
+        #endif
+        return nil
+    }
+}

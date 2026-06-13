@@ -11,6 +11,7 @@ struct SettingsView: View {
     @ObservedObject private var theme = ThemeSettings.shared
     @ObservedObject private var avatarSettings = AvatarSettings.shared
     @ObservedObject private var desktopPanel = DesktopPanelSettings.shared
+    @ObservedObject private var packStore = CharacterPackStore.shared
     @Query private var settingsQuery: [UserSettings]
 
     private var settings: UserSettings {
@@ -57,6 +58,17 @@ struct SettingsView: View {
             Toggle(L("Show avatar", "显示卡通助手"),
                    isOn: Binding(get: { avatarSettings.avatarVisible },
                                  set: { avatarSettings.avatarVisible = $0 }))
+            // Which character pack drives the animation + portrait. Shows
+            // only once more than the built-in pack is installed.
+            if packStore.available.count > 1 {
+                Picker(L("Character", "形象"), selection: $packStore.selectedID) {
+                    ForEach(packStore.available) { pack in
+                        Text(L(pack.displayNameEN, pack.displayName)).tag(pack.id)
+                    }
+                }
+                .help(L("Pick the character Doris uses — animation + portrait.",
+                        "选择 Doris 使用的形象 —— 动画与头像。"))
+            }
             Picker(L("Avatar activity", "助手活跃度"), selection: activityLevelBinding) {
                 Text(L("Quiet", "安静")).tag(AvatarActivityLevel.quiet)
                 Text(L("Standard", "标准")).tag(AvatarActivityLevel.standard)

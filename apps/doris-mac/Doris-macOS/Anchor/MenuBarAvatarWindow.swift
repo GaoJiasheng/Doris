@@ -469,19 +469,12 @@ struct EdgeAttachShape: Shape {
 }
 
 private struct AvatarPortrait: View {
-    static let bundled: NSImage? = {
-        let candidates = ["doris-avatar", "doris-avatar-idle"]
-        for name in candidates {
-            if let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: "Avatar"),
-               let img = NSImage(contentsOf: url) { return img }
-            if let url = Bundle.main.url(forResource: name, withExtension: "png"),
-               let img = NSImage(contentsOf: url) { return img }
-        }
-        return nil
-    }()
+    // Observe the pack store so the menu-bar head swaps live when the user
+    // picks a different character in Settings.
+    @ObservedObject private var packStore = CharacterPackStore.shared
 
     var body: some View {
-        if let img = Self.bundled {
+        if let img = packStore.portraitImage() {
             Image(nsImage: img)
                 .resizable()
                 .interpolation(.high)

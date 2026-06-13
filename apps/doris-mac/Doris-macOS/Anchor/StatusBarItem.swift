@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import DorisIPC
+import DorisUI
 
 /// Owns the NSStatusItem that lives in the macOS menu bar. Status items are the only
 /// supported way to put content INSIDE the menu bar area — regular NSPanels get clamped
@@ -54,6 +55,9 @@ final class StatusBarItem {
     }
 
     private func bundledAvatar() -> NSImage? {
+        // Prefer the selected character pack's portrait; fall back to the
+        // legacy bundled girl assets.
+        if let img = CharacterPackStore.currentPortraitImage() { return img }
         let candidates = ["doris-avatar", "doris-avatar-idle"]
         for name in candidates {
             if let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: "Avatar"),

@@ -81,6 +81,10 @@ public struct AvatarHero: View {
     /// fresh fetch.
     @ObservedObject private var weather = WeatherViewModel.shared
     @ObservedObject private var heroEvents = HeroEvents.shared
+    /// Active visual identity. Switching the selected pack swaps the
+    /// character's frames live (the player keys its cache on the pack's
+    /// anim directory, so the same mood name reloads new art).
+    @ObservedObject private var packStore = CharacterPackStore.shared
     /// Drives the day/night look of the backdrop: light scheme → bright
     /// daytime sky with faint dust motes; dark scheme → deep-space night
     /// with a full starfield. Both windows that host the hero apply
@@ -444,11 +448,13 @@ public struct AvatarHero: View {
         // less per second than 16. One-shots stay at 16 because they
         // only run for ~5 seconds total, so the higher rate is a bounded
         // expense.
-        AnimatedAvatarPlayer(
-            clip: playingMood.clipName,
+        let pack = packStore.selected
+        return AnimatedAvatarPlayer(
+            clip: pack.clip(for: playingMood.clipName),
             isLooping: playingMood.isLooping,
-            fps: playingMood.isLooping ? 12 : 16,
+            fps: playingMood.isLooping ? pack.loopFps : pack.fps,
             verticalOffset: showWeather ? (compact ? 36 : 50) : 0,
+            animDirectory: pack.animDirectory,
             onFinished: { handleOneShotFinished() }
         )
     }

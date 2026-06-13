@@ -1,0 +1,9 @@
+{
+  "id": "girl",
+  "displayName": "小姑娘",
+  "displayNameEN": "Doris",
+  "moods": ["idle", "greeting", "alerted", "listening", "celebrating", "walking", "confused"],
+  "fps": 16,
+  "loopFps": 12,
+  "animDirectoryOverride": "HeroAnim"
+}

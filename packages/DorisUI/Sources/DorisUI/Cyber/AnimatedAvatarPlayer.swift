@@ -34,18 +34,24 @@ public struct AnimatedAvatarPlayer: View {
     /// Fired once after a one-shot clip finishes its single play-through.
     /// Looping clips never fire this. Use it to revert mood → idle.
     let onFinished: (() -> Void)?
+    /// Subdirectory in `Bundle.module` holding the per-mood frame folders
+    /// for the active character pack — e.g. "HeroAnim" (built-in girl) or
+    /// "Characters/<id>/anim". Frames load from `<animDirectory>/<clip>/`.
+    let animDirectory: String
 
     public init(
         clip: String,
         isLooping: Bool,
         fps: Double = 16,
         verticalOffset: CGFloat = 0,
+        animDirectory: String = "HeroAnim",
         onFinished: (() -> Void)? = nil
     ) {
         self.clip = clip
         self.isLooping = isLooping
         self.fps = fps
         self.verticalOffset = verticalOffset
+        self.animDirectory = animDirectory
         self.onFinished = onFinished
     }
 
@@ -73,6 +79,12 @@ public struct AnimatedAvatarPlayer: View {
         .clipped()
         .onAppear { ensureLoaded() }
         .onChange(of: clip) { _, _ in
+            ensureLoaded()
+            startTime = Date()
+            hasFired = false
+        }
+        // Pack switch: same mood name ("idle"), different frames — reload.
+        .onChange(of: animDirectory) { _, _ in
             ensureLoaded()
             startTime = Date()
             hasFired = false
@@ -134,9 +146,12 @@ public struct AnimatedAvatarPlayer: View {
     }
 
     private func ensureLoaded() {
-        if clip == lastClip, !frames.isEmpty { return }
-        lastClip = clip
-        frames = HeroFrameCache.shared.frames(for: clip)
+        // Key by pack dir + clip so switching packs reloads even when the
+        // mood name is unchanged (e.g. both packs' "idle").
+        let key = "\(animDirectory)/\(clip)"
+        if key == lastClip, !frames.isEmpty { return }
+        lastClip = key
+        frames = HeroFrameCache.shared.frames(animDirectory: animDirectory, clip: clip)
     }
 }
 
@@ -149,19 +164,20 @@ final class HeroFrameCache: @unchecked Sendable {
     private let lock = NSLock()
     private var cache: [String: [HeroPlatformImage]] = [:]
 
-    func frames(for clip: String) -> [HeroPlatformImage] {
+    func frames(animDirectory: String, clip: String) -> [HeroPlatformImage] {
+        let key = "\(animDirectory)/\(clip)"
         lock.lock()
-        if let hit = cache[clip] {
+        if let hit = cache[key] {
             lock.unlock()
             return hit
         }
         lock.unlock()
 
-        // Look for files at HeroAnim/<clip>/<clip>_*.png inside Bundle.module.
+        // Look for files at <animDirectory>/<clip>/<clip>_*.png in Bundle.module.
         let bundle = Bundle.module
         guard let urls = bundle.urls(
             forResourcesWithExtension: "png",
-            subdirectory: "HeroAnim/\(clip)"
+            subdirectory: "\(animDirectory)/\(clip)"
         ) else {
             return []
         }
@@ -180,7 +196,7 @@ final class HeroFrameCache: @unchecked Sendable {
         }
 
         lock.lock()
-        cache[clip] = loaded
+        cache[key] = loaded
         lock.unlock()
         return loaded
     }

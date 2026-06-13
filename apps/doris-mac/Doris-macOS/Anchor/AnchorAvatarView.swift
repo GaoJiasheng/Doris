@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import DorisUI
 
 enum AvatarState: Equatable {
     case idle
@@ -139,6 +140,9 @@ struct AnchorAvatarView: View {
     }
 
     private func bundledAvatarImage() -> NSImage? {
+        // Prefer the selected character pack's portrait; fall back to the
+        // legacy bundled girl assets.
+        if let img = CharacterPackStore.currentPortraitImage() { return img }
         let candidates = ["doris-avatar", "doris-avatar-idle"]
         for name in candidates {
             if let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: "Avatar") {
