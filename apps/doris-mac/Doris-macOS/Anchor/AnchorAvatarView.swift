@@ -16,6 +16,8 @@ struct AnchorAvatarView: View {
     let state: AvatarState
     var size: CGFloat = 24
 
+    // Observe so the head swaps live when the selected character changes.
+    @ObservedObject private var packStore = CharacterPackStore.shared
     @State private var clickTrigger: Int = 0
 
     var body: some View {
@@ -102,7 +104,15 @@ struct AnchorAvatarView: View {
 
     @ViewBuilder
     private var avatarArt: some View {
-        if let nsImage = bundledAvatarImage() {
+        if let mark = packStore.notchImage() {
+            // Pixel-art mark: crisp nearest-neighbor, square (no circle crop
+            // / no head crop — the mark is already composed).
+            Image(nsImage: mark)
+                .resizable()
+                .interpolation(.none)
+                .scaledToFit()
+                .frame(width: size, height: size)
+        } else if let nsImage = bundledAvatarImage() {
             Image(nsImage: cropToHeadSquare(nsImage))
                 .resizable()
                 .interpolation(.high)

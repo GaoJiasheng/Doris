@@ -134,6 +134,15 @@ public final class CharacterPackStore: ObservableObject {
         Self.image(named: "logo", in: (pack ?? selected).resourceDirectory)
     }
 
+    /// The small pixel-art mark for the menu-bar / notch (~22–26pt). When a
+    /// pack ships `notch.png`, surfaces render it nearest-neighbor and
+    /// square (no circle crop) so the pixels stay crisp. Returns nil when
+    /// the pack has no dedicated mark — callers then fall back to the
+    /// circle-cropped portrait.
+    public func notchImage(for pack: CharacterPack? = nil) -> HeroPlatformImage? {
+        Self.image(named: "notch", in: (pack ?? selected).resourceDirectory)
+    }
+
     /// Portrait of the currently-selected pack, resolvable from any thread
     /// without main-actor isolation — it reads only `UserDefaults` + the
     /// bundle. For AppKit call sites (status-bar item, anchor view) that
@@ -152,6 +161,14 @@ public final class CharacterPackStore: ObservableObject {
         }
         #endif
         return nil
+    }
+
+    /// Notch/menu-bar pixel mark for the currently-selected pack, resolvable
+    /// without main-actor isolation (for AppKit call sites like the status
+    /// item). nil when the pack ships no `notch.png`.
+    public nonisolated static func currentNotchImage() -> HeroPlatformImage? {
+        let id = UserDefaults.standard.string(forKey: key) ?? CharacterPack.girl.id
+        return image(named: "notch", in: "Characters/\(id)")
     }
 
     // MARK: Discovery

@@ -312,8 +312,9 @@ private struct MenuBarAvatarContent: View {
         Button(action: onClick) {
             ZStack {
                 background
+                // AvatarPortrait self-clips (circle for a photo portrait,
+                // no crop for a pixel notch mark), so no clipShape here.
                 AvatarPortrait()
-                    .clipShape(Circle())
                     .frame(width: 26, height: 26)
                     .modifier(AvatarOffsetModifier(shape: model.shape))
             }
@@ -474,11 +475,19 @@ private struct AvatarPortrait: View {
     @ObservedObject private var packStore = CharacterPackStore.shared
 
     var body: some View {
-        if let img = packStore.portraitImage() {
+        if let mark = packStore.notchImage() {
+            // Pixel-art mark: crisp nearest-neighbor, square (no circle).
+            Image(nsImage: mark)
+                .resizable()
+                .interpolation(.none)
+                .scaledToFit()
+        } else if let img = packStore.portraitImage() {
+            // Photo portrait: smooth, circle-cropped.
             Image(nsImage: img)
                 .resizable()
                 .interpolation(.high)
                 .scaledToFill()
+                .clipShape(Circle())
         } else {
             Text("K")
                 .font(.system(size: 12, weight: .heavy, design: .rounded))

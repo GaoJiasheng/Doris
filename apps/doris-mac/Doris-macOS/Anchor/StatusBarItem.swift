@@ -48,10 +48,34 @@ final class StatusBarItem {
     /// fallback if the asset isn't found.
     private func makeAvatarImage() -> NSImage {
         let size: CGFloat = 22
+        // Pixel-art notch mark, if the pack ships one: nearest-neighbor,
+        // square, no head-crop / no circle mask.
+        if let mark = CharacterPackStore.currentNotchImage() {
+            return pixelScaled(mark, size: size)
+        }
         let raw: NSImage = bundledAvatar() ?? fallbackGlyph(size: size)
         // Crop the source to a head-focused square, then mask into a circle.
         let cropped = cropToHeadSquare(raw)
         return circleMask(cropped, diameter: size)
+    }
+
+    /// Aspect-fit `image` into a `size`×`size` canvas with nearest-neighbor
+    /// interpolation, so pixel art stays crisp instead of being smoothed.
+    private func pixelScaled(_ image: NSImage, size: CGFloat) -> NSImage {
+        let result = NSImage(size: NSSize(width: size, height: size))
+        result.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .none
+        let s = image.size
+        let scale = min(size / max(s.width, 1), size / max(s.height, 1))
+        let w = s.width * scale, h = s.height * scale
+        image.draw(
+            in: NSRect(x: (size - w) / 2, y: (size - h) / 2, width: w, height: h),
+            from: NSRect(origin: .zero, size: s),
+            operation: .sourceOver,
+            fraction: 1.0
+        )
+        result.unlockFocus()
+        return result
     }
 
     private func bundledAvatar() -> NSImage? {
