@@ -30,6 +30,9 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         DueDateNotifier.requestAuthorization()
+        // Match the home-screen icon to the selected character pack (no-op
+        // for the default pack / when its alternate icon isn't bundled).
+        AppIconManager.applyCurrent()
         Task { @MainActor in
             // Single shared container — same one the SwiftUI scene sees,
             // configured with `.private(...)` CloudKit mirror inside

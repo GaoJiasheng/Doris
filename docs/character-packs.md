@@ -122,16 +122,25 @@ Characters/robot/
 
 ---
 
-## 7. App 图标 / logo 的平台限制
+## 7. App 桌面图标(按包切换 — 已接框架)
 
-App 桌面图标**不能运行时换任意图**(和上面其它素材不同):
+切换逻辑已由 `AppIconManager` 实现,跟随所选形象自动切换。两端机制不同:
 
-- **iOS**:只能用「备用图标」——构建时预打包 + `Info.plist` 声明,`setAlternateIconName(_:)`
-  切换。每个想换图标的包给一张 **1024×1024 `icon.png`**,由构建流程生成备用图标集。
-- **macOS**:运行中只能换 Dock 图标(`NSApp.applicationIconImage`)。
+- **macOS**:**纯运行时**。用包里的 `icon.png` 直接设 Dock 图标(`NSApp.applicationIconImage`)。
+  **丢一张 `icon.png` 进包就生效**,无需额外步骤。(Finder 里的文件图标构建时固定,改不了;
+  用户看到的是运行中的 Dock 图标。)
+- **iOS**:**必须构建时预埋**。iOS 只能切换「编译进资源目录的备用图标」。所以每个要换图标的包,
+  除了 `icon.png`,还要在 `Assets.xcassets` 里加一个名为 **`AppIcon-<id>`** 的「iOS App Icon」集
+  (iOS target 已开 `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS`)。运行时框架会
+  `setAlternateIconName("AppIcon-<id>")` 自动切;没预埋则静默跳过(不崩)。
+  > iOS 切换时系统会弹一句「已更改图标」——这是系统行为,改不掉。
 
-所以 `icon.png` 给 **1024×1024 不透明方图** 即可;切换逻辑后续再接。前三样(动画/头像/
-刘海 logo)已完全可换。
+**你要准备的**:每个包一张 **1024×1024 不透明方图 `icon.png`**。
+- macOS 端:放进包就行。
+- iOS 端:我拿这张 `icon.png` 在资源目录里建 `AppIcon-<id>` 图标集(可写个脚本从 1024 源图
+  生成各尺寸)。你只管给 1024 方图。
+
+不给 `icon.png` 的包,自动用 App 默认图标(小姑娘即如此)。
 
 ---
 

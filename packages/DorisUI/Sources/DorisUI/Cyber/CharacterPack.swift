@@ -59,6 +59,10 @@ public struct CharacterPack: Identifiable, Equatable {
     public let animDirectory: String
     /// Subdirectory in `Bundle.module` holding portrait/thumb/logo PNGs.
     public let resourceDirectory: String
+    /// Whether the pack ships an `icon.png` (its app-icon source). Drives
+    /// the macOS Dock-tile swap and signals that an iOS alternate icon
+    /// `AppIcon-<id>` is expected in the asset catalog.
+    public let hasCustomIcon: Bool
 
     public static func == (a: CharacterPack, b: CharacterPack) -> Bool { a.id == b.id }
 
@@ -66,6 +70,15 @@ public struct CharacterPack: Identifiable, Equatable {
     /// falling back to `idle` so a half-finished pack never renders blank.
     public func clip(for mood: String) -> String {
         availableMoods.contains(mood) ? mood : "idle"
+    }
+
+    /// iOS alternate-icon asset name, or nil to use the primary app icon.
+    /// Convention: an "iOS App Icon" set named `AppIcon-<id>` compiled into
+    /// the catalog (the iOS target sets
+    /// `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES`). nil for the
+    /// default girl and any pack without a custom icon (→ primary icon).
+    public var alternateIconName: String? {
+        (hasCustomIcon && id != "girl") ? "AppIcon-\(id)" : nil
     }
 
     /// The always-present built-in. Used as the default selection and as a
@@ -78,7 +91,8 @@ public struct CharacterPack: Identifiable, Equatable {
         fps: 16,
         loopFps: 12,
         animDirectory: "HeroAnim",
-        resourceDirectory: "Characters/girl"
+        resourceDirectory: "Characters/girl",
+        hasCustomIcon: false
     )
 }
 
@@ -96,6 +110,9 @@ public final class CharacterPackStore: ObservableObject {
         didSet {
             guard selectedID != oldValue else { return }
             UserDefaults.standard.set(selectedID, forKey: Self.key)
+            // Follow the pack with the app/Dock icon (macOS now; iOS swaps
+            // the pre-bundled alternate icon if one exists for this pack).
+            AppIconManager.apply(selected)
         }
     }
 
@@ -143,6 +160,12 @@ public final class CharacterPackStore: ObservableObject {
         Self.image(named: "notch", in: (pack ?? selected).resourceDirectory)
     }
 
+    /// The pack's app-icon source (`icon.png`). Used on macOS to set the
+    /// running Dock tile. nil if the pack ships no icon.
+    public func appIconImage(for pack: CharacterPack? = nil) -> HeroPlatformImage? {
+        Self.image(named: "icon", in: (pack ?? selected).resourceDirectory)
+    }
+
     /// Portrait of the currently-selected pack, resolvable from any thread
     /// without main-actor isolation — it reads only `UserDefaults` + the
     /// bundle. For AppKit call sites (status-bar item, anchor view) that
@@ -186,6 +209,8 @@ public final class CharacterPackStore: ObservableObject {
                 let resourceDir = "Characters/\(m.id)"
                 let animDir = m.animDirectoryOverride ?? "\(resourceDir)/anim"
                 let moods = Set(m.moods ?? detectMoods(animDir: animDir))
+                let hasIcon = Bundle.module.url(
+                    forResource: "icon", withExtension: "png", subdirectory: resourceDir) != nil
                 packs.append(CharacterPack(
                     id: m.id,
                     displayName: m.displayName,
@@ -194,7 +219,8 @@ public final class CharacterPackStore: ObservableObject {
                     fps: m.fps ?? 16,
                     loopFps: m.loopFps ?? 12,
                     animDirectory: animDir,
-                    resourceDirectory: resourceDir
+                    resourceDirectory: resourceDir,
+                    hasCustomIcon: hasIcon
                 ))
             }
         }

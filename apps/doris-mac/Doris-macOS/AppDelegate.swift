@@ -107,6 +107,10 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
             // Desktop dashboard panel — re-show if left visible.
             DesktopPanelController.shared.start()
 
+            // Match the Dock tile to the selected character pack (no-op for
+            // the default pack, which uses the bundled icon).
+            AppIconManager.applyCurrent()
+
             // Avatar's right-click menu calls into these hooks. Sync
             // completion fires a celebration so the cyber girl reacts.
             // Both manual buttons (toolbar + avatar menu) take this path.
