@@ -6,6 +6,31 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.2.2 — 2026-06-20
+
+Faster iOS widget refresh + groundwork for swappable characters.
+
+### Fixed
+
+- **iOS widget refreshes closer to real-time after an edit.** 1.2.1 only
+  asked WidgetKit to reload on the 60-second sync tick, on foreground, or
+  at background-time — and a reload requested *as the app suspends* is the
+  one iOS defers most, so an edit-then-leave still updated the widget only
+  "a while later." The app now front-loads a (debounced) reload the instant
+  data is saved, while it's still foreground — WidgetKit honors
+  foreground-initiated requests far sooner. (iOS still ultimately schedules
+  widget refreshes; this minimizes the part the app controls.)
+
+### Internal
+
+- **Character-pack framework (dormant).** Groundwork for swappable visual
+  identities — animated character, portrait, pixel notch mark, and per-pack
+  app icon (macOS Dock + iOS alternate icons). No user-facing change yet:
+  only the built-in "小姑娘" ships, and the picker stays hidden until a
+  second pack is added.
+
+---
+
 ## 1.2.1 — 2026-06-13
 
 Bug-fix release: the iOS home-screen widget now actually keeps up.
