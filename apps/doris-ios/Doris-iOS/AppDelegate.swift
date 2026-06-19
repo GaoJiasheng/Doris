@@ -24,6 +24,8 @@ import DorisUI
 @MainActor
 final class DorisAppDelegate: NSObject, UIApplicationDelegate {
     private var syncTimer: SyncTimer?
+    private var saveObserver: NSObjectProtocol?
+    private var widgetReloadWork: DispatchWorkItem?
 
     func application(
         _ application: UIApplication,
@@ -33,6 +35,7 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
         // Match the home-screen icon to the selected character pack (no-op
         // for the default pack / when its alternate icon isn't bundled).
         AppIconManager.applyCurrent()
+        observeSavesForWidgetReload()
         Task { @MainActor in
             // Single shared container — same one the SwiftUI scene sees,
             // configured with `.private(...)` CloudKit mirror inside
@@ -89,5 +92,40 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
         let container = DorisRuntime.shared.container
         try? container.mainContext.save()
         WidgetReloadCoordinator.reloadIfChanged(container: container)
+    }
+
+    /// Front-load the widget reload to the moment data is saved.
+    ///
+    /// Previously the reload was only requested on the 60-second sync tick,
+    /// on foreground, or at background-time. The last is the worst moment to
+    /// ask: iOS is suspending the app and defers the reload, so an
+    /// edit-then-leave only refreshed the widget "a while later". By
+    /// observing `ModelContext.didSave` we register the reload **while the
+    /// app is still foreground** — WidgetKit honors foreground-initiated
+    /// requests far sooner, so by the time the user reaches the home screen
+    /// the new timeline is usually already built.
+    ///
+    /// Debounced (0.4s) to coalesce edit bursts; `reloadIfChanged` no-ops
+    /// when the widget-visible data didn't actually change, so this never
+    /// wastes WidgetKit's reload budget.
+    private func observeSavesForWidgetReload() {
+        saveObserver = NotificationCenter.default.addObserver(
+            forName: ModelContext.didSave, object: nil, queue: .main
+        ) { [weak self] _ in
+            // queue: .main guarantees the main thread → safe to hop to the
+            // MainActor synchronously.
+            MainActor.assumeIsolated { self?.scheduleWidgetReload() }
+        }
+    }
+
+    private func scheduleWidgetReload() {
+        widgetReloadWork?.cancel()
+        let work = DispatchWorkItem {
+            MainActor.assumeIsolated {
+                _ = WidgetReloadCoordinator.reloadIfChanged(container: DorisRuntime.shared.container)
+            }
+        }
+        widgetReloadWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work)
     }
 }
