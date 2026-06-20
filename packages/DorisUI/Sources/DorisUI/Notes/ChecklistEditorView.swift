@@ -90,7 +90,9 @@ public struct ChecklistEditorView: View {
                     let arr = lines
                     guard idx > 0, idx < arr.count, arr[idx].text.isEmpty else { return }
                     backspaceMergeIntoPrevious(at: idx)
-                }
+                },
+                onMoveUp:   { moveFocus(to: idx - 1) },
+                onMoveDown: { moveFocus(to: idx + 1) }
             )
             #else
             // `axis: .vertical` lets a long item wrap onto multiple lines
@@ -138,6 +140,17 @@ public struct ChecklistEditorView: View {
     }
 
     // MARK: - Editing
+
+    #if os(macOS)
+    /// Move keyboard focus to an adjacent checklist item (↑/↓). Bounds-checked
+    /// and deferred a runloop — setting focus synchronously from inside the
+    /// field editor's key handling doesn't reliably move the first responder
+    /// (same reason insertLine / backspaceMergeIntoPrevious defer).
+    private func moveFocus(to index: Int) {
+        guard lines.indices.contains(index) else { return }
+        DispatchQueue.main.async { focusedLine = index }
+    }
+    #endif
 
     private func textBinding(at idx: Int) -> Binding<String> {
         Binding(
@@ -322,6 +335,8 @@ struct ChecklistItemField: NSViewRepresentable {
     var onFocusChange: (Bool) -> Void
     var onSubmit: () -> Void
     var onDeleteEmpty: () -> Void
+    var onMoveUp: () -> Void = {}
+    var onMoveDown: () -> Void = {}
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -342,7 +357,12 @@ struct ChecklistItemField: NSViewRepresentable {
         tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
         tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tf.setContentHuggingPriority(.required, for: .vertical)
+        context.coordinator.installArrowMonitor(for: tf)
         return tf
+    }
+
+    static func dismantleNSView(_ nsView: WrappingTextField, coordinator: Coordinator) {
+        coordinator.removeArrowMonitor()
     }
 
     func updateNSView(_ tf: WrappingTextField, context: Context) {
@@ -381,6 +401,33 @@ struct ChecklistItemField: NSViewRepresentable {
             }
             return false
         }
+
+        /// ↑/↓ switch between checklist items. Caught with a local key
+        /// monitor (before the field editor turns them into caret moves),
+        /// only while THIS field is being edited. Mirrors TodoTitleField.
+        var arrowMonitor: Any?
+
+        func installArrowMonitor(for field: NSTextField) {
+            guard arrowMonitor == nil else { return }
+            arrowMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self, weak field] event in
+                guard let self, let field,
+                      let editor = field.currentEditor(),
+                      field.window?.firstResponder === editor,
+                      event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
+                else { return event }
+                switch event.keyCode {
+                case 126: self.parent.onMoveUp();   return nil   // ↑
+                case 125: self.parent.onMoveDown(); return nil   // ↓
+                default:  return event
+                }
+            }
+        }
+
+        func removeArrowMonitor() {
+            if let m = arrowMonitor { NSEvent.removeMonitor(m); arrowMonitor = nil }
+        }
+
+        deinit { removeArrowMonitor() }
     }
 }
 

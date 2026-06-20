@@ -425,7 +425,12 @@ struct TodoTitleField: NSViewRepresentable {
         tf.delegate = context.coordinator
         tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
         tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        context.coordinator.installArrowMonitor(for: tf)
         return tf
+    }
+
+    static func dismantleNSView(_ nsView: NSTextField, coordinator: Coordinator) {
+        coordinator.removeArrowMonitor()
     }
 
     func updateNSView(_ tf: NSTextField, context: Context) {
@@ -458,30 +463,18 @@ struct TodoTitleField: NSViewRepresentable {
 
         func control(_ control: NSControl, textView: NSTextView,
                      doCommandBy selector: Selector) -> Bool {
-            // Decide arrow / shortcut handling from the RAW keystroke, not
-            // the command selector. In a single-line field the field editor
-            // maps ↑/↓ to move-to-start/end-of-document (not moveUp:/
-            // moveDown:), so matching on the selector name silently misses
-            // them and the caret jumps to the line head/tail. keyCode is
-            // unambiguous.
-            if let event = NSApp.currentEvent, event.type == .keyDown {
-                let mods = event.modifierFlags.intersection([.command, .control, .option, .shift])
-                // Ctrl+A → line head, Ctrl+Z → line tail.
-                if mods == .control {
-                    switch event.charactersIgnoringModifiers?.lowercased() {
-                    case "a": textView.moveToBeginningOfLine(nil); return true
-                    case "z": textView.moveToEndOfLine(nil);       return true
-                    default:  break
-                    }
-                }
-                // Bare ↑ / ↓ (arrows carry .function/.numericPad flags, but
-                // none of cmd/ctrl/opt/shift) → switch task rows.
-                if mods.isEmpty {
-                    switch event.keyCode {
-                    case 126: parent.onMoveUp();   return true   // ↑
-                    case 125: parent.onMoveDown(); return true   // ↓
-                    default:  break
-                    }
+            // Ctrl+A → line head, Ctrl+Z → line tail. Decided from the raw
+            // event because in a single-line field these aren't reliably
+            // distinguishable from arrows at the selector level.
+            // (Bare ↑/↓ row-switching is handled by a key monitor — see
+            // `installArrowMonitor` — because a single-line field editor
+            // does NOT route plain arrows through this delegate method.)
+            if let event = NSApp.currentEvent, event.type == .keyDown,
+               event.modifierFlags.intersection([.command, .control, .option, .shift]) == .control {
+                switch event.charactersIgnoringModifiers?.lowercased() {
+                case "a": textView.moveToBeginningOfLine(nil); return true
+                case "z": textView.moveToEndOfLine(nil);       return true
+                default:  break
                 }
             }
             if selector == #selector(NSResponder.insertNewline(_:)) {
@@ -494,6 +487,35 @@ struct TodoTitleField: NSViewRepresentable {
             }
             return false
         }
+
+        /// Bare ↑/↓ never reach `control(_:textView:doCommandBy:)` in a
+        /// single-line field editor (it consumes them as caret moves), so we
+        /// catch them one level earlier with a local key-event monitor. The
+        /// monitor only acts while THIS field is the one being edited, and
+        /// swallows the arrow so the caret doesn't jump to the line head/tail.
+        var arrowMonitor: Any?
+
+        func installArrowMonitor(for field: NSTextField) {
+            guard arrowMonitor == nil else { return }
+            arrowMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self, weak field] event in
+                guard let self, let field,
+                      let editor = field.currentEditor(),
+                      field.window?.firstResponder === editor,
+                      event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
+                else { return event }
+                switch event.keyCode {
+                case 126: self.parent.onMoveUp();   return nil   // ↑
+                case 125: self.parent.onMoveDown(); return nil   // ↓
+                default:  return event
+                }
+            }
+        }
+
+        func removeArrowMonitor() {
+            if let m = arrowMonitor { NSEvent.removeMonitor(m); arrowMonitor = nil }
+        }
+
+        deinit { removeArrowMonitor() }
     }
 }
 
