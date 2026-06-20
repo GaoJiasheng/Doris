@@ -17,13 +17,21 @@ import DorisUI
 final class DesktopPetController {
     private var window: NSWindow?
     private let onClick: () -> Void
+    /// Reports the window center during a drag (dashed drop-preview) and on
+    /// release (returns true if it docked to an edge → became the edge logo).
+    private let reportDragMove: (CGPoint) -> Void
+    private let reportDragEnded: (CGPoint) -> Bool
     /// Cursor offset within the window when a drag began (global coords) —
     /// same absolute-repositioning trick the edge window uses to avoid the
     /// SwiftUI-translation feedback loop.
     private var dragCursorOffset: CGPoint?
 
-    init(onClick: @escaping () -> Void) {
+    init(onClick: @escaping () -> Void,
+         onDragMove: @escaping (CGPoint) -> Void = { _ in },
+         onDragEnded: @escaping (CGPoint) -> Bool = { _ in false }) {
         self.onClick = onClick
+        self.reportDragMove = onDragMove
+        self.reportDragEnded = onDragEnded
     }
 
     var isVisible: Bool { window != nil }
@@ -111,11 +119,17 @@ final class DesktopPetController {
         }
         guard let off = dragCursorOffset else { return }
         win.setFrameOrigin(CGPoint(x: mouse.x - off.x, y: mouse.y - off.y))
+        reportDragMove(CGPoint(x: win.frame.midX, y: win.frame.midY))
     }
 
     private func dragEnded() {
         dragCursorOffset = nil
-        if let win = window { AvatarSettings.shared.petPosition = win.frame.origin }
+        guard let win = window else { return }
+        let center = CGPoint(x: win.frame.midX, y: win.frame.midY)
+        // Dropped near an edge center → dock back to the logo (controller
+        // switches placement + tears this window down); otherwise stay put.
+        if reportDragEnded(center) { return }
+        AvatarSettings.shared.petPosition = win.frame.origin
     }
 }
 

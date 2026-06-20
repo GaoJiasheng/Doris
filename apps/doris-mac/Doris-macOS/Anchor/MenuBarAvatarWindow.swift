@@ -16,6 +16,11 @@ final class MenuBarAvatarWindow {
     private let window: NSWindow
     private let model = MenuBarModel()
     private let onClick: () -> Void
+    /// Reports the window center to the controller during a drag (drives the
+    /// dashed drop-preview) and on release (returns true if it detached to a
+    /// desktop pet, in which case we skip our own edge re-snap).
+    private let reportDragMove: (CGPoint) -> Void
+    private let reportDragEnded: (CGPoint) -> Bool
     /// Cursor position relative to the window's bottom-left when drag started, in global
     /// screen coords. Using global cursor + this offset avoids the feedback loop you get
     /// when a SwiftUI DragGesture's view-local translation shifts as the window moves.
@@ -25,8 +30,12 @@ final class MenuBarAvatarWindow {
     var screen: NSScreen? { window.screen ?? bestScreen() }
     var edge: AnchorEdge { model.edge }
 
-    init(onClick: @escaping () -> Void) {
+    init(onClick: @escaping () -> Void,
+         onDragMove: @escaping (CGPoint) -> Void = { _ in },
+         onDragEnded: @escaping (CGPoint) -> Bool = { _ in false }) {
         self.onClick = onClick
+        self.reportDragMove = onDragMove
+        self.reportDragEnded = onDragEnded
 
         let win = NSWindow(
             contentRect: NSRect(origin: .zero, size: NSSize(width: 40, height: 32)),
@@ -109,11 +118,15 @@ final class MenuBarAvatarWindow {
         guard let offset = dragCursorOffset else { return }
         let newOrigin = CGPoint(x: mouse.x - offset.x, y: mouse.y - offset.y)
         window.setFrameOrigin(newOrigin)
+        reportDragMove(CGPoint(x: window.frame.midX, y: window.frame.midY))
     }
 
     private func dragEnded() {
         dragCursorOffset = nil
         let center = NSPoint(x: window.frame.midX, y: window.frame.midY)
+        // Dropped on the desktop → detach into a pet (controller switches
+        // placement + hides this window); skip the edge re-snap below.
+        if reportDragEnded(center) { return }
         // No force-unwrap — bail if there are zero screens (impossible
         // in practice, but the `!` would bake this file's source path
         // into runtime trap metadata).

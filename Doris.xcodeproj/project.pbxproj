@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		006BD91A2809680D3BE95C1F /* AvatarSnap.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA461842DCD0E41922F27A58 /* AvatarSnap.swift */; };
 		0138CA7ECECF75D81A221C26 /* DorisUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0971CEB283C981E06A5B6137 /* DorisUI */; };
 		0573E0604AA69758A8931230 /* DorisIntentsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC3F2A4FFB36D66A3B4097B /* DorisIntentsBundle.swift */; };
 		05E598C378B531293A80E1FA /* MainTodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8440B3789E181CF97F3CF7B4 /* MainTodayView.swift */; };
@@ -54,6 +55,7 @@
 		6938EF7A119C77219E20BB45 /* AddNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 158FE15ABF0D2A4C3DC8BAC3 /* AddNoteIntent.swift */; };
 		7040B677FFD658642BA65190 /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2C48574E347B4EE76D140986 /* DorisCore */; };
 		70E79B824FCB7230A27D4D1B /* PushNotificationIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5860F89D0929C6440DEA0036 /* PushNotificationIntent.swift */; };
+		7201E0279A2B47B9AC9B2E53 /* SnapPreviewWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0CD86FBE958FBDC8D1F6B9F /* SnapPreviewWindow.swift */; };
 		75A567DCBBD5A17176094D43 /* DorisScriptCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B6A23241EBA8A24694833B /* DorisScriptCommands.swift */; };
 		762208DDC9AAE1996EF6F987 /* ClickActionRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10C3EAA2191386EDE59801BF /* ClickActionRouter.swift */; };
 		7650F868B576783BBDB02F79 /* IPCFSEventReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFE8BFB4CAA1D8CE956C57D /* IPCFSEventReader.swift */; };
@@ -227,6 +229,7 @@
 		A957823B6968DE8D6D1C19A9 /* HotkeyEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyEngine.swift; sourceTree = "<group>"; };
 		AD66496AECE70963437B750C /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
 		AEB137662D3DAC600C955D36 /* MarkMessageDoneIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkMessageDoneIntent.swift; sourceTree = "<group>"; };
+		B0CD86FBE958FBDC8D1F6B9F /* SnapPreviewWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapPreviewWindow.swift; sourceTree = "<group>"; };
 		B1DCF61C45573AFCC4F934A3 /* OpenSidebarIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenSidebarIntent.swift; sourceTree = "<group>"; };
 		B489FE10D147F23B18789AFF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		BB71668C471E5FF4D4AF7C06 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -241,6 +244,7 @@
 		D711C527DD44237BA4A5C40D /* DorisApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DorisApp.swift; sourceTree = "<group>"; };
 		D9FAEC524DB6AA1CA56A6024 /* DorisShareExtension-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "DorisShareExtension-iOS.entitlements"; sourceTree = "<group>"; };
 		D9FD36425E135CC9E362FCB4 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
+		DA461842DCD0E41922F27A58 /* AvatarSnap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarSnap.swift; sourceTree = "<group>"; };
 		DB8853F1317B2486DAB7E291 /* SpeechRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognizer.swift; sourceTree = "<group>"; };
 		E06A5801ADADFF5C8CC26B70 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E2C43AC1A96796BEB25788BA /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -615,10 +619,12 @@
 				FA324399D378502240BA8470 /* AnchorView.swift */,
 				6A8D4FCB090245F62C745832 /* AppearanceSettings.swift */,
 				CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */,
+				DA461842DCD0E41922F27A58 /* AvatarSnap.swift */,
 				68A7DF1DA0D5BE2ACB2B2F1D /* DailyRitual.swift */,
 				5616260E3BE68E019F297D88 /* DesktopPetController.swift */,
 				0239401BE0698A4354F48B33 /* MenuBarAvatarWindow.swift */,
 				AD66496AECE70963437B750C /* SettingsWindow.swift */,
+				B0CD86FBE958FBDC8D1F6B9F /* SnapPreviewWindow.swift */,
 				9124431BB7A8127A5AE105A1 /* StatusBarItem.swift */,
 			);
 			path = Anchor;
@@ -1154,6 +1160,7 @@
 				25036E4CBA4693D9116F0370 /* AppRouter.swift in Sources */,
 				294983F21EEEC7DFB7A5E538 /* AppearanceSettings.swift in Sources */,
 				F87B15508619139626BAB672 /* AvatarSettings.swift in Sources */,
+				006BD91A2809680D3BE95C1F /* AvatarSnap.swift in Sources */,
 				762208DDC9AAE1996EF6F987 /* ClickActionRouter.swift in Sources */,
 				A6F10058EAF7E8A0833E9D43 /* DailyRitual.swift in Sources */,
 				59310758E0D2AC22BD34CFE0 /* DesktopPanelController.swift in Sources */,
@@ -1177,6 +1184,7 @@
 				7955A88D3B0E011532D4A845 /* SettingsWindow.swift in Sources */,
 				434DB57A49A8B0D99FDC2FC4 /* SidebarController.swift in Sources */,
 				466612C4F9BF3A250E8F0963 /* SidebarRootView.swift in Sources */,
+				7201E0279A2B47B9AC9B2E53 /* SnapPreviewWindow.swift in Sources */,
 				E9874DBDAB1A27FE48686FCB /* SpeechRecognizer.swift in Sources */,
 				99A039F0737F80C5295506D0 /* StatusBarItem.swift in Sources */,
 				521B0B2B1B54209E339769ED /* StickyNoteView.swift in Sources */,
