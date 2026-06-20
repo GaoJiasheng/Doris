@@ -38,6 +38,9 @@ struct MainTodayView: View {
     /// same editor path (and parent hides the detail header etc.).
     @Binding var editing: Note?
 
+    /// Tapping the token summary card jumps to the Tokens tab.
+    var onOpenTokens: () -> Void = {}
+
     /// Pinned notes sorted by urgency:
     ///   1. Notes with a `dueDate` come first, sorted ascending (most
     ///      overdue → today → soonest future).
@@ -97,6 +100,10 @@ struct MainTodayView: View {
     private var scrollBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
+
+                // Token-usage glance — leads the Today content; tap to open
+                // the full Tokens dashboard.
+                TokenSummaryCard(onTap: onOpenTokens)
 
                 // The date is rendered up in `MainWindowView`'s detail
                 // header (next to the tab strip, only while Today is

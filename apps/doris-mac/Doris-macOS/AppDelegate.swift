@@ -107,6 +107,10 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
             // Desktop dashboard panel — re-show if left visible.
             DesktopPanelController.shared.start()
 
+            // Token-usage monitor — watch ~/.claude & ~/.codex logs, backfill
+            // history, and keep the dashboard fresh.
+            TokenCollectionService.shared.start()
+
             // Match the Dock tile to the selected character pack (no-op for
             // the default pack, which uses the bundled icon).
             AppIconManager.applyCurrent()

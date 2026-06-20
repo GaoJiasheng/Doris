@@ -12,6 +12,7 @@ struct SettingsView: View {
     @ObservedObject private var avatarSettings = AvatarSettings.shared
     @ObservedObject private var desktopPanel = DesktopPanelSettings.shared
     @ObservedObject private var packStore = CharacterPackStore.shared
+    @ObservedObject private var tokenSettings = TokenMonitorSettings.shared
     @Query private var settingsQuery: [UserSettings]
 
     private var settings: UserSettings {
@@ -32,6 +33,8 @@ struct SettingsView: View {
                     .tabItem { Label(L("Avatar", "形象"), systemImage: "face.smiling") }
                 syncTab
                     .tabItem { Label(L("Sync", "同步"), systemImage: "icloud.fill") }
+                tokenTab
+                    .tabItem { Label(L("Tokens", "Token"), systemImage: "bolt.fill") }
                 recentlyDeletedTab
                     .tabItem { Label(L("Recently Deleted", "最近删除"), systemImage: "trash") }
                 sidebarTab
@@ -69,6 +72,52 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .textSelection(.enabled)
+            }
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    /// Token-usage monitor config — master switch, per-tool toggles, manual
+    /// rescan. Collection runs on macOS by reading local AI-tool logs.
+    private var tokenTab: some View {
+        Form {
+            Toggle(L("Monitor token usage", "监控 Token 用量"),
+                   isOn: Binding(get: { tokenSettings.monitoringEnabled },
+                                 set: { tokenSettings.monitoringEnabled = $0 }))
+            Text(L("Tallies token consumption by reading AI tools' local logs. macOS only — data stays on this Mac.",
+                   "通过读取 AI 工具的本地日志统计 Token 消耗。仅 macOS,数据只保存在本机。"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Section(header: Text(L("Tools", "工具"))) {
+                ForEach(TokenTool.allCases, id: \.self) { tool in
+                    if TokenSourceRegistry.adapter(for: tool) != nil {
+                        Toggle(isOn: Binding(get: { tokenSettings.isEnabled(tool) },
+                                             set: { tokenSettings.setEnabled(tool, $0) })) {
+                            Label(tool.displayName, systemImage: tool.sfSymbol)
+                        }
+                        .disabled(!tokenSettings.monitoringEnabled)
+                    } else {
+                        LabeledContent {
+                            Text(L("coming soon", "即将支持")).foregroundStyle(.secondary)
+                        } label: {
+                            Label(tool.displayName, systemImage: tool.sfSymbol)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            Section {
+                Button(L("Rescan now", "立即扫描")) {
+                    TokenCollectionService.shared.triggerNow()
+                }
+                if let last = tokenSettings.lastCollectAt {
+                    LabeledContent(L("Last scan", "上次扫描")) {
+                        Text(last.formatted(.relative(presentation: .named)))
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
         }
         .scrollContentBackground(.hidden)

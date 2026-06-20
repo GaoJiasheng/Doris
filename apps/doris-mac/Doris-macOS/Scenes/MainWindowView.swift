@@ -37,7 +37,7 @@ struct MainWindowView: View {
     /// for those, otherwise the DORIS / tabs strip slides under them.
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
-    enum Tab: Hashable { case today, events, notes }
+    enum Tab: Hashable { case today, events, notes, tokens }
 
     var body: some View {
         ZStack {
@@ -156,9 +156,10 @@ struct MainWindowView: View {
             }
             Group {
                 switch tab {
-                case .today:  MainTodayView(editing: $editingNote)
+                case .today:  MainTodayView(editing: $editingNote, onOpenTokens: { tab = .tokens })
                 case .events: MainEventsList()
                 case .notes:  MainNotesList(editing: $editingNote)
+                case .tokens: MainTokensView()
                 }
             }
             .scrollContentBackground(.hidden)
@@ -203,6 +204,7 @@ struct MainWindowView: View {
                 tabButton(.today, label: L("Today", "今日"), system: "sparkles")
                 tabButton(.notes, label: L("TODO", "TODO"), system: "checklist")
                 tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
+                tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
             }
 
             Spacer()
