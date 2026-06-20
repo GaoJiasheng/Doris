@@ -458,20 +458,38 @@ struct TodoTitleField: NSViewRepresentable {
 
         func control(_ control: NSControl, textView: NSTextView,
                      doCommandBy selector: Selector) -> Bool {
+            // Decide arrow / shortcut handling from the RAW keystroke, not
+            // the command selector. In a single-line field the field editor
+            // maps ↑/↓ to move-to-start/end-of-document (not moveUp:/
+            // moveDown:), so matching on the selector name silently misses
+            // them and the caret jumps to the line head/tail. keyCode is
+            // unambiguous.
+            if let event = NSApp.currentEvent, event.type == .keyDown {
+                let mods = event.modifierFlags.intersection([.command, .control, .option, .shift])
+                // Ctrl+A → line head, Ctrl+Z → line tail.
+                if mods == .control {
+                    switch event.charactersIgnoringModifiers?.lowercased() {
+                    case "a": textView.moveToBeginningOfLine(nil); return true
+                    case "z": textView.moveToEndOfLine(nil);       return true
+                    default:  break
+                    }
+                }
+                // Bare ↑ / ↓ (arrows carry .function/.numericPad flags, but
+                // none of cmd/ctrl/opt/shift) → switch task rows.
+                if mods.isEmpty {
+                    switch event.keyCode {
+                    case 126: parent.onMoveUp();   return true   // ↑
+                    case 125: parent.onMoveDown(); return true   // ↓
+                    default:  break
+                    }
+                }
+            }
             if selector == #selector(NSResponder.insertNewline(_:)) {
                 parent.onSubmit()
                 return true
             }
             if selector == #selector(NSResponder.deleteBackward(_:)), textView.string.isEmpty {
                 parent.onDeleteEmpty()
-                return true
-            }
-            if selector == #selector(NSResponder.moveUp(_:)) {
-                parent.onMoveUp()
-                return true
-            }
-            if selector == #selector(NSResponder.moveDown(_:)) {
-                parent.onMoveDown()
                 return true
             }
             return false
