@@ -71,7 +71,12 @@ final class DesktopPetController {
             defer: true
         )
         win.isReleasedWhenClosed = false
-        win.level = .floating                       // above normal windows
+        // `.statusBar` (above the menu bar), NOT `.floating` (below it):
+        // a `.floating` pet slides UNDER the menu bar when dragged up, the
+        // cursor leaves it and the drag stalls before reaching the notch —
+        // which is why top-edge docking failed while the other three edges
+        // worked. It also matches the "in front of all windows" intent.
+        win.level = .statusBar
         win.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         win.backgroundColor = .clear
         win.isOpaque = false

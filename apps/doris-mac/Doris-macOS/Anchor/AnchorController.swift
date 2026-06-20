@@ -488,6 +488,18 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
         return NSRect(x: x, y: y, width: size.width, height: size.height)
     }
 
+    /// Notification rect dropping from the top-center (camera-notch) of a
+    /// display — used for banners / fixes while the avatar is a desktop pet,
+    /// so notifications appear at the notch regardless of where the pet (or
+    /// the hidden edge logo's saved edge) happens to be.
+    private func topNotchRect(size: CGSize, screen: NSScreen) -> NSRect {
+        let s = screen.frame
+        let vf = screen.visibleFrame
+        let x = min(max(s.midX - size.width / 2, s.minX + 6), s.maxX - size.width - 6)
+        let y = vf.maxY - size.height        // flush under the menu bar / notch
+        return NSRect(x: x, y: y, width: size.width, height: size.height)
+    }
+
     private func computeRect() -> NSRect {
         let (width, height): (CGFloat, CGFloat)
         switch model.state {
@@ -512,16 +524,20 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             height = saved.height
         }
 
-        // Desktop-pet mode: anchor only the EXPANDED dropdown next to the pet
-        // (click-me → menu beside me). Banners / fix notifications stay at the
-        // notch / top of the display — they shouldn't chase the pet around.
-        if model.state == .expanded,
-           AvatarSettings.shared.placement == .desktop,
-           let petFrame = desktopPet?.frame,
+        // Desktop-pet mode placement:
+        //  • expanded dropdown → beside the pet (click-me → menu beside me)
+        //  • banner / fix notifications → drop from the TOP NOTCH of the pet's
+        //    display. NOT from the pet, and NOT from the hidden edge logo
+        //    (whose saved edge may be bottom/left/right — which is why
+        //    notifications were appearing mid-screen-bottom). They shouldn't
+        //    chase the pet around either.
+        if AvatarSettings.shared.placement == .desktop,
            let petScreen = desktopPet?.screen {
-            return petAnchoredRect(petFrame: petFrame,
-                                   size: CGSize(width: width, height: height),
-                                   screen: petScreen)
+            let size = CGSize(width: width, height: height)
+            if model.state == .expanded, let petFrame = desktopPet?.frame {
+                return petAnchoredRect(petFrame: petFrame, size: size, screen: petScreen)
+            }
+            return topNotchRect(size: size, screen: petScreen)
         }
 
         if let avatar = avatarWindow, let screen = avatar.screen {

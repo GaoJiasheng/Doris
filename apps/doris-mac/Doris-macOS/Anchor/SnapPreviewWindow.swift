@@ -22,8 +22,9 @@ final class SnapPreviewWindow {
     private func makeWindow() -> NSWindow {
         let win = NSWindow(contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: true)
         win.isReleasedWhenClosed = false
-        // Just above the pet (.floating) so the outline is always visible.
-        win.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
+        // Above the pet / edge logo (both .statusBar) so the outline is
+        // always visible, even when docking to the top over the menu bar.
+        win.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
         win.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         win.backgroundColor = .clear
         win.isOpaque = false
