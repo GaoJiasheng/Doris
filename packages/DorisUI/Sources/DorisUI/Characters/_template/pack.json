@@ -1,0 +1,15 @@
+{
+  "id": "REPLACE_ME",
+  "displayName": "形象中文名",
+  "displayNameEN": "EnglishName",
+  "moods": ["idle", "greeting", "celebrating", "alerted", "listening", "confused", "walking"],
+  "fps": 16,
+  "loopFps": 12,
+  "theme": {
+    "accentPrimary":   "#FF4DBF",
+    "accentSecondary": { "light": "#008CBF", "dark": "#00D9FF" },
+    "done":            "#9AA0A6",
+    "backdropTop":     { "light": "#F0EEF9", "dark": "#1A0F2E" },
+    "backdropBottom":  { "light": "#FDF8FF", "dark": "#05050D" }
+  }
+}

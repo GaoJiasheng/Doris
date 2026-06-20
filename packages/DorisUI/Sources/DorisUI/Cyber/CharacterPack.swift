@@ -35,10 +35,62 @@ public struct CharacterManifest: Decodable {
     public let moods: [String]?
     public let fps: Double?
     public let loopFps: Double?
+    /// Optional per-pack color theme. Any subset of colors may be set; the
+    /// rest fall back to the girl defaults.
+    public let theme: ThemeManifest?
     /// Internal escape hatch for the built-in `girl` pack, whose frames
     /// live in the legacy `HeroAnim/` directory rather than
     /// `Characters/girl/anim/`. New packs omit this.
     public let animDirectoryOverride: String?
+}
+
+/// The `theme` object in `pack.json`. Each color is optional and accepts
+/// either a single hex string (same in both light/dark) or a
+/// `{ "light": "#…", "dark": "#…" }` pair.
+public struct ThemeManifest: Decodable {
+    public let accentPrimary: ThemeColorSpec?     // → neonPink
+    public let accentSecondary: ThemeColorSpec?   // → neonCyan
+    public let done: ThemeColorSpec?              // → doneAccent
+    public let backdropTop: ThemeColorSpec?
+    public let backdropBottom: ThemeColorSpec?
+
+    /// Resolve into a `CharacterTheme`, filling any missing color from girl.
+    public func resolved() -> CharacterTheme {
+        let g = CharacterTheme.girl
+        return CharacterTheme(
+            neonPink:       accentPrimary?.color(or: g.neonPink)       ?? g.neonPink,
+            neonCyan:       accentSecondary?.color(or: g.neonCyan)     ?? g.neonCyan,
+            doneAccent:     done?.color(or: g.doneAccent)              ?? g.doneAccent,
+            backdropTop:    backdropTop?.color(or: g.backdropTop)      ?? g.backdropTop,
+            backdropBottom: backdropBottom?.color(or: g.backdropBottom) ?? g.backdropBottom
+        )
+    }
+}
+
+/// One themed color from the manifest: `"#RRGGBB"` (optionally `#RRGGBBAA`)
+/// or `{ "light": "#…", "dark": "#…" }`. Decodes from either shape.
+public struct ThemeColorSpec: Decodable {
+    public let light: String
+    public let dark: String
+
+    enum CodingKeys: String, CodingKey { case light, dark }
+
+    public init(from decoder: Decoder) throws {
+        if let single = try? decoder.singleValueContainer().decode(String.self) {
+            light = single; dark = single
+        } else {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let l = try c.decode(String.self, forKey: .light)
+            light = l
+            dark = (try c.decodeIfPresent(String.self, forKey: .dark)) ?? l
+        }
+    }
+
+    /// Build the adaptive `Color`, or `fallback` if either hex is malformed.
+    public func color(or fallback: Color) -> Color {
+        guard let l = Color(hex: light), let d = Color(hex: dark) else { return fallback }
+        return Color(light: l, dark: d)
+    }
 }
 
 // MARK: - Pack
@@ -63,6 +115,9 @@ public struct CharacterPack: Identifiable, Equatable {
     /// the macOS Dock-tile swap and signals that an iOS alternate icon
     /// `AppIcon-<id>` is expected in the asset catalog.
     public let hasCustomIcon: Bool
+    /// The pack's color theme (the "主题" part of the set). Defaults to girl;
+    /// `pack.json`'s `theme` block overrides any subset.
+    public let theme: CharacterTheme
 
     public static func == (a: CharacterPack, b: CharacterPack) -> Bool { a.id == b.id }
 
@@ -92,7 +147,8 @@ public struct CharacterPack: Identifiable, Equatable {
         loopFps: 12,
         animDirectory: "HeroAnim",
         resourceDirectory: "Characters/girl",
-        hasCustomIcon: false
+        hasCustomIcon: false,
+        theme: .girl
     )
 }
 
@@ -110,6 +166,10 @@ public final class CharacterPackStore: ObservableObject {
         didSet {
             guard selectedID != oldValue else { return }
             UserDefaults.standard.set(selectedID, forKey: Self.key)
+            // Re-skin the palette to the new pack's theme. Surfaces that
+            // observe this store (or get re-rendered) pick up the colors;
+            // a relaunch guarantees every surface is consistent.
+            CyberPalette.activeTheme = selected.theme
             // Follow the pack with the app/Dock icon (macOS now; iOS swaps
             // the pre-bundled alternate icon if one exists for this pack).
             AppIconManager.apply(selected)
@@ -123,6 +183,8 @@ public final class CharacterPackStore: ObservableObject {
         self.available = packs
         let saved = UserDefaults.standard.string(forKey: Self.key) ?? CharacterPack.girl.id
         self.selectedID = packs.contains(where: { $0.id == saved }) ? saved : (packs.first?.id ?? CharacterPack.girl.id)
+        // Apply the selected pack's theme before any surface renders.
+        CyberPalette.activeTheme = (packs.first(where: { $0.id == self.selectedID }) ?? .girl).theme
     }
 
     /// The currently-selected pack (never nil — falls back to `girl`).
@@ -203,6 +265,10 @@ public final class CharacterPackStore: ObservableObject {
             let dirs = (try? FileManager.default.contentsOfDirectory(
                 at: root, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
             for dir in dirs {
+                // Skip scaffolding / hidden dirs (e.g. `_template`) so they
+                // never show up as a selectable pack.
+                let name = dir.lastPathComponent
+                if name.hasPrefix("_") || name.hasPrefix(".") { continue }
                 guard let data = try? Data(contentsOf: dir.appendingPathComponent("pack.json")),
                       let m = try? JSONDecoder().decode(CharacterManifest.self, from: data)
                 else { continue }
@@ -220,7 +286,8 @@ public final class CharacterPackStore: ObservableObject {
                     loopFps: m.loopFps ?? 12,
                     animDirectory: animDir,
                     resourceDirectory: resourceDir,
-                    hasCustomIcon: hasIcon
+                    hasCustomIcon: hasIcon,
+                    theme: m.theme?.resolved() ?? .girl
                 ))
             }
         }

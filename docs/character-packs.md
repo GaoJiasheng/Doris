@@ -1,8 +1,12 @@
 # Character Packs(形象包)— 设计 + 素材规格
 
 Doris 的可视形象做成**可切换的「形象包」(CharacterPack)**。一个包打包一整套形象:
-动画角色、菜单栏头像、刘海像素 logo、品牌图、缩略图。用户在设置里选哪个包,全 App
-的形象就整套切换。目前的「小姑娘」是内置的第一个包(`girl`)。
+**App 图标、动画角色、视频帧、头像、主题配色**(再加刘海像素 logo、品牌图、缩略图)。
+用户在设置里选哪个包,全 App 的形象 + 配色就整套切换。目前的「小姑娘」是内置的第一个
+包(`girl`)。
+
+> 一套包 = `icon.png`(App logo) + `anim/`(形象/视频帧) + `portrait.png`(头像) +
+> `pack.json` 里的 `theme`(主题配色) + `notch.png`(刘海 mark)。下面逐项给规格。
 
 加一个新形象 = 按下面的结构丢一个文件夹进 `Characters/<id>/` + 一个 `pack.json`,
 **重新构建**即可被发现,无需改代码。
@@ -61,7 +65,14 @@ Doris 的可视形象做成**可切换的「形象包」(CharacterPack)**。一�
   "displayNameEN": "Robo",
   "moods": ["idle", "greeting", "celebrating", "alerted", "listening", "confused", "walking"],
   "fps": 16,
-  "loopFps": 12
+  "loopFps": 12,
+  "theme": {
+    "accentPrimary":   "#FF4DBF",
+    "accentSecondary": { "light": "#008CBF", "dark": "#00D9FF" },
+    "done":            "#9AA0A6",
+    "backdropTop":     { "light": "#F0EEF9", "dark": "#1A0F2E" },
+    "backdropBottom":  { "light": "#FDF8FF", "dark": "#05050D" }
+  }
 }
 ```
 
@@ -73,6 +84,28 @@ Doris 的可视形象做成**可切换的「形象包」(CharacterPack)**。一�
 | `moods` | — | 本包做了哪些情绪;缺省自动探测 `anim/` 子文件夹 |
 | `fps` | — | 一次性帧率,缺省 16 |
 | `loopFps` | — | 循环帧率,缺省 12 |
+| `theme` | — | 主题配色;整块或任意单色可省,省的回退小姑娘色(见 §3.1) |
+
+### 3.1 主题配色 `theme`(可选)
+
+每个颜色都可省;省掉的自动回退到小姑娘默认色。颜色写法二选一:
+**单串 `"#RRGGBB"`**(深浅模式同色,品牌色通常这样)或
+**`{ "light": "#…", "dark": "#…" }`**(深浅模式各一)。支持 `#RRGGBB` 与 `#RRGGBBAA`。
+
+| 键 | 作用(对应 `CyberPalette`) | 建议 |
+|---|---|---|
+| `accentPrimary`   | 主品牌色 `neonPink` — 高亮、激活态、进度、描边渐变之一 | 形象的标志色 |
+| `accentSecondary` | 次品牌色 `neonCyan` — 链接、次高亮、描边渐变之二 | 与主色对比的另一色 |
+| `done`            | 完成态 `doneAccent` — 划线 / DONE 药丸 / 完成卡描边 | 冷中性色,别和品牌色打架 |
+| `backdropTop`     | 页面背景渐变**顶**色 | 深色模式深、浅色模式浅 |
+| `backdropBottom`  | 页面背景渐变**底**色 | 同上 |
+
+> 卡片玻璃面(`surfaceTop/Bottom`)目前仍是全局色,不随包变——保留通用毛玻璃质感。
+> 想让某色也可换时告诉我,扩一行即可(`CharacterTheme` + `ThemeManifest` 各加一个字段)。
+
+**作用范围**:配色由 `CharacterPackStore` 在启动时和切包时写入 `CyberPalette.activeTheme`,
+全 App 205 处 `CyberPalette.X` 调用点不变就跟着换色。切包时观察 store 的界面立即变色,
+**重启可保证每个界面都一致**。
 
 ---
 
@@ -148,13 +181,14 @@ Characters/robot/
 
 每个新形象包:
 
-- [ ] `pack.json`(§3)
-- [ ] `portrait.png` 1024×1024 圆头(§1.2)
+- [ ] `pack.json`(§3),含 `theme` 配色(§3.1)——主题:**App logo / 形象 / 视频 / 头像 / 主题**这一套里的「主题」
+- [ ] `icon.png` 1024×1024 不透明方图(App logo,§7;不给则用默认)
+- [ ] `portrait.png` 1024×1024 圆头(头像,§1.2)
 - [ ] `notch.png` 96×96 像素 logo(§1.3)
-- [ ] `anim/idle/idle_0001.png …`(至少 idle;512×768 透明帧)(§2)
+- [ ] `anim/idle/idle_0001.png …`(至少 idle;512×768 透明帧)(形象/视频,§2)
 - [ ] 其余情绪动画(greeting/celebrating/alerted/listening/confused/walking)——可后补
 - [ ] `fullbody.png` 1024×1536 源图(建议留)
-- [ ] `thumb.png` 256×256(可选)
-- [ ] `logo.png` / `icon.png`(可选)
+- [ ] `thumb.png` 256×256(可选)/ `logo.png`(可选)
 
 做好丢进 `packages/DorisUI/Sources/DorisUI/Characters/<id>/`,告诉我 id,我接上即可切换。
+内置 `Characters/_template/pack.json` 是带注释的清单模板,照着填最省事。
