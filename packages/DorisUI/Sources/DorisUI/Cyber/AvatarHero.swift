@@ -155,48 +155,23 @@ public struct AvatarHero: View {
         // and particles are forgiving — 12fps looks identical to the eye
         // and cuts CPU enormously (was sitting at 60–80 % during launch
         // with the old 30fps full-tree re-eval).
-        ZStack {
-            // Desktop-pet mode (transparentBackdrop) renders ONLY the
-            // character — the clip's PNGs are alpha-transparent, so just the
-            // character floats on the desktop with no card / backdrop / HUD.
-            if !transparentBackdrop {
-                ambientBackdrop        // day-sky / night-space gradient
-                cursorHalo             // re-renders only on cursor move (Mac)
-                animatedAmbientLayers  // 12fps Canvas layer for stars/particles/ripples
-                scanlines              // CoreAnimation-driven offset, cheap
-            }
-            character                  // owns its own 16fps player TimelineView
-            if !transparentBackdrop {
-                cornerAccents          // static
-                if showWeather { weatherOverlay }
-            }
-        }
-        .opacity(moodOpacity)
-        .modifier(SelfChromeModifier(enabled: selfChrome && !transparentBackdrop, compact: compact))
-        .allowsHitTesting(interactive)
-        .contentShape(Rectangle())
-        .onTapGesture(coordinateSpace: .local) { point in
-            handleClick(at: point)
-        }
-        #if os(macOS)
-        .onContinuousHover { phase in
-            switch phase {
-            case .active(let p):
-                // `onContinuousHover` fires on every mouse-moved event
-                // (200+ Hz from a high-polling-rate trackpad/mouse). Each
-                // change of `cursorPos` re-renders both `cursorHalo` and
-                // the starfield Canvas (cursor proximity boost). Throttle
-                // to ~30 Hz — same visual feel, far less view work.
-                let now = Date()
-                if now.timeIntervalSince(lastCursorUpdate) > 0.033 {
-                    cursorPos = p
-                    lastCursorUpdate = now
-                }
-            case .ended:
-                cursorPos = nil
+        // When non-interactive (desktop pet), AvatarHero is a PLAIN visual:
+        // no tap/hover gestures and — crucially — no `.allowsHitTesting(false)`
+        // (that made the character region swallow/deaden clicks so the host
+        // button only fired in some spots). The host window owns click + drag.
+        Group {
+            if interactive {
+                decoratedContent
+                    .onTapGesture(coordinateSpace: .local) { point in
+                        handleClick(at: point)
+                    }
+                    #if os(macOS)
+                    .onContinuousHover { phase in updateCursorHalo(phase) }
+                    #endif
+            } else {
+                decoratedContent
             }
         }
-        #endif
         .onAppear {
             playingMood = mood
             startPerpetualLoops()
@@ -220,6 +195,46 @@ public struct AvatarHero: View {
         .onChange(of: heroEvents.lastAlert)       { _, _ in busFireOneShot(.alerted) }
         .onChange(of: heroEvents.isListening)     { _, on in setListening(on) }
     }
+
+    /// The visual stack (no gestures). Pet mode shows only the character.
+    private var decoratedContent: some View {
+        ZStack {
+            // Desktop-pet mode (transparentBackdrop) renders ONLY the
+            // character — the clip's PNGs are alpha-transparent, so just the
+            // character floats on the desktop with no card / backdrop / HUD.
+            if !transparentBackdrop {
+                ambientBackdrop        // day-sky / night-space gradient
+                cursorHalo             // re-renders only on cursor move (Mac)
+                animatedAmbientLayers  // 12fps Canvas layer for stars/particles/ripples
+                scanlines              // CoreAnimation-driven offset, cheap
+            }
+            character                  // owns its own 16fps player TimelineView
+            if !transparentBackdrop {
+                cornerAccents          // static
+                if showWeather { weatherOverlay }
+            }
+        }
+        .opacity(moodOpacity)
+        .modifier(SelfChromeModifier(enabled: selfChrome && !transparentBackdrop, compact: compact))
+        .contentShape(Rectangle())
+    }
+
+    #if os(macOS)
+    /// Throttled cursor tracking for the cyan halo (interactive mode only).
+    /// `onContinuousHover` fires 200+ Hz on high-polling devices; cap at ~30 Hz.
+    private func updateCursorHalo(_ phase: HoverPhase) {
+        switch phase {
+        case .active(let p):
+            let now = Date()
+            if now.timeIntervalSince(lastCursorUpdate) > 0.033 {
+                cursorPos = p
+                lastCursorUpdate = now
+            }
+        case .ended:
+            cursorPos = nil
+        }
+    }
+    #endif
 
     /// The three Canvas-backed ambient layers stacked into one
     /// `TimelineView` so they share a single per-frame tick. Putting them

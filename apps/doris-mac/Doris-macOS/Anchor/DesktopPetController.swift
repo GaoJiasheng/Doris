@@ -141,20 +141,26 @@ private struct DesktopPetContent: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(L("Click to open · drag to move · right-click for options",
-                "点击打开 · 拖动移动 · 右键更多"))
+        .help(L(
+            "Doris — drag to move · right-click for settings",
+            "Doris — 拖动可移动 · 右键打开设置"
+        ))
+        // Identical to the edge avatar's right-click menu (MenuBarAvatarContent).
         .contextMenu {
-            Button(L("Dock to edge", "收回边缘")) {
-                AvatarSettings.shared.placement = .edge
-            }
-            Button(L("Hide avatar", "隐藏助手")) {
-                AvatarSettings.shared.avatarVisible = false
+            Button(L("Open Main Window", "打开主窗口")) {
+                AppCommands.openMainWindow()
             }
             Divider()
-            Button(L("Open Main Window", "打开主窗口")) { AppCommands.openMainWindow() }
-            Button(L("Settings…", "设置…")) { AppCommands.openSettings() }
+            Button(L("Sync Now", "立即同步")) {
+                AppCommands.syncNow()
+            }
+            Button(L("Settings…", "设置…")) {
+                SettingsWindowController.shared.show()
+            }
             Divider()
-            Button(L("Quit Doris", "退出 Doris")) { NSApp.terminate(nil) }
+            Button(L("Quit Doris", "退出 Doris")) {
+                NSApp.terminate(nil)
+            }
         }
         .simultaneousGesture(
             DragGesture(minimumDistance: 6)
