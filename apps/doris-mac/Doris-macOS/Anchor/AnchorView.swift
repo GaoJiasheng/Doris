@@ -1172,7 +1172,11 @@ private struct AnchorNotesView: View {
         guard let idx = rows.firstIndex(where: { $0.id == n.id }) else { return }
         let next = idx + direction
         guard rows.indices.contains(next) else { return }
-        focusedNoteID = rows[next].id
+        let targetID = rows[next].id
+        // Defer to the next runloop — setting focus synchronously while we're
+        // still inside the field editor's key-event handling doesn't reliably
+        // move the first responder (same reason deleteEmptyAndFocusPrev defers).
+        DispatchQueue.main.async { focusedNoteID = targetID }
     }
 
     private func deleteEmptyAndFocusPrev(_ n: Note) {
