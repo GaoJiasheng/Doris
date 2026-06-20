@@ -119,16 +119,17 @@ final class DesktopPetController {
         }
         guard let off = dragCursorOffset else { return }
         win.setFrameOrigin(CGPoint(x: mouse.x - off.x, y: mouse.y - off.y))
-        reportDragMove(CGPoint(x: win.frame.midX, y: win.frame.midY))
+        // Report the CURSOR (where the user points) so edge docking — esp.
+        // the top/notch — keys off the cursor, not the tall pet's center.
+        reportDragMove(mouse)
     }
 
     private func dragEnded() {
         dragCursorOffset = nil
         guard let win = window else { return }
-        let center = CGPoint(x: win.frame.midX, y: win.frame.midY)
         // Dropped near an edge center → dock back to the logo (controller
         // switches placement + tears this window down); otherwise stay put.
-        if reportDragEnded(center) { return }
+        if reportDragEnded(NSEvent.mouseLocation) { return }
         AvatarSettings.shared.petPosition = win.frame.origin
     }
 }

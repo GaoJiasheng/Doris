@@ -9,6 +9,7 @@ enum AvatarSnapTarget: Equatable {
     case desktop
 }
 
+@MainActor
 enum AvatarSnap {
     /// How close (pts) the dragged window's center must be to a screen edge
     /// to count as "docking" there.
@@ -41,14 +42,9 @@ enum AvatarSnap {
                           y: center.y - petSize.height / 2,
                           width: petSize.width, height: petSize.height)
         case .edge(let edge):
-            let f = screen.frame
-            let box = NSSize(width: 66, height: 46)
-            switch edge {
-            case .top:    return NSRect(x: f.midX - box.width / 2, y: f.maxY - box.height, width: box.width, height: box.height)
-            case .bottom: return NSRect(x: f.midX - box.width / 2, y: f.minY,               width: box.width, height: box.height)
-            case .left:   return NSRect(x: f.minX,                 y: f.midY - box.height / 2, width: box.width, height: box.height)
-            case .right:  return NSRect(x: f.maxX - box.width,     y: f.midY - box.height / 2, width: box.width, height: box.height)
-            }
+            // Use the REAL docked-logo frame so the dashed outline matches
+            // where/what it'll actually become (notch-extension at top, etc.).
+            return MenuBarAvatarWindow.logoFrame(edge: edge, on: screen)
         }
     }
 

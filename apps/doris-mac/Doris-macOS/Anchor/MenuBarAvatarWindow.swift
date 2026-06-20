@@ -96,7 +96,7 @@ final class MenuBarAvatarWindow {
         guard let s = bestScreen() else { return }
         let edge = AnchorScreenStore.savedEdge()
         model.edge = edge
-        let layout = layoutFor(edge: edge, screen: s)
+        let layout = Self.layoutFor(edge: edge, screen: s)
         model.shape = layout.shape
         window.setFrame(layout.frame, display: true)
         AnchorScreenStore.save(screen: s)
@@ -118,15 +118,19 @@ final class MenuBarAvatarWindow {
         guard let offset = dragCursorOffset else { return }
         let newOrigin = CGPoint(x: mouse.x - offset.x, y: mouse.y - offset.y)
         window.setFrameOrigin(newOrigin)
-        reportDragMove(CGPoint(x: window.frame.midX, y: window.frame.midY))
+        // Report the CURSOR (where the user is pointing), not the window
+        // center — a tall pet's center can't reach the top edge, so dock
+        // detection keys off the cursor.
+        reportDragMove(mouse)
     }
 
     private func dragEnded() {
         dragCursorOffset = nil
+        let cursor = NSEvent.mouseLocation
         let center = NSPoint(x: window.frame.midX, y: window.frame.midY)
         // Dropped on the desktop → detach into a pet (controller switches
         // placement + hides this window); skip the edge re-snap below.
-        if reportDragEnded(center) { return }
+        if reportDragEnded(cursor) { return }
         // No force-unwrap — bail if there are zero screens (impossible
         // in practice, but the `!` would bake this file's source path
         // into runtime trap metadata).
@@ -161,7 +165,7 @@ final class MenuBarAvatarWindow {
         guard let s = bestScreen() else { return }
         let edge = AnchorScreenStore.savedEdge()
         model.edge = edge
-        let layout = layoutFor(edge: edge, screen: s)
+        let layout = Self.layoutFor(edge: edge, screen: s)
         model.shape = layout.shape
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.22
@@ -175,7 +179,14 @@ final class MenuBarAvatarWindow {
 
     private struct Layout { let frame: NSRect; let shape: MenuBarModel.Shape }
 
-    private func layoutFor(edge: AnchorEdge, screen s: NSScreen) -> Layout {
+    /// The real frame the docked logo would occupy at `edge` on `screen` —
+    /// used by the drag drop-preview so the dashed outline matches reality
+    /// (notch-extension at top, edge tabs elsewhere), not a generic box.
+    static func logoFrame(edge: AnchorEdge, on screen: NSScreen) -> NSRect {
+        layoutFor(edge: edge, screen: screen).frame
+    }
+
+    private static func layoutFor(edge: AnchorEdge, screen s: NSScreen) -> Layout {
         let f = s.frame
         switch edge {
         case .top:
