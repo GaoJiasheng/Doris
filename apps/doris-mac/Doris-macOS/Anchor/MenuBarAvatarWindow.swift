@@ -68,6 +68,12 @@ final class MenuBarAvatarWindow {
 
     func hide() { window.orderOut(nil) }
 
+    /// Re-show after `hide()` (e.g. switching back from desktop-pet mode).
+    func show() {
+        relayout()
+        window.orderFrontRegardless()
+    }
+
     /// Recompute frame + visual style from the saved screen + edge.
     ///
     /// Also persists the chosen screen back to `AnchorScreenStore` —

@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import SwiftData
+import Combine
 import DorisCore
 import DorisIPC
 import DorisMacChrome
@@ -11,6 +12,10 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     private let model = AnchorModel()
     private var panel: DorisAnchorPanel?
     private var avatarWindow: MenuBarAvatarWindow?
+    /// Free-floating desktop pet — the detached counterpart to the edge
+    /// avatar. Shown when `AvatarSettings.placement == .desktop`.
+    private var desktopPet: DesktopPetController?
+    private var avatarSettingsSinks: Set<AnyCancellable> = []
     private var screenObserver: NSObjectProtocol?
     private var bannerDismissTask: Task<Void, Never>?
     private let modelContainer: ModelContainer
@@ -52,9 +57,29 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
                 self?.scheduleAvatarRelayoutsAfterScreenChange()
             }
         }
+        if desktopPet == nil {
+            desktopPet = DesktopPetController { [weak self] in self?.toggleExpanded() }
+        }
+        if avatarSettingsSinks.isEmpty {
+            // Switch between edge / desktop placement (and show/hide) when
+            // the user changes the setting; rebuild the pet on size change.
+            AvatarSettings.shared.$placement
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in self?.applyPlacement() }
+                .store(in: &avatarSettingsSinks)
+            AvatarSettings.shared.$avatarVisible
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in self?.applyPlacement() }
+                .store(in: &avatarSettingsSinks)
+            AvatarSettings.shared.$petSize
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in self?.desktopPet?.reloadSize() }
+                .store(in: &avatarSettingsSinks)
+        }
         if panel == nil {
             buildPanel()
         }
+        applyPlacement()
         // No zoom observer needed at the controller level. The panel
         // window's size is decoupled from zoom — Cmd-+ / Cmd-− only
         // changes font/icon scale (via `.dorisZoom()` inside the
@@ -382,6 +407,38 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
 
     /// Compute the panel rect anchored to the avatar window. The panel grows AWAY from
     /// the screen edge: down for top, up for bottom, left for right edge, right for left.
+    /// Show the edge avatar or the desktop pet per the current settings.
+    /// The edge `avatarWindow` always exists (it anchors banners + provides
+    /// the notch layout), but is hidden while the pet is active.
+    private func applyPlacement() {
+        let s = AvatarSettings.shared
+        guard s.avatarVisible else {
+            avatarWindow?.hide()
+            desktopPet?.hide()
+            return
+        }
+        switch s.placement {
+        case .desktop:
+            avatarWindow?.hide()
+            desktopPet?.show()
+        case .edge:
+            desktopPet?.hide()
+            avatarWindow?.show()
+        }
+    }
+
+    /// Panel rect when the avatar is a free desktop pet: centered on the pet,
+    /// below it (or above if there's no room), clamped to the screen.
+    private func petAnchoredRect(petFrame: NSRect, size: CGSize, screen: NSScreen) -> NSRect {
+        let vf = screen.visibleFrame
+        var x = petFrame.midX - size.width / 2
+        var y = petFrame.minY - 6 - size.height          // below the pet
+        if y < vf.minY + 8 { y = petFrame.maxY + 6 }      // flip above
+        x = min(max(x, vf.minX + 8), vf.maxX - size.width - 8)
+        y = min(max(y, vf.minY + 8), vf.maxY - size.height - 8)
+        return NSRect(x: x, y: y, width: size.width, height: size.height)
+    }
+
     private func computeRect() -> NSRect {
         let (width, height): (CGFloat, CGFloat)
         switch model.state {
@@ -404,6 +461,16 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
                 ?? CGSize(width: Self.expandedWidth, height: Self.expandedHeight)
             width = saved.width
             height = saved.height
+        }
+
+        // Desktop-pet mode: anchor the panel next to the pet, not the notch.
+        if model.state != .idle,
+           AvatarSettings.shared.placement == .desktop,
+           let petFrame = desktopPet?.frame,
+           let petScreen = desktopPet?.screen {
+            return petAnchoredRect(petFrame: petFrame,
+                                   size: CGSize(width: width, height: height),
+                                   screen: petScreen)
         }
 
         if let avatar = avatarWindow, let screen = avatar.screen {

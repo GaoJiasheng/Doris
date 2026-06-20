@@ -28,6 +28,8 @@ struct SettingsView: View {
             TabView {
                 generalTab
                     .tabItem { Label(L("General", "通用"), systemImage: "gear") }
+                avatarTab
+                    .tabItem { Label(L("Avatar", "形象"), systemImage: "face.smiling") }
                 syncTab
                     .tabItem { Label(L("Sync", "同步"), systemImage: "icloud.fill") }
                 recentlyDeletedTab
@@ -52,9 +54,31 @@ struct SettingsView: View {
             Picker(L("Theme", "主题"), selection: themeBinding) {
                 ForEach(DorisTheme.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
             }
-            // Default visibility of the cyber-girl avatar pane (main
-            // window sidebar + menu-bar dropdown). Can also be toggled
-            // live from the dropdown header / sidebar collapse button.
+            // Always-on-desktop dashboard panel (pinned + today). The
+            // binding drives the window controller so flipping it here
+            // actually shows / hides the floating panel.
+            Toggle(L("Desktop panel", "桌面面板"),
+                   isOn: Binding(get: { desktopPanel.visible },
+                                 set: { $0 ? DesktopPanelController.shared.show()
+                                           : DesktopPanelController.shared.hide() }))
+            // Version row — reads CFBundleShortVersionString +
+            // CFBundleVersion via Bundle.main so it tracks
+            // project.yml without manual touch-ups.
+            LabeledContent(L("Version", "版本")) {
+                Text(Self.appVersionString)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .textSelection(.enabled)
+            }
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    /// Avatar / character configuration — visibility, which character pack,
+    /// reaction level, and where it lives (edge vs. desktop pet). This is the
+    /// home for future character / logo customization too.
+    private var avatarTab: some View {
+        Form {
             Toggle(L("Show avatar", "显示卡通助手"),
                    isOn: Binding(get: { avatarSettings.avatarVisible },
                                  set: { avatarSettings.avatarVisible = $0 }))
@@ -76,21 +100,22 @@ struct SettingsView: View {
             }
             .help(L("Controls how often the avatar reacts to task events and notifications.",
                     "控制助手对任务和通知的反应频率。"))
-            // Always-on-desktop dashboard panel (pinned + today). The
-            // binding drives the window controller so flipping it here
-            // actually shows / hides the floating panel.
-            Toggle(L("Desktop panel", "桌面面板"),
-                   isOn: Binding(get: { desktopPanel.visible },
-                                 set: { $0 ? DesktopPanelController.shared.show()
-                                           : DesktopPanelController.shared.hide() }))
-            // Version row — reads CFBundleShortVersionString +
-            // CFBundleVersion via Bundle.main so it tracks
-            // project.yml without manual touch-ups.
-            LabeledContent(L("Version", "版本")) {
-                Text(Self.appVersionString)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .textSelection(.enabled)
+
+            Divider()
+
+            // Edge-docked (notch / menu bar) vs free-floating desktop pet.
+            Picker(L("Placement", "显示位置"), selection: placementBinding) {
+                Text(L("Screen edge", "贴边")).tag(AvatarPlacement.edge)
+                Text(L("Desktop pet", "桌面")).tag(AvatarPlacement.desktop)
+            }
+            .help(L("Edge: docked to the menu bar / notch. Desktop: a free-floating pet you can drag anywhere, on top of all windows.",
+                    "贴边:停靠在菜单栏/刘海。桌面:可随意拖动的桌宠,浮于所有窗口之上。"))
+            if avatarSettings.placement == .desktop {
+                Picker(L("Pet size", "桌宠大小"), selection: petSizeBinding) {
+                    Text(L("Small", "小")).tag(PetSize.small)
+                    Text(L("Medium", "中")).tag(PetSize.medium)
+                    Text(L("Large", "大")).tag(PetSize.large)
+                }
             }
         }
         .scrollContentBackground(.hidden)
@@ -186,6 +211,12 @@ struct SettingsView: View {
             get: { avatarSettings.activityLevel },
             set: { avatarSettings.activityLevel = $0 }
         )
+    }
+    private var placementBinding: Binding<AvatarPlacement> {
+        Binding(get: { avatarSettings.placement }, set: { avatarSettings.placement = $0 })
+    }
+    private var petSizeBinding: Binding<PetSize> {
+        Binding(get: { avatarSettings.petSize }, set: { avatarSettings.petSize = $0 })
     }
 }
 

@@ -79,6 +79,7 @@
 		A6855D156B8AB8040C74AFD6 /* HotkeyEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A957823B6968DE8D6D1C19A9 /* HotkeyEngine.swift */; };
 		A6F10058EAF7E8A0833E9D43 /* DailyRitual.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A7DF1DA0D5BE2ACB2B2F1D /* DailyRitual.swift */; };
 		AC5618F120AE8AEA3954A591 /* doris-avatar.png in Resources */ = {isa = PBXBuildFile; fileRef = CE1DB98BBE156A6C003C5363 /* doris-avatar.png */; };
+		B20447B42FDE6AA6641B9BF0 /* DesktopPetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5616260E3BE68E019F297D88 /* DesktopPetController.swift */; };
 		BE57B57CE9DCCD7F9B1E5175 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1428A4010334504409D6401 /* MainWindowController.swift */; };
 		C0E36B64A06FE09BF55B87AA /* MarkMessageDoneIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEB137662D3DAC600C955D36 /* MarkMessageDoneIntent.swift */; };
 		C3E00F27D14EA198A7029CE7 /* DesktopPanelSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5C2DAC65F1EB16C5017423 /* DesktopPanelSettings.swift */; };
@@ -184,6 +185,7 @@
 		50476AECFF2B8FC223258807 /* DorisMacChrome */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisMacChrome; path = packages/DorisMacChrome; sourceTree = SOURCE_ROOT; };
 		510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyWindowManager.swift; sourceTree = "<group>"; };
 		5207402EE925DF6E240B5132 /* ExitCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExitCodes.swift; sourceTree = "<group>"; };
+		5616260E3BE68E019F297D88 /* DesktopPetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPetController.swift; sourceTree = "<group>"; };
 		57AA392218328D9FF434AF27 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		5860F89D0929C6440DEA0036 /* PushNotificationIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationIntent.swift; sourceTree = "<group>"; };
 		5ABC8FF8127AE2864BFD08BE /* StickyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyStore.swift; sourceTree = "<group>"; };
@@ -614,6 +616,7 @@
 				6A8D4FCB090245F62C745832 /* AppearanceSettings.swift */,
 				CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */,
 				68A7DF1DA0D5BE2ACB2B2F1D /* DailyRitual.swift */,
+				5616260E3BE68E019F297D88 /* DesktopPetController.swift */,
 				0239401BE0698A4354F48B33 /* MenuBarAvatarWindow.swift */,
 				AD66496AECE70963437B750C /* SettingsWindow.swift */,
 				9124431BB7A8127A5AE105A1 /* StatusBarItem.swift */,
@@ -1156,6 +1159,7 @@
 				59310758E0D2AC22BD34CFE0 /* DesktopPanelController.swift in Sources */,
 				C3E00F27D14EA198A7029CE7 /* DesktopPanelSettings.swift in Sources */,
 				92077813352F0A182AFE7846 /* DesktopPanelView.swift in Sources */,
+				B20447B42FDE6AA6641B9BF0 /* DesktopPetController.swift in Sources */,
 				80D2E4BE6C0981FAD23590B1 /* DorisApp.swift in Sources */,
 				6785932C8C20FE6106D45907 /* DorisCommands.swift in Sources */,
 				75A567DCBBD5A17176094D43 /* DorisScriptCommands.swift in Sources */,

@@ -61,17 +61,28 @@ public struct AvatarHero: View {
     /// false when the parent applies its own clip (e.g. expanded panel
     /// uses an uneven-rounded clip on the left column).
     var selfChrome: Bool
+    /// When true, render ONLY the animated character (transparent PNG) —
+    /// no backdrop, scanlines, HUD brackets, stars, weather or chrome. Used
+    /// by the floating desktop pet so just the character sits on the desktop.
+    var transparentBackdrop: Bool
+    /// When false, the view ignores taps / hover (the host handles all
+    /// interaction — e.g. the desktop pet window does click vs drag itself).
+    var interactive: Bool
 
     public init(
         mood: HeroMood = .idle,
         compact: Bool = false,
         showWeather: Bool = false,
-        selfChrome: Bool = true
+        selfChrome: Bool = true,
+        transparentBackdrop: Bool = false,
+        interactive: Bool = true
     ) {
         self.mood = mood
         self.compact = compact
         self.showWeather = showWeather
         self.selfChrome = selfChrome
+        self.transparentBackdrop = transparentBackdrop
+        self.interactive = interactive
     }
 
     /// Shared app-wide weather state — one network round-trip every
@@ -145,16 +156,24 @@ public struct AvatarHero: View {
         // and cuts CPU enormously (was sitting at 60–80 % during launch
         // with the old 30fps full-tree re-eval).
         ZStack {
-            ambientBackdrop        // day-sky / night-space gradient
-            cursorHalo             // re-renders only on cursor move (Mac)
-            animatedAmbientLayers  // 12fps Canvas layer for stars/particles/ripples
-            scanlines              // CoreAnimation-driven offset, cheap
-            character              // owns its own 16fps player TimelineView
-            cornerAccents          // static
-            if showWeather { weatherOverlay }
+            // Desktop-pet mode (transparentBackdrop) renders ONLY the
+            // character — the clip's PNGs are alpha-transparent, so just the
+            // character floats on the desktop with no card / backdrop / HUD.
+            if !transparentBackdrop {
+                ambientBackdrop        // day-sky / night-space gradient
+                cursorHalo             // re-renders only on cursor move (Mac)
+                animatedAmbientLayers  // 12fps Canvas layer for stars/particles/ripples
+                scanlines              // CoreAnimation-driven offset, cheap
+            }
+            character                  // owns its own 16fps player TimelineView
+            if !transparentBackdrop {
+                cornerAccents          // static
+                if showWeather { weatherOverlay }
+            }
         }
         .opacity(moodOpacity)
-        .modifier(SelfChromeModifier(enabled: selfChrome, compact: compact))
+        .modifier(SelfChromeModifier(enabled: selfChrome && !transparentBackdrop, compact: compact))
+        .allowsHitTesting(interactive)
         .contentShape(Rectangle())
         .onTapGesture(coordinateSpace: .local) { point in
             handleClick(at: point)

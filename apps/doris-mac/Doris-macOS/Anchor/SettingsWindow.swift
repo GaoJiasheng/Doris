@@ -553,6 +553,31 @@ private struct AppearanceSettingsView: View {
             }
             .toggleStyle(.switch)
 
+            // Edge-docked (notch / menu bar) vs free-floating desktop pet.
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L("Avatar placement", "助手位置")).font(.subheadline)
+                Picker("", selection: Binding(get: { avatarSettings.placement },
+                                              set: { avatarSettings.placement = $0 })) {
+                    Text(L("Screen edge", "贴边")).tag(AvatarPlacement.edge)
+                    Text(L("Desktop pet", "桌面")).tag(AvatarPlacement.desktop)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+            if avatarSettings.placement == .desktop {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L("Pet size", "桌宠大小")).font(.subheadline)
+                    Picker("", selection: Binding(get: { avatarSettings.petSize },
+                                                  set: { avatarSettings.petSize = $0 })) {
+                        Text(L("Small", "小")).tag(PetSize.small)
+                        Text(L("Medium", "中")).tag(PetSize.medium)
+                        Text(L("Large", "大")).tag(PetSize.large)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+            }
+
             Toggle(isOn: Binding(get: { desktopPanel.visible },
                                  set: { $0 ? DesktopPanelController.shared.show()
                                            : DesktopPanelController.shared.hide() })) {
