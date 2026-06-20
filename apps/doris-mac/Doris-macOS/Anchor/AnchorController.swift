@@ -70,13 +70,10 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             )
         }
         if avatarSettingsSinks.isEmpty {
-            // Switch between edge / desktop placement (and show/hide) when
-            // the user changes the setting; rebuild the pet on size change.
+            // Switch logo ↔ pet when the user changes placement; rebuild the
+            // pet on size change. (avatarVisible is intentionally NOT observed
+            // here — it only governs the in-window character, not the launcher.)
             AvatarSettings.shared.$placement
-                .receive(on: RunLoop.main)
-                .sink { [weak self] _ in self?.applyPlacement() }
-                .store(in: &avatarSettingsSinks)
-            AvatarSettings.shared.$avatarVisible
                 .receive(on: RunLoop.main)
                 .sink { [weak self] _ in self?.applyPlacement() }
                 .store(in: &avatarSettingsSinks)
@@ -420,13 +417,14 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     /// The edge `avatarWindow` always exists (it anchors banners + provides
     /// the notch layout), but is hidden while the pet is active.
     private func applyPlacement() {
-        let s = AvatarSettings.shared
-        guard s.avatarVisible else {
-            avatarWindow?.hide()
-            desktopPet?.hide()
-            return
-        }
-        switch s.placement {
+        // The menu-bar avatar (notch logo OR desktop pet) is the app's
+        // anchor / launcher — ALWAYS exactly one of the two, chosen by
+        // `placement`. It is deliberately NOT tied to `avatarVisible`:
+        // that toggle only governs the in-window animated character
+        // (main-window left column + dropdown hero). Tying the launcher to
+        // it left the user with no way to open the app when they hid the
+        // character.
+        switch AvatarSettings.shared.placement {
         case .desktop:
             avatarWindow?.hide()
             desktopPet?.show()
