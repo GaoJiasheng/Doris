@@ -482,6 +482,20 @@ struct TodoTitleField: NSViewRepresentable {
         if isFocused { dorisFocusFieldToEnd(tf) }
     }
 
+    /// Report the WRAPPED height at SwiftUI's proposed width so the row grows
+    /// to fit a multi-line title instead of clipping to one line. The
+    /// `layout()` invalidation alone wasn't enough — SwiftUI kept the
+    /// single-line height it measured first; this hands it the real height
+    /// for the actual width.
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: WrappingTextField, context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0, width != .infinity else { return nil }
+        if abs(nsView.preferredMaxLayoutWidth - width) > 0.5 {
+            nsView.preferredMaxLayoutWidth = width
+            nsView.invalidateIntrinsicContentSize()
+        }
+        return CGSize(width: width, height: nsView.intrinsicContentSize.height)
+    }
+
     final class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: TodoTitleField
         /// Last-applied `done` so we only re-color when it actually flips.

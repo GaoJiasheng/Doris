@@ -395,6 +395,17 @@ struct ChecklistItemField: NSViewRepresentable {
         if isFocused { dorisFocusFieldToEnd(tf) }
     }
 
+    /// Report the WRAPPED height at SwiftUI's proposed width so a long
+    /// sub-task grows the row to show all lines instead of clipping to one.
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: WrappingTextField, context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0, width != .infinity else { return nil }
+        if abs(nsView.preferredMaxLayoutWidth - width) > 0.5 {
+            nsView.preferredMaxLayoutWidth = width
+            nsView.invalidateIntrinsicContentSize()
+        }
+        return CGSize(width: width, height: nsView.intrinsicContentSize.height)
+    }
+
     final class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: ChecklistItemField
         /// Last-applied `checked` so we only re-color on an actual flip.
