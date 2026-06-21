@@ -164,11 +164,14 @@ struct MainWindowView: View {
             }
             .scrollContentBackground(.hidden)
         }
-        // Push content under the transparent title bar so the nav strip
-        // (DORIS / tabs / sync / theme) sits at the very top of the
-        // window. The traffic lights live over the dark sidebar on the
-        // left, not over this pane.
-        .ignoresSafeArea(edges: .top)
+        // Do NOT push the interactive nav strip under the transparent title
+        // bar. On macOS 26 (Tahoe) the title-bar region swallows clicks meant
+        // for SwiftUI content placed beneath it via `.ignoresSafeArea(.top)`
+        // — only real title-bar controls (e.g. the sidebar toggle) still
+        // register, so the DORIS / tabs / sync / theme strip became
+        // completely unclickable. Keeping the strip inside the safe area
+        // (just below the title bar) makes it reliably clickable; the
+        // CyberBackground behind still fills edge-to-edge under the title bar.
     }
 
     /// Right-pane header: DORIS brand on the left, tab buttons next to
