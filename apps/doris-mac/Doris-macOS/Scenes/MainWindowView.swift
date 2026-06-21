@@ -166,10 +166,14 @@ struct MainWindowView: View {
         // Always shown (even while editing a note) so the title-bar row is
         // never empty — an empty toolbar left a big blank band above the
         // note/sub-task editor.
+        // One full-width principal item: DORIS + tabs pinned LEFT, a flexible
+        // spacer, then date + sync + theme pinned RIGHT. `.primaryAction`
+        // wasn't right-aligning in this manually-hosted NavigationSplitView
+        // toolbar (everything bunched left), so lay the two groups out
+        // explicitly with a Spacer between them.
         .toolbar {
-            // DORIS + tabs on the LEADING edge (left).
-            ToolbarItem(placement: .navigation) {
-                HStack(spacing: 14) {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 16) {
                     Text("DORIS")
                         .font(.system(size: 15, weight: .heavy, design: .rounded))
                         .kerning(2)
@@ -187,17 +191,18 @@ struct MainWindowView: View {
                         tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
                         tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
                     }
+                    Spacer(minLength: 24)
+                    HStack(spacing: 10) {
+                        Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary.opacity(0.6))
+                            .lineLimit(1)
+                            .fixedSize()
+                        SyncNowToolbarButton(showsTime: false)
+                        ThemeToggleButton()
+                    }
                 }
-            }
-            // Date + sync + theme on the TRAILING edge (right).
-            ToolbarItemGroup(placement: .primaryAction) {
-                Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary.opacity(0.6))
-                    .lineLimit(1)
-                    .fixedSize()
-                SyncNowToolbarButton(showsTime: false)
-                ThemeToggleButton()
+                .frame(maxWidth: .infinity)
             }
         }
     }
@@ -289,6 +294,9 @@ struct MainWindowView: View {
         let isSelected = tab == value
         return Button {
             tab = value
+            // Leave any open note editor so the tab actually switches (the
+            // editor is shown whenever editingNote is set, regardless of tab).
+            editingNote = nil
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: system)

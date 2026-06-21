@@ -102,11 +102,11 @@ struct MainTodayView: View {
             VStack(alignment: .leading, spacing: 22) {
 
                 // Token-usage glance — leads the Today content; tap to open
-                // the full Tokens dashboard. Width-matched to one pinned card
-                // (the grid's 270pt min) + left-aligned so it lines up with
-                // the cards below instead of spanning the whole pane.
+                // the full Tokens dashboard. Half the row width, left-aligned.
                 TokenSummaryCard(onTap: onOpenTokens)
-                    .frame(maxWidth: 270, alignment: .leading)
+                    .containerRelativeFrame(.horizontal, alignment: .leading) { width, _ in
+                        width * 0.5
+                    }
 
                 // The date is rendered up in `MainWindowView`'s detail
                 // header (next to the tab strip, only while Today is
