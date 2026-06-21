@@ -443,19 +443,23 @@ struct TodoTitleField: NSViewRepresentable {
     }
 
     func updateNSView(_ tf: NSTextField, context: Context) {
-        context.coordinator.parent = self
+        let c = context.coordinator
+        c.parent = self
         // Pin the appearance so `.labelColor` always resolves to the right
-        // light/dark value — kills the flicker-to-invisible during rapid
-        // updateNSView passes. Only assign on change to avoid redraws.
+        // light/dark value (deterministic, no flicker-to-invisible).
         let appName: NSAppearance.Name = colorScheme == .dark ? .darkAqua : .aqua
         if tf.appearance?.name != appName { tf.appearance = NSAppearance(named: appName) }
         if tf.stringValue != text { tf.stringValue = text }
         if tf.placeholderString != placeholder { tf.placeholderString = placeholder }
-        // Done → dimmed. The checkbox carries the "done" signal; AppKit
-        // strikethrough on an editable field fights the field editor, so
-        // we dim like the checklist editor instead of striking through.
-        let target = done ? NSColor.labelColor.withAlphaComponent(0.45) : NSColor.labelColor
-        if tf.textColor != target { tf.textColor = target }
+        // Only touch textColor when `done` actually flips. Comparing NSColor
+        // instances is unreliable for dynamic / alpha colors, so the old
+        // `tf.textColor != target` re-assigned (and redrew) on every pass —
+        // that per-render redraw is what made rows flicker on unrelated
+        // refreshes (focus change, CloudKit sync, autosave).
+        if c.appliedDone != done {
+            c.appliedDone = done
+            tf.textColor = done ? NSColor.labelColor.withAlphaComponent(0.45) : .labelColor
+        }
 
         // Self-healing focus: whenever SwiftUI marks this row focused we
         // become first responder and drop the caret at the end. The
@@ -467,6 +471,8 @@ struct TodoTitleField: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: TodoTitleField
+        /// Last-applied `done` so we only re-color when it actually flips.
+        var appliedDone: Bool?
         init(_ parent: TodoTitleField) { self.parent = parent }
 
         func controlTextDidChange(_ obj: Notification) {

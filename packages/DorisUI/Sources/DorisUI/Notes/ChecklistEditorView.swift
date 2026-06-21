@@ -372,14 +372,18 @@ struct ChecklistItemField: NSViewRepresentable {
     }
 
     func updateNSView(_ tf: WrappingTextField, context: Context) {
-        context.coordinator.parent = self
+        let c = context.coordinator
+        c.parent = self
         let appName: NSAppearance.Name = colorScheme == .dark ? .darkAqua : .aqua
         if tf.appearance?.name != appName { tf.appearance = NSAppearance(named: appName) }
         if tf.stringValue != text { tf.stringValue = text }
-        // Checked → dimmed (the checkbox glyph carries the "done" signal;
-        // strikethrough on an editable field fights the field editor).
-        let target = checked ? NSColor.labelColor.withAlphaComponent(0.45) : NSColor.labelColor
-        if tf.textColor != target { tf.textColor = target }
+        // Only re-color when `checked` flips — NSColor comparison is
+        // unreliable for dynamic/alpha colors, so the old guard re-assigned
+        // (and redrew) every pass, flickering the row on unrelated refreshes.
+        if c.appliedChecked != checked {
+            c.appliedChecked = checked
+            tf.textColor = checked ? NSColor.labelColor.withAlphaComponent(0.45) : .labelColor
+        }
 
         // Become first responder when SwiftUI marks this row focused —
         // and drop the cursor at the END. Retries until the view is in a
@@ -389,6 +393,8 @@ struct ChecklistItemField: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: ChecklistItemField
+        /// Last-applied `checked` so we only re-color on an actual flip.
+        var appliedChecked: Bool?
         init(_ parent: ChecklistItemField) { self.parent = parent }
 
         func controlTextDidChange(_ obj: Notification) {
