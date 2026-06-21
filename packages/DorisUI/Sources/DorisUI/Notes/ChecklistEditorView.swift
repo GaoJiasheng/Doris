@@ -326,6 +326,19 @@ final class WrappingTextField: NSTextField {
             invalidateIntrinsicContentSize()
         }
     }
+
+    /// Report the WRAPPED height for the current width. `NSTextField`'s own
+    /// `intrinsicContentSize` doesn't reliably reflect wrapping even with
+    /// `preferredMaxLayoutWidth` set, so compute it explicitly via the cell —
+    /// this is what makes the row grow to fit multi-line text instead of
+    /// clipping at one line.
+    override var intrinsicContentSize: NSSize {
+        let width = preferredMaxLayoutWidth > 0 ? preferredMaxLayoutWidth : bounds.width
+        guard width > 0, let cell else { return super.intrinsicContentSize }
+        let h = cell.cellSize(forBounds:
+            NSRect(x: 0, y: 0, width: width, height: .greatestFiniteMagnitude)).height
+        return NSSize(width: NSView.noIntrinsicMetric, height: ceil(h))
+    }
 }
 
 /// Editable checklist item backed by AppKit so we can intercept the
