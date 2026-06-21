@@ -3,6 +3,7 @@ import SwiftUI
 import SwiftData
 import DorisCore
 import DorisUI
+import DorisMacChrome
 
 /// Manually-managed main window. Replaces the SwiftUI `Window("Doris",
 /// id: "main")` scene because that scene was auto-instantiating its
@@ -40,6 +41,18 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     /// Whether the main window is currently on screen — used by
     /// `AnchorController` to toggle it from the notch/pet click.
     var isMainWindowVisible: Bool { window?.isVisible ?? false }
+
+    // Per-mode remembered sizes. The transient ("展开") size lives in
+    // `AnchorScreenStore.savedExpandedSize` (shared with the dropdown's
+    // historical store); the persistent ("主窗口") size lives here. Same
+    // window, two sizes → the two modes feel like distinct surfaces.
+    private let mainWidthKey = "doris.mainWindow.width"
+    private let mainHeightKey = "doris.mainWindow.height"
+    private var savedMainSize: NSSize {
+        let w = UserDefaults.standard.double(forKey: mainWidthKey)
+        let h = UserDefaults.standard.double(forKey: mainHeightKey)
+        return (w >= 400 && h >= 300) ? NSSize(width: w, height: h) : NSSize(width: 900, height: 600)
+    }
 
     private override init() { super.init() }
 
@@ -116,11 +129,19 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     ///  • persistent ("Open Main Window") → centered on the preferred screen.
     private func position(_ win: NSWindow, preferredScreen: NSScreen?, frame: NSRect?) {
         if let frame {
+            // Transient (notch/pet): beside the pet/avatar at the saved
+            // EXPANDED size (the rect is computed by AnchorController).
             win.setFrame(frame, display: false)
-        } else if let screen = preferredScreen {
-            centerWindow(win, on: screen)
         } else {
-            win.center()
+            // Persistent ("Open Main Window"): the saved MAIN size, centered.
+            var f = win.frame
+            f.size = savedMainSize
+            win.setFrame(f, display: false)
+            if let screen = preferredScreen {
+                centerWindow(win, on: screen)
+            } else {
+                win.center()
+            }
         }
     }
 
@@ -192,6 +213,20 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         uninstallOutsideClickMonitor()
         transient = false
+    }
+
+    /// Persist the window's size per mode as the user resizes, so each mode
+    /// reopens at its own remembered size: transient ("展开") → the shared
+    /// expanded-size store; persistent ("主窗口") → its own keys. Position is
+    /// recomputed on open (beside-pet / centered), so only size is saved.
+    func windowDidEndLiveResize(_ notification: Notification) {
+        guard let size = window?.frame.size else { return }
+        if transient {
+            AnchorScreenStore.save(expandedSize: size)
+        } else {
+            UserDefaults.standard.set(Double(size.width), forKey: mainWidthKey)
+            UserDefaults.standard.set(Double(size.height), forKey: mainHeightKey)
+        }
     }
 
     /// Hide the main window — wired to the custom close button in the
