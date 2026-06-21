@@ -57,6 +57,13 @@ struct MainWindowView: View {
             }
             .navigationSplitViewStyle(.balanced)
             .scrollContentBackground(.hidden)
+            // Hide the window toolbar entirely. NavigationSplitView otherwise
+            // auto-creates one to host its sidebar-toggle button, and since
+            // our header is in-content (not the toolbar), that toolbar row
+            // sat empty — a big ~52pt band above the header on top of the
+            // ~28pt title bar. With it hidden, only the traffic-light strip
+            // remains. (The sidebar toggle is re-added in `detailHeader`.)
+            .toolbar(.hidden, for: .windowToolbar)
         }
         .frame(minWidth: 760, minHeight: 520)
         .preferredColorScheme(theme.mode.colorScheme)
@@ -177,6 +184,22 @@ struct MainWindowView: View {
     /// stays minimal and the whole "navigation strip" reads as one row.
     private var detailHeader: some View {
         HStack(alignment: .center, spacing: 16) {
+            // Sidebar (avatar) toggle — re-homed here because the window
+            // toolbar (which used to carry NavigationSplitView's automatic
+            // toggle) is now hidden to kill the empty band above the header.
+            Button {
+                withAnimation(.smooth(duration: 0.2)) {
+                    columnVisibility = (columnVisibility == .detailOnly) ? .all : .detailOnly
+                }
+            } label: {
+                Image(systemName: "sidebar.leading")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.primary.opacity(0.55))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(L("Toggle avatar sidebar", "切换卡通侧栏"))
+
             // DORIS wordmark — single line, with `.fixedSize` so SwiftUI
             // doesn't squeeze it letter-by-letter into a vertical column
             // when the toolbar fills up. The decorative "cyber helper /
