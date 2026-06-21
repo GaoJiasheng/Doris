@@ -176,6 +176,12 @@ struct MainWindowView: View {
         }
         .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Extend to the very top of the window — the title-bar SAFE-AREA inset
+        // here is inflated (~90pt) and showed up as a big empty band above the
+        // header. The header's own `.padding(.top, 34)` then drops it just
+        // below the ~28pt traffic-light strip, which is the only region macOS
+        // 26 steals clicks from — so the header stays clickable with no band.
+        .ignoresSafeArea(.container, edges: .top)
     }
 
     /// Right-pane header: DORIS brand on the left, tab buttons next to
@@ -269,10 +275,9 @@ struct MainWindowView: View {
         .padding(.trailing, 18)
         // Minimal top padding now that the strip sits just below the title
         // bar (the title-bar height itself is the only gap above it).
-        // Sits just below the title bar (the title-bar safe area is the only
-        // gap above it). A little top clearance keeps the row from crowding
-        // the traffic-light line.
-        .padding(.top, 8)
+        // Clears the ~28pt traffic-light / title-bar drag strip (the detail
+        // now ignores the top safe area, so this offset positions the row).
+        .padding(.top, 34)
         .padding(.bottom, 12)
         .animation(.smooth(duration: 0.18), value: columnVisibility)
     }
