@@ -55,14 +55,12 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     /// on the right display, so users with multi-monitor setups don't
     /// get the main window left behind on whatever screen it was last
     /// closed on.
-    func show(preferredScreen: NSScreen? = nil, transient: Bool = false) {
+    func show(preferredScreen: NSScreen? = nil, transient: Bool = false, frame: NSRect? = nil) {
         self.transient = transient
         NSApp.activate(ignoringOtherApps: true)
         if let window {
             if window.isMiniaturized { window.deminiaturize(nil) }
-            if let screen = preferredScreen, window.screen != screen {
-                centerWindow(window, on: screen)
-            }
+            position(window, preferredScreen: preferredScreen, frame: frame)
             window.makeKeyAndOrderFront(nil)
             applyTransientMonitor()
             scheduleGreetOnNextRunloop()
@@ -105,16 +103,25 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         win.identifier = NSUserInterfaceItemIdentifier("doris-main")
         win.isReleasedWhenClosed = false
         win.delegate = self
-        if let screen = preferredScreen {
+        self.window = win
+        position(win, preferredScreen: preferredScreen, frame: frame)
+        win.makeKeyAndOrderFront(nil)
+        applyTransientMonitor()
+        scheduleGreetOnNextRunloop()
+    }
+
+    /// Position by open-mode:
+    ///  • transient (notch/pet click) → open at `frame` (beside the
+    ///    pet/avatar, saved expanded size; AppKit clamps to the content min).
+    ///  • persistent ("Open Main Window") → centered on the preferred screen.
+    private func position(_ win: NSWindow, preferredScreen: NSScreen?, frame: NSRect?) {
+        if let frame {
+            win.setFrame(frame, display: false)
+        } else if let screen = preferredScreen {
             centerWindow(win, on: screen)
         } else {
             win.center()
         }
-
-        self.window = win
-        win.makeKeyAndOrderFront(nil)
-        applyTransientMonitor()
-        scheduleGreetOnNextRunloop()
     }
 
     // MARK: - Transient (focus-loss) dismissal

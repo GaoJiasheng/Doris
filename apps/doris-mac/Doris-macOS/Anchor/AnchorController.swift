@@ -267,10 +267,15 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             MainWindowController.shared.closeMainWindow()
         } else {
             // Hide any AnchorView panel (e.g. a live banner) first so we
-            // never show two surfaces at once, then open the main window.
+            // never show two surfaces at once, then open the main window
+            // BESIDE the pet/avatar at the saved expanded size — the old
+            // dropdown's position/size — but transiently (focus-loss closes).
             model.state = .idle
             hidePanel()
-            MainWindowController.shared.show(preferredScreen: currentScreen, transient: true)
+            let rect = computeRect(for: .expanded)
+            MainWindowController.shared.show(
+                transient: true,
+                frame: rect == .zero ? nil : rect)
             HeroEvents.shared.greet()
         }
     }
@@ -512,9 +517,15 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
         return NSRect(x: x, y: y, width: size.width, height: size.height)
     }
 
-    private func computeRect() -> NSRect {
+    private func computeRect() -> NSRect { computeRect(for: model.state) }
+
+    /// Same as `computeRect()` but for an explicit state — lets callers
+    /// (e.g. opening the transient main window from the notch/pet click)
+    /// request the EXPANDED rect (beside the pet/avatar at the saved
+    /// expanded size) without having to mutate `model.state`.
+    private func computeRect(for state: AnchorState) -> NSRect {
         let (width, height): (CGFloat, CGFloat)
-        switch model.state {
+        switch state {
         case .idle:
             return .zero
         case .banner:
@@ -546,7 +557,7 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
         if AvatarSettings.shared.placement == .desktop,
            let petScreen = desktopPet?.screen {
             let size = CGSize(width: width, height: height)
-            if model.state == .expanded, let petFrame = desktopPet?.frame {
+            if state == .expanded, let petFrame = desktopPet?.frame {
                 return petAnchoredRect(petFrame: petFrame, size: size, screen: petScreen)
             }
             return topNotchRect(size: size, screen: petScreen)
