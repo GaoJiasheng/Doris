@@ -96,6 +96,9 @@ public struct ChecklistEditorView: View {
                 onMoveUp:   { moveFocus(to: idx - 1) },
                 onMoveDown: { moveFocus(to: idx + 1) }
             )
+            // Width-constrain so it wraps to the available space (reporting
+            // its multi-line height) rather than growing horizontally.
+            .frame(maxWidth: .infinity, alignment: .leading)
             #else
             // `axis: .vertical` lets a long item wrap onto multiple lines
             // instead of scrolling horizontally inside a single-line field.
@@ -111,7 +114,8 @@ public struct ChecklistEditorView: View {
                 .onSubmit { insertLine(after: idx) }
             #endif
 
-            Spacer(minLength: 0)
+            // No Spacer: the field above fills the width (maxWidth .infinity);
+            // a Spacer would split the slack and wrap the text too early.
 
             Button(role: .destructive) {
                 removeLine(at: idx)
