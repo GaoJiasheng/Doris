@@ -6,6 +6,43 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.3.0 — 2026-06-21
+
+Token usage monitor + a unified, borderless main window.
+
+### Added
+
+- **Token usage monitor (macOS).** Tracks token consumption across local AI
+  CLIs (Claude Code, Codex) by parsing their on-disk logs — a home summary
+  card (today's tokens + cost) and a full **Token** dashboard tab (today /
+  7-day / 30-day / all-time totals + a per-day trend). Parsing follows
+  ccusage's model: dedup on the `message.id`+`requestId` composite and scans
+  both `~/.claude` and `~/.config/claude`. Cost is computed from per-model
+  rates.
+- **Subscription quota.** The Token dashboard shows the rolling 5-hour
+  window. Opt into the **status-line capture** (Settings → Token) to surface
+  Claude Code's real 5h + weekly remaining-% — the only supported source;
+  otherwise it shows a usage estimate.
+
+### Changed
+
+- **Unified, borderless main window.** The main window and the expanded
+  notch/pet dropdown are now one surface (avatar sidebar + tabs + Token),
+  with mode-specific behavior: summoned from the notch/pet it opens beside
+  the pet and dismisses on focus-loss; opened via "Open Main Window" it
+  centers and stays until closed. Each mode remembers its own size. The
+  window is borderless — a custom close button replaces the traffic lights,
+  and Cmd-W closes it.
+- **Long task / sub-task titles wrap** to show their full text instead of
+  truncating to a single line.
+
+### Fixed
+
+- Main-window header tabs (and the sync / theme controls) were unclickable
+  on macOS 26 (Tahoe); the header is reworked so they register clicks again,
+  with no empty band above it.
+- No more flash of the old dropdown at every launch.
+
 ## 1.2.2 — 2026-06-20
 
 Faster iOS widget refresh + groundwork for swappable characters.
