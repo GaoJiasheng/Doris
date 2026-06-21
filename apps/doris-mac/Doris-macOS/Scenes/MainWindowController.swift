@@ -26,6 +26,20 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     static let shared = MainWindowController()
 
     private var window: NSWindow?
+    /// Transient mode = the window dismisses when focus leaves it (the
+    /// "展开窗口" summoned from the notch/avatar, like the old dropdown).
+    /// Persistent mode = it stays until the custom close button / Cmd-W
+    /// (the "主窗口" opened via "Open Main Window").
+    private var transient = false
+    /// Global mouse-down monitor for transient mode. It fires ONLY for
+    /// clicks outside Doris's own windows, so the window dismisses
+    /// popover-style without closing on clicks into its own popovers /
+    /// Settings panel. Mirrors `AnchorController`'s dropdown behavior.
+    private var outsideClickMonitor: Any?
+
+    /// Whether the main window is currently on screen — used by
+    /// `AnchorController` to toggle it from the notch/pet click.
+    var isMainWindowVisible: Bool { window?.isVisible ?? false }
 
     private override init() { super.init() }
 
@@ -41,7 +55,8 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     /// on the right display, so users with multi-monitor setups don't
     /// get the main window left behind on whatever screen it was last
     /// closed on.
-    func show(preferredScreen: NSScreen? = nil) {
+    func show(preferredScreen: NSScreen? = nil, transient: Bool = false) {
+        self.transient = transient
         NSApp.activate(ignoringOtherApps: true)
         if let window {
             if window.isMiniaturized { window.deminiaturize(nil) }
@@ -49,6 +64,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
                 centerWindow(window, on: screen)
             }
             window.makeKeyAndOrderFront(nil)
+            applyTransientMonitor()
             scheduleGreetOnNextRunloop()
             return
         }
@@ -97,7 +113,32 @@ final class MainWindowController: NSObject, NSWindowDelegate {
 
         self.window = win
         win.makeKeyAndOrderFront(nil)
+        applyTransientMonitor()
         scheduleGreetOnNextRunloop()
+    }
+
+    // MARK: - Transient (focus-loss) dismissal
+
+    private func applyTransientMonitor() {
+        if transient { installOutsideClickMonitor() } else { uninstallOutsideClickMonitor() }
+    }
+
+    private func installOutsideClickMonitor() {
+        uninstallOutsideClickMonitor()
+        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        ) { [weak self] _ in
+            // Global monitors only fire for clicks OUTSIDE our own windows,
+            // so reaching here means the click landed elsewhere → dismiss.
+            Task { @MainActor [weak self] in self?.closeMainWindow() }
+        }
+    }
+
+    private func uninstallOutsideClickMonitor() {
+        if let monitor = outsideClickMonitor {
+            NSEvent.removeMonitor(monitor)
+            outsideClickMonitor = nil
+        }
     }
 
     /// Fire a hero greeting one tick after the window is shown.
@@ -137,6 +178,14 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     /// AppKit hide it (with `isReleasedWhenClosed = false` the NSWindow
     /// object survives the close and can be ordered-front again).
     func windowShouldClose(_ sender: NSWindow) -> Bool { true }
+
+    /// Tear down the transient outside-click monitor on EVERY close path
+    /// (custom close button, Cmd-W, focus-loss) so it never outlives the
+    /// window and fire on a stale instance.
+    func windowWillClose(_ notification: Notification) {
+        uninstallOutsideClickMonitor()
+        transient = false
+    }
 
     /// Hide the main window — wired to the custom close button in the
     /// borderless window's header (there are no system traffic lights).

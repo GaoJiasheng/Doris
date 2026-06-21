@@ -257,12 +257,20 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     // MARK: - Expand / collapse
 
     private func toggleExpanded() {
-        if case .expanded = model.state {
+        // Unified surface: the "展开窗口" summoned from the notch/pet IS the
+        // main window in transient (focus-loss-close) mode, sharing
+        // MainWindowView's full layout (avatar sidebar + tabs + Token).
+        // Notification banners still use the AnchorView panel via
+        // showPanel()/dismissActiveMessage() — only this user-click path is
+        // redirected.
+        if MainWindowController.shared.isMainWindowVisible {
+            MainWindowController.shared.closeMainWindow()
+        } else {
+            // Hide any AnchorView panel (e.g. a live banner) first so we
+            // never show two surfaces at once, then open the main window.
             model.state = .idle
             hidePanel()
-        } else {
-            model.state = .expanded
-            showPanel()
+            MainWindowController.shared.show(preferredScreen: currentScreen, transient: true)
             HeroEvents.shared.greet()
         }
     }
