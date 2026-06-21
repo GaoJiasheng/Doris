@@ -190,31 +190,6 @@ struct MainWindowView: View {
     /// stays minimal and the whole "navigation strip" reads as one row.
     private var detailHeader: some View {
         HStack(alignment: .center, spacing: 16) {
-            // Custom window close button — the borderless window has no
-            // system traffic lights. Neon dot so it reads as "close" while
-            // fitting the cyber palette.
-            Button {
-                MainWindowController.shared.closeMainWindow()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.92))
-                    .frame(width: 16, height: 16)
-                    .background(
-                        Circle().fill(
-                            LinearGradient(
-                                colors: [Color(red: 1.0, green: 0.38, blue: 0.52),
-                                         Color(red: 0.92, green: 0.18, blue: 0.46)],
-                                startPoint: .top, endPoint: .bottom
-                            )
-                        )
-                    )
-                    .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .help(L("Close window", "关闭窗口"))
-
             // Sidebar (avatar) toggle — re-homed here because the window
             // toolbar (which used to carry NavigationSplitView's automatic
             // toggle) is now hidden to kill the empty band above the header.
@@ -279,6 +254,31 @@ struct MainWindowView: View {
                     .fixedSize()
                 SyncNowToolbarButton(showsTime: false)
                 ThemeToggleButton()
+
+                // Custom window close button — top-RIGHT. The borderless
+                // window has no system traffic lights; this neon dot reads as
+                // "close" and fits the cyber palette.
+                Button {
+                    MainWindowController.shared.closeMainWindow()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.92))
+                        .frame(width: 16, height: 16)
+                        .background(
+                            Circle().fill(
+                                LinearGradient(
+                                    colors: [Color(red: 1.0, green: 0.38, blue: 0.52),
+                                             Color(red: 0.92, green: 0.18, blue: 0.46)],
+                                    startPoint: .top, endPoint: .bottom
+                                )
+                            )
+                        )
+                        .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help(L("Close window", "关闭窗口"))
             }
         }
         // No system traffic lights anymore (borderless window) and the
