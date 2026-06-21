@@ -17,18 +17,18 @@ import DorisUI
 final class DesktopPetController {
     private var window: NSWindow?
     private let onClick: () -> Void
-    /// Reports the window center during a drag (dashed drop-preview) and on
-    /// release (returns true if it docked to an edge → became the edge logo).
-    private let reportDragMove: (CGPoint) -> Void
-    private let reportDragEnded: (CGPoint) -> Bool
+    /// (cursor, windowCenter). Cursor drives edge-dock detection; windowCenter
+    /// positions the drop-preview so it tracks the pet (fixes the drift).
+    private let reportDragMove: (CGPoint, CGPoint) -> Void
+    private let reportDragEnded: (CGPoint, CGPoint) -> Bool
     /// Cursor offset within the window when a drag began (global coords) —
     /// same absolute-repositioning trick the edge window uses to avoid the
     /// SwiftUI-translation feedback loop.
     private var dragCursorOffset: CGPoint?
 
     init(onClick: @escaping () -> Void,
-         onDragMove: @escaping (CGPoint) -> Void = { _ in },
-         onDragEnded: @escaping (CGPoint) -> Bool = { _ in false }) {
+         onDragMove: @escaping (CGPoint, CGPoint) -> Void = { _, _ in },
+         onDragEnded: @escaping (CGPoint, CGPoint) -> Bool = { _, _ in false }) {
         self.onClick = onClick
         self.reportDragMove = onDragMove
         self.reportDragEnded = onDragEnded
@@ -124,17 +124,18 @@ final class DesktopPetController {
         }
         guard let off = dragCursorOffset else { return }
         win.setFrameOrigin(CGPoint(x: mouse.x - off.x, y: mouse.y - off.y))
-        // Report the CURSOR (where the user points) so edge docking — esp.
-        // the top/notch — keys off the cursor, not the tall pet's center.
-        reportDragMove(mouse)
+        // Cursor drives dock detection; window center positions the preview
+        // so the dashed frame tracks the pet instead of drifting off.
+        reportDragMove(mouse, CGPoint(x: win.frame.midX, y: win.frame.midY))
     }
 
     private func dragEnded() {
         dragCursorOffset = nil
         guard let win = window else { return }
+        let center = CGPoint(x: win.frame.midX, y: win.frame.midY)
         // Dropped near an edge center → dock back to the logo (controller
         // switches placement + tears this window down); otherwise stay put.
-        if reportDragEnded(NSEvent.mouseLocation) { return }
+        if reportDragEnded(NSEvent.mouseLocation, center) { return }
         AvatarSettings.shared.petPosition = win.frame.origin
     }
 }
@@ -147,45 +148,52 @@ private struct DesktopPetContent: View {
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: () -> Void
 
+    @State private var dragMoved = false
+
     var body: some View {
-        // Button = click; AvatarHero is non-interactive so the click/drag
-        // belong to this wrapper, not the character's own tap reactions.
-        Button(action: onClick) {
-            AvatarHero(mood: .idle,
-                       compact: true,
-                       showWeather: false,
-                       selfChrome: false,
-                       transparentBackdrop: true,
-                       interactive: false)
-                .frame(width: size, height: size * 1.5)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(L(
-            "Doris — drag to move · right-click for settings",
-            "Doris — 拖动可移动 · 右键打开设置"
-        ))
-        // Identical to the edge avatar's right-click menu (MenuBarAvatarContent).
-        .contextMenu {
-            Button(L("Open Main Window", "打开主窗口")) {
-                AppCommands.openMainWindow()
+        // AvatarHero is non-interactive; this wrapper owns click vs drag.
+        AvatarHero(mood: .idle,
+                   compact: true,
+                   showWeather: false,
+                   selfChrome: false,
+                   transparentBackdrop: true,
+                   interactive: false)
+            .frame(width: size, height: size * 1.5)
+            .contentShape(Rectangle())
+            .help(L(
+                "Doris — drag to move · right-click for settings",
+                "Doris — 拖动可移动 · 右键打开设置"
+            ))
+            // Identical to the edge avatar's right-click menu.
+            .contextMenu {
+                Button(L("Open Main Window", "打开主窗口")) {
+                    AppCommands.openMainWindow()
+                }
+                Divider()
+                Button(L("Sync Now", "立即同步")) {
+                    AppCommands.syncNow()
+                }
+                Button(L("Settings…", "设置…")) {
+                    SettingsWindowController.shared.show()
+                }
+                Divider()
+                Button(L("Quit Doris", "退出 Doris")) {
+                    NSApp.terminate(nil)
+                }
             }
-            Divider()
-            Button(L("Sync Now", "立即同步")) {
-                AppCommands.syncNow()
-            }
-            Button(L("Settings…", "设置…")) {
-                SettingsWindowController.shared.show()
-            }
-            Divider()
-            Button(L("Quit Doris", "退出 Doris")) {
-                NSApp.terminate(nil)
-            }
-        }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 6)
-                .onChanged { v in onDragChanged(v.translation) }
-                .onEnded { _ in onDragEnded() }
-        )
+            // Same click-vs-drag split as the notch logo: under the
+            // threshold = click (open panel); past it = drag (move) only.
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { v in
+                        if !dragMoved && hypot(v.translation.width, v.translation.height) < 6 { return }
+                        dragMoved = true
+                        onDragChanged(v.translation)
+                    }
+                    .onEnded { _ in
+                        if dragMoved { onDragEnded() } else { onClick() }
+                        dragMoved = false
+                    }
+            )
     }
 }

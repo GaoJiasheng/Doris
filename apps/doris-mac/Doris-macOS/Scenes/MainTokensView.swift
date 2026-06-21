@@ -31,11 +31,13 @@ private struct MainTokensInner: View {
     @Query(sort: [SortDescriptor(\TokenUsageDaily.day, order: .reverse)])
     private var dailies: [TokenUsageDaily]
     @State private var range: TokenStats.Range = .last7
+    @StateObject private var quota = QuotaModel()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 headerRow
+                quotaCard
                 statTiles
                 trendCard
                 rangePicker
@@ -44,6 +46,72 @@ private struct MainTokensInner: View {
                 sourcesCard
             }
             .padding(20)
+        }
+        .onAppear { quota.start() }
+        .onDisappear { quota.stop() }
+    }
+
+    // MARK: Subscription quota (Codex real, Claude estimated)
+
+    private var quotaCard: some View {
+        CyberCard {
+            VStack(alignment: .leading, spacing: 12) {
+                sectionTitle(L("Subscription quota", "订阅额度"))
+                if quota.windows.isEmpty {
+                    Text(L("No quota signal (open a Codex/Claude session, then Rescan).",
+                           "暂无额度信号(跑一段 Codex/Claude 会话后重新扫描)。"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(quota.windows) { w in quotaRow(w) }
+            }
+            .padding(14)
+        }
+    }
+
+    @ViewBuilder
+    private func quotaRow(_ w: QuotaWindow) -> some View {
+        let used = w.usedPercent ?? 0
+        let barColor: Color = used >= 90 ? CyberPalette.neonPink
+                            : used >= 70 ? .orange : CyberPalette.neonCyan
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Image(systemName: TokenTool(rawValue: w.toolRaw)?.sfSymbol ?? "bolt")
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(barColor)
+                Text("\(w.toolName) · \(w.label)").font(.system(size: 12, weight: .medium))
+                if w.isEstimate {
+                    Text(L("est.", "估算"))
+                        .font(.system(size: 9, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(Capsule().fill(Color.orange.opacity(0.15)))
+                }
+                if let plan = w.planType {
+                    Text(plan).font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if let rem = w.remainingPercent {
+                    Text(String(format: L("%.0f%% left", "剩 %.0f%%"), rem))
+                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .foregroundStyle(barColor).monospacedDigit()
+                } else if let used = w.usedTokens {
+                    Text(L("\(TokenFormat.tokens(used)) used", "已用 \(TokenFormat.tokens(used))"))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary).monospacedDigit()
+                }
+            }
+            if w.usedPercent != nil {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.primary.opacity(0.08)).frame(height: 6)
+                        Capsule().fill(barColor).frame(width: geo.size.width * CGFloat(used / 100), height: 6)
+                    }
+                }
+                .frame(height: 6)
+            }
+            if let reset = w.resetsAt {
+                Text(L("resets ", "重置于 ") + reset.formatted(.relative(presentation: .named)))
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -264,6 +332,33 @@ private struct MainTokensInner: View {
         case .last7: return L("7 days", "7 天")
         case .last30: return L("30 days", "30 天")
         case .all:   return L("All", "全部")
+        }
+    }
+}
+
+/// Owns quota-window refresh (file read for Codex + event fetch for Claude),
+/// off the main actor, on appear + a 30s timer.
+@MainActor
+final class QuotaModel: ObservableObject {
+    @Published var windows: [QuotaWindow] = []
+    private var timer: Timer?
+
+    func start() {
+        refresh()
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refresh() }
+        }
+    }
+
+    func stop() { timer?.invalidate(); timer = nil }
+
+    func refresh() {
+        let container = TokenStore.shared
+        let cap = TokenMonitorSettings.shared.claudeWindowCap
+        Task.detached(priority: .utility) {
+            let w = QuotaReader.windows(container: container, claudeCap: cap)
+            await MainActor.run { self.windows = w }
         }
     }
 }

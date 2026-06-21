@@ -19,8 +19,11 @@ final class MenuBarAvatarWindow {
     /// Reports the window center to the controller during a drag (drives the
     /// dashed drop-preview) and on release (returns true if it detached to a
     /// desktop pet, in which case we skip our own edge re-snap).
-    private let reportDragMove: (CGPoint) -> Void
-    private let reportDragEnded: (CGPoint) -> Bool
+    /// (cursor, windowCenter). Cursor drives edge-dock detection (reaches the
+    /// top); windowCenter places the desktop drop-preview so it tracks the
+    /// dragged thing instead of drifting off by the grab offset.
+    private let reportDragMove: (CGPoint, CGPoint) -> Void
+    private let reportDragEnded: (CGPoint, CGPoint) -> Bool
     /// Cursor position relative to the window's bottom-left when drag started, in global
     /// screen coords. Using global cursor + this offset avoids the feedback loop you get
     /// when a SwiftUI DragGesture's view-local translation shifts as the window moves.
@@ -31,8 +34,8 @@ final class MenuBarAvatarWindow {
     var edge: AnchorEdge { model.edge }
 
     init(onClick: @escaping () -> Void,
-         onDragMove: @escaping (CGPoint) -> Void = { _ in },
-         onDragEnded: @escaping (CGPoint) -> Bool = { _ in false }) {
+         onDragMove: @escaping (CGPoint, CGPoint) -> Void = { _, _ in },
+         onDragEnded: @escaping (CGPoint, CGPoint) -> Bool = { _, _ in false }) {
         self.onClick = onClick
         self.reportDragMove = onDragMove
         self.reportDragEnded = onDragEnded
@@ -118,10 +121,8 @@ final class MenuBarAvatarWindow {
         guard let offset = dragCursorOffset else { return }
         let newOrigin = CGPoint(x: mouse.x - offset.x, y: mouse.y - offset.y)
         window.setFrameOrigin(newOrigin)
-        // Report the CURSOR (where the user is pointing), not the window
-        // center — a tall pet's center can't reach the top edge, so dock
-        // detection keys off the cursor.
-        reportDragMove(mouse)
+        // Cursor drives dock detection; window center positions the preview.
+        reportDragMove(mouse, CGPoint(x: window.frame.midX, y: window.frame.midY))
     }
 
     private func dragEnded() {
@@ -130,7 +131,7 @@ final class MenuBarAvatarWindow {
         let center = NSPoint(x: window.frame.midX, y: window.frame.midY)
         // Dropped on the desktop → detach into a pet (controller switches
         // placement + hides this window); skip the edge re-snap below.
-        if reportDragEnded(cursor) { return }
+        if reportDragEnded(cursor, center) { return }
         // No force-unwrap — bail if there are zero screens (impossible
         // in practice, but the `!` would bake this file's source path
         // into runtime trap metadata).
@@ -337,27 +338,21 @@ private struct MenuBarAvatarContent: View {
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: (CGSize) -> Void
     @State private var hovered = false
+    /// Whether the current press has crossed the drag threshold. Lets us
+    /// cleanly separate click (open) from drag (move) — a `Button` +
+    /// simultaneous drag fired BOTH on release, so a drag also opened the panel.
+    @State private var dragMoved = false
 
     var body: some View {
-        Button(action: onClick) {
-            ZStack {
-                background
-                // AvatarPortrait self-clips (circle for a photo portrait,
-                // no crop for a pixel notch mark), so no clipShape here.
-                AvatarPortrait()
-                    .frame(width: 26, height: 26)
-                    .modifier(AvatarOffsetModifier(shape: model.shape))
-            }
-            // No `.scaleEffect` + `.animation(value:)` here. SwiftUI keeps
-            // a persistent `AnimatorState` alive for any value-bound
-            // `.animation` modifier even when nothing is currently
-            // animating, and that AnimatorState ticks the display loop
-            // at the screen refresh rate. Removing this single modifier
-            // dropped idle CPU from ~45 % to flat. The 4 % hover bump
-            // wasn't worth a permanently-running render loop.
-            .contentShape(Rectangle())
+        ZStack {
+            background
+            // AvatarPortrait self-clips (circle for a photo portrait,
+            // no crop for a pixel notch mark), so no clipShape here.
+            AvatarPortrait()
+                .frame(width: 26, height: 26)
+                .modifier(AvatarOffsetModifier(shape: model.shape))
         }
-        .buttonStyle(.plain)
+        .contentShape(Rectangle())
         .onHover { hovered = $0 }
         .help(L(
             "Doris — drag to a different screen edge · right-click for settings",
@@ -379,10 +374,19 @@ private struct MenuBarAvatarContent: View {
                 NSApp.terminate(nil)
             }
         }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 6)
-                .onChanged { v in onDragChanged(v.translation) }
-                .onEnded   { v in onDragEnded(v.translation) }
+        // Single gesture decides click vs drag: movement under the
+        // threshold for the whole press → click (open); past it → drag only.
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { v in
+                    if !dragMoved && hypot(v.translation.width, v.translation.height) < 6 { return }
+                    dragMoved = true
+                    onDragChanged(v.translation)
+                }
+                .onEnded { v in
+                    if dragMoved { onDragEnded(v.translation) } else { onClick() }
+                    dragMoved = false
+                }
         )
     }
 

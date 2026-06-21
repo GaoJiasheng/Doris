@@ -41,8 +41,8 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
         if avatarWindow == nil {
             avatarWindow = MenuBarAvatarWindow(
                 onClick: { [weak self] in self?.toggleExpanded() },
-                onDragMove: { [weak self] center in self?.previewAvatarDrag(center: center) },
-                onDragEnded: { [weak self] center in self?.commitEdgeDrag(center: center) ?? false }
+                onDragMove: { [weak self] cursor, center in self?.previewAvatarDrag(cursor: cursor, windowCenter: center) },
+                onDragEnded: { [weak self] cursor, center in self?.commitEdgeDrag(cursor: cursor, windowCenter: center) ?? false }
             )
         }
         if screenObserver == nil {
@@ -65,8 +65,8 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
         if desktopPet == nil {
             desktopPet = DesktopPetController(
                 onClick: { [weak self] in self?.toggleExpanded() },
-                onDragMove: { [weak self] center in self?.previewAvatarDrag(center: center) },
-                onDragEnded: { [weak self] center in self?.commitPetDrag(center: center) ?? false }
+                onDragMove: { [weak self] cursor, center in self?.previewAvatarDrag(cursor: cursor, windowCenter: center) },
+                onDragEnded: { [weak self] cursor, center in self?.commitPetDrag(cursor: cursor, windowCenter: center) ?? false }
             )
         }
         if avatarSettingsSinks.isEmpty {
@@ -438,11 +438,13 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
 
     /// Live during a drag of either the edge logo or the pet: show the dashed
     /// drop-preview where it would land if released now.
-    private func previewAvatarDrag(center: CGPoint) {
-        guard let screen = AvatarSnap.screen(containing: center) else { snapPreview.hide(); return }
-        let target = AvatarSnap.evaluate(center: center, screen: screen)
+    private func previewAvatarDrag(cursor: CGPoint, windowCenter: CGPoint) {
+        guard let screen = AvatarSnap.screen(containing: cursor) else { snapPreview.hide(); return }
+        let target = AvatarSnap.evaluate(center: cursor, screen: screen)
         let w = AvatarSettings.shared.petSize.width
-        let frame = AvatarSnap.previewFrame(for: target, center: center, screen: screen,
+        // Desktop preview is centered on the dragged WINDOW (so the dashed
+        // frame tracks the pet/logo); edge preview uses the real logo frame.
+        let frame = AvatarSnap.previewFrame(for: target, center: windowCenter, screen: screen,
                                             petSize: CGSize(width: w, height: w * 1.5))
         snapPreview.show(frame: frame)
     }
@@ -450,12 +452,13 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     /// Edge logo released at `center`. Returns true if it detached to the
     /// desktop (placement switched to pet); false → the edge window snaps to
     /// the nearest edge itself.
-    private func commitEdgeDrag(center: CGPoint) -> Bool {
+    private func commitEdgeDrag(cursor: CGPoint, windowCenter: CGPoint) -> Bool {
         snapPreview.hide()
-        guard let screen = AvatarSnap.screen(containing: center) else { return false }
-        if case .desktop = AvatarSnap.evaluate(center: center, screen: screen) {
+        guard let screen = AvatarSnap.screen(containing: cursor) else { return false }
+        if case .desktop = AvatarSnap.evaluate(center: cursor, screen: screen) {
             let w = AvatarSettings.shared.petSize.width
-            AvatarSettings.shared.petPosition = CGPoint(x: center.x - w / 2, y: center.y - (w * 1.5) / 2)
+            // Land the pet where the preview was (around the logo center).
+            AvatarSettings.shared.petPosition = CGPoint(x: windowCenter.x - w / 2, y: windowCenter.y - (w * 1.5) / 2)
             AvatarSettings.shared.placement = .desktop   // → applyPlacement shows the pet
             return true
         }
@@ -464,10 +467,11 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
 
     /// Pet released at `center`. Returns true if it docked to an edge
     /// (placement switched to edge); false → it stays a free pet.
-    private func commitPetDrag(center: CGPoint) -> Bool {
+    private func commitPetDrag(cursor: CGPoint, windowCenter: CGPoint) -> Bool {
+        _ = windowCenter   // docking uses the cursor; center kept for symmetry
         snapPreview.hide()
-        guard let screen = AvatarSnap.screen(containing: center) else { return false }
-        if case .edge(let edge) = AvatarSnap.evaluate(center: center, screen: screen) {
+        guard let screen = AvatarSnap.screen(containing: cursor) else { return false }
+        if case .edge(let edge) = AvatarSnap.evaluate(center: cursor, screen: screen) {
             AnchorScreenStore.save(screen: screen)
             AnchorScreenStore.save(edge: edge)
             AvatarSettings.shared.placement = .edge      // → applyPlacement shows the edge logo

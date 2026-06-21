@@ -108,6 +108,21 @@ struct SettingsView: View {
                 }
             }
 
+            Section(header: Text(L("Quota", "额度"))) {
+                LabeledContent(L("Codex", "Codex")) {
+                    Text(L("real (from Codex rate limits)", "真实(来自 Codex 限额)"))
+                        .foregroundStyle(.secondary).font(.caption)
+                }
+                TextField(L("Claude 5h cap (tokens, 0 = usage only)",
+                            "Claude 5 小时额度(tokens,0=仅显示用量)"),
+                          value: Binding(get: { tokenSettings.claudeWindowCap },
+                                         set: { tokenSettings.claudeWindowCap = max(0, $0) }),
+                          format: .number)
+                Text(L("Anthropic publishes no exact token cap, so Claude's % is an estimate against the cap you set.",
+                       "Anthropic 未公布确切 token 上限,Claude 的百分比是按你设的上限估算。"))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section {
                 Button(L("Rescan now", "立即扫描")) {
                     TokenCollectionService.shared.triggerNow()

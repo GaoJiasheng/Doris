@@ -17,6 +17,7 @@ public final class TokenMonitorSettings: ObservableObject {
         static let openAIKey = "doris.tokens.openAIKey"
         static let cursorToken = "doris.tokens.cursorToken"
         static let lastCollectAt = "doris.tokens.lastCollectAt"
+        static let claudeCap = "doris.tokens.claudeWindowCap"
     }
 
     /// Master switch — off disables collection entirely.
@@ -28,6 +29,10 @@ public final class TokenMonitorSettings: ObservableObject {
     @Published public var openAIKey: String { didSet { defaults.set(openAIKey, forKey: Key.openAIKey) } }
     @Published public var cursorToken: String { didSet { defaults.set(cursorToken, forKey: Key.cursorToken) } }
     @Published public var lastCollectAt: Date? { didSet { defaults.set(lastCollectAt, forKey: Key.lastCollectAt) } }
+    /// Claude 5-hour-window token cap for estimating remaining %. 0 = unknown
+    /// (show tokens used instead of a %). User-configurable since Anthropic
+    /// publishes no exact token cap.
+    @Published public var claudeWindowCap: Int { didSet { defaults.set(claudeWindowCap, forKey: Key.claudeCap) } }
 
     private init() {
         let d = UserDefaults(suiteName: DorisIdentifiers.appGroup) ?? .standard
@@ -41,6 +46,7 @@ public final class TokenMonitorSettings: ObservableObject {
         self.openAIKey = d.string(forKey: Key.openAIKey) ?? ""
         self.cursorToken = d.string(forKey: Key.cursorToken) ?? ""
         self.lastCollectAt = d.object(forKey: Key.lastCollectAt) as? Date
+        self.claudeWindowCap = d.integer(forKey: Key.claudeCap)
     }
 
     public func isEnabled(_ tool: TokenTool) -> Bool { enabledTools.contains(tool) }
