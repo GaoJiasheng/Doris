@@ -165,25 +165,27 @@ struct MainWindowView: View {
         // Hidden while editing a note so the editor owns the whole pane.
         .toolbar {
             if editingNote == nil {
+                // DORIS + tabs together on the LEADING edge (left-aligned),
+                // not centered.
                 ToolbarItem(placement: .navigation) {
-                    Text("DORIS")
-                        .font(.system(size: 15, weight: .heavy, design: .rounded))
-                        .kerning(2)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [CyberPalette.neonPink, CyberPalette.neonCyan],
-                                startPoint: .leading, endPoint: .trailing
+                    HStack(spacing: 14) {
+                        Text("DORIS")
+                            .font(.system(size: 15, weight: .heavy, design: .rounded))
+                            .kerning(2)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [CyberPalette.neonPink, CyberPalette.neonCyan],
+                                    startPoint: .leading, endPoint: .trailing
+                                )
                             )
-                        )
-                        .lineLimit(1)
-                        .fixedSize()
-                }
-                ToolbarItem(placement: .principal) {
-                    HStack(spacing: 6) {
-                        tabButton(.today, label: L("Today", "今日"), system: "sparkles")
-                        tabButton(.notes, label: L("TODO", "TODO"), system: "checklist")
-                        tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
-                        tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
+                            .lineLimit(1)
+                            .fixedSize()
+                        HStack(spacing: 6) {
+                            tabButton(.today, label: L("Today", "今日"), system: "sparkles")
+                            tabButton(.notes, label: L("TODO", "TODO"), system: "checklist")
+                            tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
+                            tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
+                        }
                     }
                 }
                 ToolbarItemGroup(placement: .primaryAction) {
@@ -192,7 +194,8 @@ struct MainWindowView: View {
                         .foregroundStyle(.primary.opacity(0.6))
                         .lineLimit(1)
                         .fixedSize()
-                    SyncNowToolbarButton()
+                    // No relative-time label after the sync icon (redundant).
+                    SyncNowToolbarButton(showsTime: false)
                     ThemeToggleButton()
                 }
             }

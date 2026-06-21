@@ -23,8 +23,11 @@ public struct SyncNowToolbarButton: View {
     @State private var nowTick: Date = Date()
     @State private var showDetails: Bool = false
     private let tickTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    /// When false, render just the status icon (no "X ago" relative time) —
+    /// used in the main-window toolbar where the time was redundant clutter.
+    private let showsTime: Bool
 
-    public init() {}
+    public init(showsTime: Bool = true) { self.showsTime = showsTime }
 
     public var body: some View {
         Button { handleTap() } label: { pillBody }
@@ -33,7 +36,8 @@ public struct SyncNowToolbarButton: View {
         .popover(isPresented: $showDetails, arrowEdge: .bottom) {
             detailsPopover
         }
-        .onReceive(tickTimer) { nowTick = $0 }
+        // Only tick the relative-time label when it's actually shown.
+        .onReceive(tickTimer) { if showsTime { nowTick = $0 } }
     }
 
     // MARK: - Pill body
@@ -41,12 +45,14 @@ public struct SyncNowToolbarButton: View {
     private var pillBody: some View {
         HStack(spacing: 5) {
             leadingIcon
-            Text(statusLabel)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(textColor)
-                .lineLimit(1)
+            if showsTime {
+                Text(statusLabel)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(textColor)
+                    .lineLimit(1)
+            }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, showsTime ? 8 : 6)
         .padding(.vertical, 4)
         .background(Capsule().fill(.primary.opacity(0.05)))
         .overlay(Capsule().stroke(strokeColor, lineWidth: 0.6))
