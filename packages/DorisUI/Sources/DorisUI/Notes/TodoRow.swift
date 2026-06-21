@@ -52,6 +52,7 @@ public struct TodoRow: View {
     public var onMoveDown: () -> Void
 
     @Environment(\.modelContext) private var ctx
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var lang = LanguageSettings.shared
     @State private var hovering = false
     @State private var confirmingDelete = false
@@ -156,6 +157,7 @@ public struct TodoRow: View {
                 text: $note.title,
                 placeholder: L("New task", "新任务"),
                 done: note.done,
+                colorScheme: colorScheme,
                 isFocused: focused.wrappedValue == note.id,
                 onFocusChange: { gained in
                     if gained { focused.wrappedValue = note.id }
@@ -400,6 +402,12 @@ struct TodoTitleField: NSViewRepresentable {
     @Binding var text: String
     var placeholder: String
     var done: Bool
+    /// Active theme scheme, passed from SwiftUI. We pin the field's
+    /// `appearance` to it so `.labelColor` resolves deterministically —
+    /// otherwise frequent `updateNSView` passes can momentarily resolve it
+    /// against the wrong appearance (black text on the dark panel → the
+    /// "text flickers / goes invisible" bug).
+    var colorScheme: ColorScheme
     var isFocused: Bool
     var onFocusChange: (Bool) -> Void
     var onSubmit: () -> Void
@@ -422,6 +430,7 @@ struct TodoTitleField: NSViewRepresentable {
         tf.cell?.isScrollable = true
         tf.font = NSFont.preferredFont(forTextStyle: .subheadline)
         tf.placeholderString = placeholder
+        tf.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
         tf.delegate = context.coordinator
         tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
         tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -435,12 +444,18 @@ struct TodoTitleField: NSViewRepresentable {
 
     func updateNSView(_ tf: NSTextField, context: Context) {
         context.coordinator.parent = self
+        // Pin the appearance so `.labelColor` always resolves to the right
+        // light/dark value — kills the flicker-to-invisible during rapid
+        // updateNSView passes. Only assign on change to avoid redraws.
+        let appName: NSAppearance.Name = colorScheme == .dark ? .darkAqua : .aqua
+        if tf.appearance?.name != appName { tf.appearance = NSAppearance(named: appName) }
         if tf.stringValue != text { tf.stringValue = text }
-        tf.placeholderString = placeholder
+        if tf.placeholderString != placeholder { tf.placeholderString = placeholder }
         // Done → dimmed. The checkbox carries the "done" signal; AppKit
         // strikethrough on an editable field fights the field editor, so
         // we dim like the checklist editor instead of striking through.
-        tf.textColor = done ? NSColor.labelColor.withAlphaComponent(0.45) : .labelColor
+        let target = done ? NSColor.labelColor.withAlphaComponent(0.45) : NSColor.labelColor
+        if tf.textColor != target { tf.textColor = target }
 
         // Self-healing focus: whenever SwiftUI marks this row focused we
         // become first responder and drop the caret at the end. The

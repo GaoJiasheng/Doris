@@ -21,6 +21,7 @@ import AppKit
 public struct ChecklistEditorView: View {
     @Bindable public var note: Note
     @ObservedObject private var lang = LanguageSettings.shared
+    @Environment(\.colorScheme) private var colorScheme
 
     /// Index of the checklist row whose text field should hold the
     /// keyboard. Set right after inserting a row so the cursor lands in
@@ -80,6 +81,7 @@ public struct ChecklistEditorView: View {
             ChecklistItemField(
                 text: textBinding(at: idx),
                 checked: line.checked == true,
+                colorScheme: colorScheme,
                 isFocused: focusedLine == idx,
                 onFocusChange: { gained in
                     if gained { focusedLine = idx }
@@ -331,6 +333,9 @@ final class WrappingTextField: NSTextField {
 struct ChecklistItemField: NSViewRepresentable {
     @Binding var text: String
     var checked: Bool
+    /// Pinned to the field's appearance so `.labelColor` never resolves to
+    /// the wrong light/dark value mid-update (the flicker-to-invisible bug).
+    var colorScheme: ColorScheme
     var isFocused: Bool
     var onFocusChange: (Bool) -> Void
     var onSubmit: () -> Void
@@ -353,6 +358,7 @@ struct ChecklistItemField: NSViewRepresentable {
         tf.maximumNumberOfLines = 0
         tf.cell?.wraps = true
         tf.cell?.isScrollable = false
+        tf.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
         tf.delegate = context.coordinator
         tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
         tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -367,10 +373,13 @@ struct ChecklistItemField: NSViewRepresentable {
 
     func updateNSView(_ tf: WrappingTextField, context: Context) {
         context.coordinator.parent = self
+        let appName: NSAppearance.Name = colorScheme == .dark ? .darkAqua : .aqua
+        if tf.appearance?.name != appName { tf.appearance = NSAppearance(named: appName) }
         if tf.stringValue != text { tf.stringValue = text }
         // Checked → dimmed (the checkbox glyph carries the "done" signal;
         // strikethrough on an editable field fights the field editor).
-        tf.textColor = checked ? NSColor.labelColor.withAlphaComponent(0.45) : .labelColor
+        let target = checked ? NSColor.labelColor.withAlphaComponent(0.45) : NSColor.labelColor
+        if tf.textColor != target { tf.textColor = target }
 
         // Become first responder when SwiftUI marks this row focused —
         // and drop the cursor at the END. Retries until the view is in a
