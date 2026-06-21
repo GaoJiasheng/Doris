@@ -186,17 +186,19 @@ struct MainWindowView: View {
                             tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
                             tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
                         }
+                        // Date + actions on the LEFT too (next to the tabs),
+                        // not pinned to the far-right edge.
+                        HStack(spacing: 10) {
+                            Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary.opacity(0.6))
+                                .lineLimit(1)
+                                .fixedSize()
+                            // No relative-time label after the sync icon (redundant).
+                            SyncNowToolbarButton(showsTime: false)
+                            ThemeToggleButton()
+                        }
                     }
-                }
-                ToolbarItemGroup(placement: .primaryAction) {
-                    Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary.opacity(0.6))
-                        .lineLimit(1)
-                        .fixedSize()
-                    // No relative-time label after the sync icon (redundant).
-                    SyncNowToolbarButton(showsTime: false)
-                    ThemeToggleButton()
                 }
             }
         }
