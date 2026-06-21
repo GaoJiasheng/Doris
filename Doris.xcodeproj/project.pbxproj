@@ -76,6 +76,7 @@
 		89C061EF7EC3EE97B38441FA /* Info-iOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 33E29E09A7E0346CA78ADE04 /* Info-iOS.plist */; };
 		8ED5DFED5A53891D5722EA26 /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4124A40499C64EAE53B1128A /* DorisCore */; };
 		92077813352F0A182AFE7846 /* DesktopPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A441596ECFF0B8C4809CC75 /* DesktopPanelView.swift */; };
+		974EA522117564A0934CAA88 /* MainHeaderActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27D104A7DF29EEC4A43264FC /* MainHeaderActionsView.swift */; };
 		982C365E820E9632BE11F092 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 4B931B0521591438F422CD68 /* KeyboardShortcuts */; };
 		99A039F0737F80C5295506D0 /* StatusBarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9124431BB7A8127A5AE105A1 /* StatusBarItem.swift */; };
 		9AAE1CBD17DBEFE210DA3277 /* DorisIPC in Frameworks */ = {isa = PBXBuildFile; productRef = 4F0B0839FD54D49732A1C8B1 /* DorisIPC */; };
@@ -178,6 +179,7 @@
 		203F13FBCEF346A85F87A07F /* Info-macOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Info-macOS.plist"; sourceTree = "<group>"; };
 		235E4E6BF62F710B10B2A744 /* DorisWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DorisWidgetBundle.swift; sourceTree = "<group>"; };
 		25C8267A2810EE34195F1355 /* DorisWidget-iOS.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = "DorisWidget-iOS.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		27D104A7DF29EEC4A43264FC /* MainHeaderActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainHeaderActionsView.swift; sourceTree = "<group>"; };
 		30F27EC68D68BB6CEE411278 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		32F5496B0D68C1324165BE25 /* DorisShareExtension-iOS.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = "DorisShareExtension-iOS.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		33E29E09A7E0346CA78ADE04 /* Info-iOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Info-iOS.plist"; sourceTree = "<group>"; };
@@ -396,10 +398,6 @@
 		1A4C05A874AD4097CDBF0954 /* Doris-iOS */ = {
 			isa = PBXGroup;
 			children = (
-				550F30E1F0EF2B853E7105BE /* Background */,
-				64EDCF0F2956D281B135DDAC /* Components */,
-				CE224B4F2B87418CFA06EBAC /* Inbox */,
-				7822765F6FBC03CE2D633CAB /* Notes */,
 				7CC6E89BD5CDB8E87038F398 /* Resources */,
 				0CE106F7AD9579029B3D8857 /* Scenes */,
 				B489FE10D147F23B18789AFF /* AppDelegate.swift */,
@@ -490,13 +488,6 @@
 			path = Notch;
 			sourceTree = "<group>";
 		};
-		550F30E1F0EF2B853E7105BE /* Background */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Background;
-			sourceTree = "<group>";
-		};
 		558FA949130E3E3007A7074B /* Sidebar */ = {
 			isa = PBXGroup;
 			children = (
@@ -533,13 +524,6 @@
 			path = "doris-mac";
 			sourceTree = "<group>";
 		};
-		64EDCF0F2956D281B135DDAC /* Components */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Components;
-			sourceTree = "<group>";
-		};
 		6C2FC1272B5E19481DC34923 /* DorisWidget-iOS */ = {
 			isa = PBXGroup;
 			children = (
@@ -556,6 +540,7 @@
 			isa = PBXGroup;
 			children = (
 				7441423CEB7BB2DEB9E04F7F /* DorisCommands.swift */,
+				27D104A7DF29EEC4A43264FC /* MainHeaderActionsView.swift */,
 				8440B3789E181CF97F3CF7B4 /* MainTodayView.swift */,
 				94E05FD16AC0FD5638D6E2FB /* MainTokensView.swift */,
 				D1428A4010334504409D6401 /* MainWindowController.swift */,
@@ -585,13 +570,6 @@
 				F3761CF5533A48FAD35C39B2 /* Sources */,
 			);
 			path = doris;
-			sourceTree = "<group>";
-		};
-		7822765F6FBC03CE2D633CAB /* Notes */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Notes;
 			sourceTree = "<group>";
 		};
 		795778FAFFF5FDB82EB47A23 /* DorisShareExtension-iOS */ = {
@@ -687,13 +665,6 @@
 				5207402EE925DF6E240B5132 /* ExitCodes.swift */,
 			);
 			path = Support;
-			sourceTree = "<group>";
-		};
-		CE224B4F2B87418CFA06EBAC /* Inbox */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Inbox;
 			sourceTree = "<group>";
 		};
 		D009A337CB1205E4BA516AF2 /* IPC */ = {
@@ -1195,6 +1166,7 @@
 				A6855D156B8AB8040C74AFD6 /* HotkeyEngine.swift in Sources */,
 				7650F868B576783BBDB02F79 /* IPCFSEventReader.swift in Sources */,
 				876FD52E07C7DC2ED1B0F03C /* InstallCLIWizardView.swift in Sources */,
+				974EA522117564A0934CAA88 /* MainHeaderActionsView.swift in Sources */,
 				05E598C378B531293A80E1FA /* MainTodayView.swift in Sources */,
 				7D57B12F70C7A1E8E8A5EDDB /* MainTokensView.swift in Sources */,
 				BE57B57CE9DCCD7F9B1E5175 /* MainWindowController.swift in Sources */,
