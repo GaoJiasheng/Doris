@@ -163,43 +163,41 @@ struct MainWindowView: View {
         // items (like the sidebar toggle) keep working — and they occupy the
         // title-bar row itself, so there's no empty band above the content.
         // Hidden while editing a note so the editor owns the whole pane.
+        // Always shown (even while editing a note) so the title-bar row is
+        // never empty — an empty toolbar left a big blank band above the
+        // note/sub-task editor.
         .toolbar {
-            if editingNote == nil {
-                // DORIS + tabs together on the LEADING edge (left-aligned),
-                // not centered.
-                ToolbarItem(placement: .navigation) {
-                    HStack(spacing: 14) {
-                        Text("DORIS")
-                            .font(.system(size: 15, weight: .heavy, design: .rounded))
-                            .kerning(2)
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [CyberPalette.neonPink, CyberPalette.neonCyan],
-                                    startPoint: .leading, endPoint: .trailing
-                                )
+            // DORIS + tabs on the LEADING edge (left).
+            ToolbarItem(placement: .navigation) {
+                HStack(spacing: 14) {
+                    Text("DORIS")
+                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .kerning(2)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [CyberPalette.neonPink, CyberPalette.neonCyan],
+                                startPoint: .leading, endPoint: .trailing
                             )
-                            .lineLimit(1)
-                            .fixedSize()
-                        HStack(spacing: 6) {
-                            tabButton(.today, label: L("Today", "今日"), system: "sparkles")
-                            tabButton(.notes, label: L("TODO", "TODO"), system: "checklist")
-                            tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
-                            tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
-                        }
-                        // Date + actions on the LEFT too (next to the tabs),
-                        // not pinned to the far-right edge.
-                        HStack(spacing: 10) {
-                            Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.primary.opacity(0.6))
-                                .lineLimit(1)
-                                .fixedSize()
-                            // No relative-time label after the sync icon (redundant).
-                            SyncNowToolbarButton(showsTime: false)
-                            ThemeToggleButton()
-                        }
+                        )
+                        .lineLimit(1)
+                        .fixedSize()
+                    HStack(spacing: 6) {
+                        tabButton(.today, label: L("Today", "今日"), system: "sparkles")
+                        tabButton(.notes, label: L("TODO", "TODO"), system: "checklist")
+                        tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
+                        tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
                     }
                 }
+            }
+            // Date + sync + theme on the TRAILING edge (right).
+            ToolbarItemGroup(placement: .primaryAction) {
+                Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary.opacity(0.6))
+                    .lineLimit(1)
+                    .fixedSize()
+                SyncNowToolbarButton(showsTime: false)
+                ThemeToggleButton()
             }
         }
     }
