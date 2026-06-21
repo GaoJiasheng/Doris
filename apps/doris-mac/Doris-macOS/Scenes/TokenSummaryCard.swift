@@ -26,7 +26,6 @@ private struct TokenSummaryCardInner: View {
 
     var body: some View {
         let today = TokenStats.totals(dailies, .today)
-        let tools = TokenStats.byTool(dailies, .today).filter { $0.1.billable > 0 }
 
         Button(action: onTap) {
             CyberCard {
@@ -55,27 +54,6 @@ private struct TokenSummaryCardInner: View {
                     }
 
                     Spacer(minLength: 8)
-
-                    // Per-tool mini bars (today), so the glance shows the mix.
-                    if !tools.isEmpty {
-                        HStack(spacing: 10) {
-                            ForEach(tools.prefix(3), id: \.0) { tool, totals in
-                                VStack(spacing: 3) {
-                                    Image(systemName: tool.sfSymbol)
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(CyberPalette.neonCyan.opacity(0.9))
-                                    Text(TokenFormat.tokens(totals.billable))
-                                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                                        .foregroundStyle(.primary.opacity(0.6))
-                                        .monospacedDigit()
-                                }
-                            }
-                        }
-                    } else {
-                        Text(L("No usage yet today", "今日暂无用量"))
-                            .font(.caption)
-                            .foregroundStyle(.primary.opacity(0.45))
-                    }
 
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold))

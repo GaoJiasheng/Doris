@@ -256,26 +256,17 @@ struct MainWindowView: View {
                 ThemeToggleButton()
 
                 // Custom window close button — top-RIGHT. The borderless
-                // window has no system traffic lights; this neon dot reads as
-                // "close" and fits the cyber palette.
+                // window has no system traffic lights. A plain transparent
+                // xmark in `.primary` so it follows the light/dark theme with
+                // no jarring colored chip (matches the sidebar-toggle glyph).
                 Button {
                     MainWindowController.shared.closeMainWindow()
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.92))
-                        .frame(width: 16, height: 16)
-                        .background(
-                            Circle().fill(
-                                LinearGradient(
-                                    colors: [Color(red: 1.0, green: 0.38, blue: 0.52),
-                                             Color(red: 0.92, green: 0.18, blue: 0.46)],
-                                    startPoint: .top, endPoint: .bottom
-                                )
-                            )
-                        )
-                        .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
-                        .contentShape(Circle())
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.primary.opacity(0.55))
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help(L("Close window", "关闭窗口"))
