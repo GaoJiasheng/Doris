@@ -146,32 +146,57 @@ struct MainWindowView: View {
     // MARK: - Detail
 
     private var detail: some View {
-        VStack(spacing: 0) {
-            // Hide the brand-and-tab strip while a note is being edited
-            // — the inline editor expands to fill the detail pane.
-            if editingNote == nil {
-                detailHeader
-                Divider()
-                    .overlay(Color.primary.opacity(0.08))
+        Group {
+            switch tab {
+            case .today:  MainTodayView(editing: $editingNote, onOpenTokens: { tab = .tokens })
+            case .events: MainEventsList()
+            case .notes:  MainNotesList(editing: $editingNote)
+            case .tokens: MainTokensView()
             }
-            Group {
-                switch tab {
-                case .today:  MainTodayView(editing: $editingNote, onOpenTokens: { tab = .tokens })
-                case .events: MainEventsList()
-                case .notes:  MainNotesList(editing: $editingNote)
-                case .tokens: MainTokensView()
+        }
+        .scrollContentBackground(.hidden)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // The DORIS / tabs / sync / theme strip lives in the window TOOLBAR
+        // (real title-bar controls), not as content under the title bar.
+        // On macOS 26 the title-bar region swallows clicks aimed at content
+        // placed beneath it via `.ignoresSafeArea(.top)`, but genuine toolbar
+        // items (like the sidebar toggle) keep working — and they occupy the
+        // title-bar row itself, so there's no empty band above the content.
+        // Hidden while editing a note so the editor owns the whole pane.
+        .toolbar {
+            if editingNote == nil {
+                ToolbarItem(placement: .navigation) {
+                    Text("DORIS")
+                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .kerning(2)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [CyberPalette.neonPink, CyberPalette.neonCyan],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 6) {
+                        tabButton(.today, label: L("Today", "今日"), system: "sparkles")
+                        tabButton(.notes, label: L("TODO", "TODO"), system: "checklist")
+                        tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
+                        tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
+                    }
+                }
+                ToolbarItemGroup(placement: .primaryAction) {
+                    Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary.opacity(0.6))
+                        .lineLimit(1)
+                        .fixedSize()
+                    SyncNowToolbarButton()
+                    ThemeToggleButton()
                 }
             }
-            .scrollContentBackground(.hidden)
         }
-        // Do NOT push the interactive nav strip under the transparent title
-        // bar. On macOS 26 (Tahoe) the title-bar region swallows clicks meant
-        // for SwiftUI content placed beneath it via `.ignoresSafeArea(.top)`
-        // — only real title-bar controls (e.g. the sidebar toggle) still
-        // register, so the DORIS / tabs / sync / theme strip became
-        // completely unclickable. Keeping the strip inside the safe area
-        // (just below the title bar) makes it reliably clickable; the
-        // CyberBackground behind still fills edge-to-edge under the title bar.
     }
 
     /// Right-pane header: DORIS brand on the left, tab buttons next to
@@ -247,7 +272,10 @@ struct MainWindowView: View {
         // already at its final position.
         .padding(.leading, columnVisibility == .detailOnly ? 160 : 18)
         .padding(.trailing, 18)
-        .padding(.vertical, 14)
+        // Minimal top padding now that the strip sits just below the title
+        // bar (the title-bar height itself is the only gap above it).
+        .padding(.top, 3)
+        .padding(.bottom, 12)
         .animation(.smooth(duration: 0.18), value: columnVisibility)
     }
 

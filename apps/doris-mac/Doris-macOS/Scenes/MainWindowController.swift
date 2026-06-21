@@ -76,6 +76,15 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         // the traffic lights floating over the dark sidebar.
         win.titleVisibility = .hidden
         win.titlebarAppearsTransparent = true
+        // No hairline under the title bar — the nav strip now sits just
+        // below the title bar (it can't go under it on macOS 26 without
+        // losing clicks), so a separator would draw a visible empty band.
+        // With it off + the CyberBackground filling behind, the title-bar
+        // height blends into the content.
+        win.titlebarSeparatorStyle = .none
+        // Header lives in the toolbar (DORIS / tabs / sync / theme). Unified
+        // style keeps it in the title-bar row so there's no extra empty band.
+        win.toolbarStyle = .unified
         win.contentViewController = host
         win.identifier = NSUserInterfaceItemIdentifier("doris-main")
         // Match the previous SwiftUI Window's full-screen behavior — the
