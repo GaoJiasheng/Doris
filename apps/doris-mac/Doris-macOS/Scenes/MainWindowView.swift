@@ -66,6 +66,15 @@ struct MainWindowView: View {
             .toolbar(.hidden, for: .windowToolbar)
         }
         .frame(minWidth: 760, minHeight: 520)
+        // The window is borderless + clear, so the content's own rounded
+        // shape IS the visible window (with the window's drop shadow). Round
+        // the corners + add a hairline edge so it reads as a real window, not
+        // a flush rectangle.
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+        )
         .preferredColorScheme(theme.mode.colorScheme)
         // Restore the saved avatar-sidebar preference on open.
         .onAppear {
@@ -153,15 +162,12 @@ struct MainWindowView: View {
     // MARK: - Detail
 
     private var detail: some View {
-        // In-content header (NOT the window toolbar). SwiftUI's toolbar
-        // CENTERS its items in this manually-hosted NavigationSplitView no
-        // matter the placement (.primaryAction bunched left, .principal/lone
-        // .navigation centered) and on macOS 26 wraps them in a "glass" pill
-        // that clipped the DORIS wordmark. So the strip is a plain HStack at
-        // the top of the detail — full control over left / Spacer / right —
-        // and it RESPECTS the title-bar safe area (no `.ignoresSafeArea`), so
-        // it stays clickable: only content pushed *under* the title bar lost
-        // clicks on macOS 26; content below it never did.
+        // In-content header as a plain HStack at the top of the detail. The
+        // window is now BORDERLESS (no title bar), so there is no title-bar
+        // safe-area inset to leave a band and no drag strip to steal clicks —
+        // the header sits flush at the very top and is fully clickable, with
+        // full control over left / Spacer / right alignment (just like the
+        // dropdown panel, which is also borderless).
         VStack(spacing: 0) {
             detailHeader
             Group {
@@ -176,12 +182,6 @@ struct MainWindowView: View {
         }
         .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Extend to the very top of the window — the title-bar SAFE-AREA inset
-        // here is inflated (~90pt) and showed up as a big empty band above the
-        // header. The header's own `.padding(.top, 34)` then drops it just
-        // below the ~28pt traffic-light strip, which is the only region macOS
-        // 26 steals clicks from — so the header stays clickable with no band.
-        .ignoresSafeArea(.container, edges: .top)
     }
 
     /// Right-pane header: DORIS brand on the left, tab buttons next to
@@ -190,6 +190,31 @@ struct MainWindowView: View {
     /// stays minimal and the whole "navigation strip" reads as one row.
     private var detailHeader: some View {
         HStack(alignment: .center, spacing: 16) {
+            // Custom window close button — the borderless window has no
+            // system traffic lights. Neon dot so it reads as "close" while
+            // fitting the cyber palette.
+            Button {
+                MainWindowController.shared.closeMainWindow()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.92))
+                    .frame(width: 16, height: 16)
+                    .background(
+                        Circle().fill(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.38, blue: 0.52),
+                                         Color(red: 0.92, green: 0.18, blue: 0.46)],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
+                    )
+                    .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .help(L("Close window", "关闭窗口"))
+
             // Sidebar (avatar) toggle — re-homed here because the window
             // toolbar (which used to carry NavigationSplitView's automatic
             // toggle) is now hidden to kill the empty band above the header.
@@ -256,30 +281,18 @@ struct MainWindowView: View {
                 ThemeToggleButton()
             }
         }
-        // Leading padding reserves space for the traffic lights
-        // (~78pt) + the sidebar-toggle button (which sits inset
-        // further than expected — measured ~160pt total clearance
-        // before content starts) when the sidebar is collapsed;
-        // otherwise just the standard 18pt gutter (the avatar
-        // sidebar covers that strip on its own).
-        //
-        // Match NavigationSplitView's faster non-bouncy spring with a
-        // short `.smooth` so the padding finishes shrinking before
-        // the sidebar finishes sliding in. With a longer duration
-        // (0.3s) the header trailed the sidebar visibly on expand —
-        // a "sticky" feel where content seemed to drift in late.
-        // 0.18s lands just before NavigationSplitView's slide
-        // settles, so by the time you can read the header it's
-        // already at its final position.
-        .padding(.leading, columnVisibility == .detailOnly ? 160 : 18)
+        // No system traffic lights anymore (borderless window) and the
+        // custom close button is the first item in the row, so the header
+        // just needs a small leading gutter that clears the rounded corner —
+        // the same on both sidebar states.
+        .padding(.leading, 16)
         .padding(.trailing, 18)
         // Minimal top padding now that the strip sits just below the title
         // bar (the title-bar height itself is the only gap above it).
-        // Clears the ~28pt traffic-light / title-bar drag strip (the detail
-        // now ignores the top safe area, so this offset positions the row).
-        .padding(.top, 34)
+        // Borderless window has no title bar / drag strip to clear — just a
+        // small top gutter so the row sits comfortably at the very top.
+        .padding(.top, 12)
         .padding(.bottom, 12)
-        .animation(.smooth(duration: 0.18), value: columnVisibility)
     }
 
     /// Capsule-style tab button. Selected = cyan-accented, unselected =

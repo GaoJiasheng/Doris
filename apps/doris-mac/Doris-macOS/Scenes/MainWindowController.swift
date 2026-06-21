@@ -62,33 +62,31 @@ final class MainWindowController: NSObject, NSWindowDelegate {
             .modelContainer(container)
         let host = NSHostingController(rootView: root)
 
-        let win = NSWindow(
+        // BORDERLESS window — same approach as the menu-bar dropdown panel
+        // (DorisAnchorPanel). A `.titled` window always reserves a ~28pt
+        // title-bar strip (where the traffic lights live), and on macOS 26
+        // that strip both leaves an empty band above any in-content header
+        // AND steals clicks from anything placed inside it. A borderless
+        // window has NO title bar, so the SwiftUI content fills from y=0:
+        // the header sits flush at the very top with zero band, and every
+        // control is clickable. The trade — no system traffic lights — is
+        // covered by a custom close button in `MainWindowView`'s header.
+        let win = MainBorderlessWindow(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.borderless, .resizable],
             backing: .buffered,
             defer: true
         )
         win.title = "Doris"
-        // Hide the title text and make the title bar transparent so the
-        // content view extends edge-to-edge under it. Combined with
-        // `.fullSizeContentView`, this lets the DORIS / tabs / sync /
-        // theme nav strip sit at the very top of the window with only
-        // the traffic lights floating over the dark sidebar.
-        win.titleVisibility = .hidden
-        win.titlebarAppearsTransparent = true
-        // No hairline under the title bar — the nav strip now sits just
-        // below the title bar (it can't go under it on macOS 26 without
-        // losing clicks), so a separator would draw a visible empty band.
-        // With it off + the CyberBackground filling behind, the title-bar
-        // height blends into the content.
-        win.titlebarSeparatorStyle = .none
+        // Drag the window by its (non-control) background; resize from edges
+        // (.resizable). Clear + non-opaque so the SwiftUI content's own
+        // rounded backdrop defines the visible window shape + shadow.
+        win.isMovableByWindowBackground = true
+        win.backgroundColor = .clear
+        win.isOpaque = false
+        win.hasShadow = true
         win.contentViewController = host
         win.identifier = NSUserInterfaceItemIdentifier("doris-main")
-        // Match the previous SwiftUI Window's full-screen behavior — the
-        // green title-bar button enters full-screen instead of zoom.
-        win.collectionBehavior.remove(.fullScreenNone)
-        win.collectionBehavior.remove(.fullScreenAuxiliary)
-        win.collectionBehavior.insert(.fullScreenPrimary)
         win.isReleasedWhenClosed = false
         win.delegate = self
         if let screen = preferredScreen {
@@ -139,4 +137,20 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     /// AppKit hide it (with `isReleasedWhenClosed = false` the NSWindow
     /// object survives the close and can be ordered-front again).
     func windowShouldClose(_ sender: NSWindow) -> Bool { true }
+
+    /// Hide the main window — wired to the custom close button in the
+    /// borderless window's header (there are no system traffic lights).
+    /// `isReleasedWhenClosed = false` keeps the instance so the next
+    /// `show()` is instant and state-preserving.
+    func closeMainWindow() {
+        window?.close()
+    }
+}
+
+/// Borderless windows refuse key/main status by default, which would stop
+/// SwiftUI text fields / buttons inside from receiving input. Allow both so
+/// the main window behaves like a normal window minus the title-bar chrome.
+final class MainBorderlessWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
 }
