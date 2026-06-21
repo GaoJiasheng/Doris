@@ -2,6 +2,7 @@
 
 import Foundation
 import SwiftData
+import DorisIPC
 
 /// One subscription rate-limit window for a tool.
 public struct QuotaWindow: Identifiable, Sendable {
@@ -95,6 +96,9 @@ public enum QuotaReader {
     // MARK: Claude Code (estimated 5-hour window)
 
     static func claudeWindows(container: ModelContainer, cap: Int) -> [QuotaWindow] {
+        // Prefer the REAL quota captured by the status-line command, if fresh.
+        if let real = claudeRealWindows() { return real }
+        // Otherwise estimate from the 5-hour rolling window.
         let ctx = ModelContext(container)
         let now = Date()
         let cutoff = now.addingTimeInterval(-5 * 3600)
@@ -118,6 +122,40 @@ public enum QuotaReader {
             toolRaw: cc, toolName: TokenTool.claudeCode.displayName,
             label: "5h", usedPercent: pct, usedTokens: used,
             resetsAt: reset, isEstimate: true, planType: nil)]
+    }
+
+    /// Real Claude quota captured by the status-line command into the App
+    /// Group (`Store/claude-quota.json`). nil if absent / stale (>6h, i.e. no
+    /// recent Claude Code activity) so the caller falls back to the estimate.
+    static func claudeRealWindows() -> [QuotaWindow]? {
+        guard let container = try? IPCDirectory.containerURL() else { return nil }
+        let url = container.appendingPathComponent("Store/claude-quota.json")
+        guard let data = try? Data(contentsOf: url),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let capturedStr = obj["capturedAt"] as? String,
+              let captured = ISO8601DateFormatter().date(from: capturedStr),
+              Date().timeIntervalSince(captured) < 6 * 3600,
+              let rl = obj["rate_limits"] as? [String: Any] else { return nil }
+        var out: [QuotaWindow] = []
+        if let w = realWindow(rl["five_hour"], label: "5h") { out.append(w) }
+        if let w = realWindow(rl["seven_day"], label: L7) { out.append(w) }
+        return out.isEmpty ? nil : out
+    }
+
+    private static let L7 = "7d"
+
+    private static func realWindow(_ any: Any?, label: String) -> QuotaWindow? {
+        guard let d = any as? [String: Any] else { return nil }
+        let used = (d["used_percentage"] as? Double)
+            ?? (d["used_percentage"] as? NSNumber)?.doubleValue
+            ?? (d["used_percentage"] as? Int).map(Double.init)
+        guard let used else { return nil }
+        let iso = ISO8601DateFormatter()
+        let reset = (d["resets_at"] as? String).flatMap { iso.date(from: $0) }
+        return QuotaWindow(
+            toolRaw: TokenTool.claudeCode.rawValue, toolName: TokenTool.claudeCode.displayName,
+            label: label, usedPercent: used, usedTokens: nil,
+            resetsAt: reset, isEstimate: false, planType: nil)
     }
 }
 

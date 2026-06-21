@@ -18,6 +18,8 @@ public final class TokenMonitorSettings: ObservableObject {
         static let cursorToken = "doris.tokens.cursorToken"
         static let lastCollectAt = "doris.tokens.lastCollectAt"
         static let claudeCap = "doris.tokens.claudeWindowCap"
+        static let claudeStatusLine = "doris.tokens.claudeStatusLineEnabled"
+        static let savedStatusLine = "doris.tokens.savedStatusLine"
     }
 
     /// Master switch — off disables collection entirely.
@@ -33,6 +35,12 @@ public final class TokenMonitorSettings: ObservableObject {
     /// (show tokens used instead of a %). User-configurable since Anthropic
     /// publishes no exact token cap.
     @Published public var claudeWindowCap: Int { didSet { defaults.set(claudeWindowCap, forKey: Key.claudeCap) } }
+    /// Whether Doris registered itself as Claude Code's statusLine to read the
+    /// REAL subscription quota (the only supported local source).
+    @Published public var claudeStatusLineEnabled: Bool { didSet { defaults.set(claudeStatusLineEnabled, forKey: Key.claudeStatusLine) } }
+    /// The user's prior `statusLine` config (JSON), saved so we can restore it
+    /// when they turn the feature off. nil = they had none.
+    @Published public var savedStatusLine: String? { didSet { defaults.set(savedStatusLine, forKey: Key.savedStatusLine) } }
 
     private init() {
         let d = UserDefaults(suiteName: DorisIdentifiers.appGroup) ?? .standard
@@ -47,6 +55,8 @@ public final class TokenMonitorSettings: ObservableObject {
         self.cursorToken = d.string(forKey: Key.cursorToken) ?? ""
         self.lastCollectAt = d.object(forKey: Key.lastCollectAt) as? Date
         self.claudeWindowCap = d.integer(forKey: Key.claudeCap)
+        self.claudeStatusLineEnabled = d.bool(forKey: Key.claudeStatusLine)
+        self.savedStatusLine = d.string(forKey: Key.savedStatusLine)
     }
 
     public func isEnabled(_ tool: TokenTool) -> Bool { enabledTools.contains(tool) }

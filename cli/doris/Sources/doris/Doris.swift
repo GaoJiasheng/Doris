@@ -15,7 +15,8 @@ struct Doris: AsyncParsableCommand {
             DevicesCommand.self,
             AuthCommand.self,
             SyncCommand.self,
-            InstallCommand.self
+            InstallCommand.self,
+            ClaudeStatuslineCommand.self
         ]
     )
 }
