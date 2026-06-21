@@ -146,55 +146,29 @@ struct MainWindowView: View {
     // MARK: - Detail
 
     private var detail: some View {
-        Group {
-            switch tab {
-            case .today:  MainTodayView(editing: $editingNote, onOpenTokens: { tab = .tokens })
-            case .events: MainEventsList()
-            case .notes:  MainNotesList(editing: $editingNote)
-            case .tokens: MainTokensView()
+        // In-content header (NOT the window toolbar). SwiftUI's toolbar
+        // CENTERS its items in this manually-hosted NavigationSplitView no
+        // matter the placement (.primaryAction bunched left, .principal/lone
+        // .navigation centered) and on macOS 26 wraps them in a "glass" pill
+        // that clipped the DORIS wordmark. So the strip is a plain HStack at
+        // the top of the detail — full control over left / Spacer / right —
+        // and it RESPECTS the title-bar safe area (no `.ignoresSafeArea`), so
+        // it stays clickable: only content pushed *under* the title bar lost
+        // clicks on macOS 26; content below it never did.
+        VStack(spacing: 0) {
+            detailHeader
+            Group {
+                switch tab {
+                case .today:  MainTodayView(editing: $editingNote, onOpenTokens: { tab = .tokens })
+                case .events: MainEventsList()
+                case .notes:  MainNotesList(editing: $editingNote)
+                case .tokens: MainTokensView()
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // The DORIS / tabs / sync / theme strip lives in the window TOOLBAR
-        // (real title-bar controls), not as content under the title bar.
-        // On macOS 26 the title-bar region swallows clicks aimed at content
-        // placed beneath it via `.ignoresSafeArea(.top)`, but genuine toolbar
-        // items (like the sidebar toggle) keep working — and they occupy the
-        // title-bar row itself, so there's no empty band above the content.
-        // Hidden while editing a note so the editor owns the whole pane.
-        // Always shown (even while editing a note) so the title-bar row is
-        // never empty — an empty toolbar left a big blank band above the
-        // note/sub-task editor.
-        // DORIS + tabs on the LEADING edge. The date/sync/theme actions are a
-        // separate trailing NSTitlebarAccessoryViewController (see
-        // MainHeaderActionsView + MainWindowController) — SwiftUI toolbar
-        // placements don't right-align in this manually-hosted
-        // NavigationSplitView (.primaryAction bunched left, .principal
-        // centered), so the only reliable right edge is a native accessory.
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                HStack(spacing: 14) {
-                    Text("DORIS")
-                        .font(.system(size: 15, weight: .heavy, design: .rounded))
-                        .kerning(2)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [CyberPalette.neonPink, CyberPalette.neonCyan],
-                                startPoint: .leading, endPoint: .trailing
-                            )
-                        )
-                        .lineLimit(1)
-                        .fixedSize()
-                    HStack(spacing: 6) {
-                        tabButton(.today, label: L("Today", "今日"), system: "sparkles")
-                        tabButton(.notes, label: L("TODO", "TODO"), system: "checklist")
-                        tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
-                        tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
-                    }
-                }
-            }
-        }
     }
 
     /// Right-pane header: DORIS brand on the left, tab buttons next to
@@ -249,7 +223,7 @@ struct MainWindowView: View {
                     .foregroundStyle(.primary.opacity(0.6))
                     .lineLimit(1)
                     .fixedSize()
-                SyncNowToolbarButton()
+                SyncNowToolbarButton(showsTime: false)
                 ThemeToggleButton()
             }
         }
@@ -272,7 +246,10 @@ struct MainWindowView: View {
         .padding(.trailing, 18)
         // Minimal top padding now that the strip sits just below the title
         // bar (the title-bar height itself is the only gap above it).
-        .padding(.top, 3)
+        // Sits just below the title bar (the title-bar safe area is the only
+        // gap above it). A little top clearance keeps the row from crowding
+        // the traffic-light line.
+        .padding(.top, 8)
         .padding(.bottom, 12)
         .animation(.smooth(duration: 0.18), value: columnVisibility)
     }

@@ -82,24 +82,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         // With it off + the CyberBackground filling behind, the title-bar
         // height blends into the content.
         win.titlebarSeparatorStyle = .none
-        // Header lives in the toolbar (DORIS / tabs / sync / theme). Unified
-        // style keeps it in the title-bar row so there's no extra empty band.
-        win.toolbarStyle = .unified
         win.contentViewController = host
-
-        // Pin the date / sync / theme controls to the title bar's TRAILING
-        // edge via a native titlebar accessory. SwiftUI's `.toolbar`
-        // placements don't right-align in this manually-hosted
-        // NavigationSplitView (`.primaryAction` bunched left next to the tabs,
-        // a lone `.principal` item centered), so the brand + tabs stay in the
-        // SwiftUI toolbar (leading) and the actions live here (trailing).
-        let actionsHost = NSHostingView(rootView: MainHeaderActionsView())
-        actionsHost.frame = NSRect(origin: .zero, size: actionsHost.fittingSize)
-        let actionsVC = NSTitlebarAccessoryViewController()
-        actionsVC.view = actionsHost
-        actionsVC.layoutAttribute = .trailing
-        win.addTitlebarAccessoryViewController(actionsVC)
-
         win.identifier = NSUserInterfaceItemIdentifier("doris-main")
         // Match the previous SwiftUI Window's full-screen behavior — the
         // green title-bar button enters full-screen instead of zoom.
