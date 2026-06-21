@@ -65,16 +65,11 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
             let anchor = AnchorController(modelContainer: container)
             self.anchorController = anchor
             anchor.show()
-            // Auto-expand the dropdown so the user lands on their inbox /
-            // notes immediately at launch — the main window doesn't open
-            // anymore (LSUIElement: true), the dropdown is the primary UI.
-            // Tiny delay lets the avatar window finish its first layout
-            // pass; without it the panel's "burst-out-of-the-avatar"
-            // animation starts from `.zero` and looks broken.
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 250_000_000)
-                anchor.expand()
-            }
+            // No auto-expand at launch. The expanded surface is now the
+            // unified main window (opened on demand from the notch/pet), and
+            // auto-opening it briefly at every launch read as an unwanted
+            // flash of the old dropdown. Doris starts idle in the menu bar /
+            // as the desktop pet; the user clicks to open the window.
 
             // Route banner/fix through the anchor (replaces DynamicNotchKit).
             router.setPresenter(anchor)
@@ -223,6 +218,15 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
             case 29, 82:
                 ZoomSettings.shared.reset()
                 return nil
+            case 13: // 'w' — Cmd-W closes the main window. It's borderless
+                     // (no system close button), so AppKit would otherwise
+                     // just beep. Only act when the main window is key; let
+                     // other windows (e.g. Settings) handle their own Cmd-W.
+                if NSApp.keyWindow?.identifier?.rawValue == "doris-main" {
+                    Task { @MainActor in MainWindowController.shared.closeMainWindow() }
+                    return nil
+                }
+                return event
             default:
                 return event
             }
