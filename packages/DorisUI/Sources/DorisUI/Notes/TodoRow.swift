@@ -168,6 +168,9 @@ public struct TodoRow: View {
                 onMoveUp: onMoveUp,
                 onMoveDown: onMoveDown
             )
+            // Constrain width so the field wraps to the available space (and
+            // reports its multi-line height) instead of growing horizontally.
+            .frame(maxWidth: .infinity, alignment: .leading)
             .onChange(of: note.title) { _, _ in note.updatedAt = Date() }
             #else
             // iOS path is dead code (iOS uses NoteRow) but must compile.
@@ -186,7 +189,10 @@ public struct TodoRow: View {
             .onChange(of: note.title) { _, _ in note.updatedAt = Date() }
             #endif
 
-            Spacer(minLength: 0)
+            // No Spacer: the title field above takes maxWidth .infinity, so
+            // it fills the gap and pushes this trailing cluster to the right
+            // edge (a Spacer here would split the slack with the field and
+            // halve its width, wrapping the text too early).
 
             // Action cluster — hover-only so resting rows stay clean.
             // Sits LEFT of the expand-icon and time so the always-on
@@ -417,32 +423,39 @@ struct TodoTitleField: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
-    func makeNSView(context: Context) -> NSTextField {
-        let tf = NSTextField()
+    func makeNSView(context: Context) -> WrappingTextField {
+        // WrappingTextField (the same self-sizing field the checklist uses):
+        // long titles wrap onto multiple lines and the row grows to fit,
+        // instead of truncating to one line. Enter still fires onSubmit (the
+        // delegate intercepts insertNewline), so multi-line display doesn't
+        // turn into multi-line input.
+        let tf = WrappingTextField()
         tf.isEditable = true
         tf.isSelectable = true
         tf.isBordered = false
         tf.drawsBackground = false
         tf.focusRingType = .none
-        tf.usesSingleLineMode = true
-        tf.lineBreakMode = .byTruncatingTail
-        tf.cell?.wraps = false
-        tf.cell?.isScrollable = true
+        tf.usesSingleLineMode = false
+        tf.maximumNumberOfLines = 0
+        tf.lineBreakMode = .byWordWrapping
+        tf.cell?.wraps = true
+        tf.cell?.isScrollable = false
         tf.font = NSFont.preferredFont(forTextStyle: .subheadline)
         tf.placeholderString = placeholder
         tf.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
         tf.delegate = context.coordinator
         tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
         tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        tf.setContentHuggingPriority(.required, for: .vertical)
         context.coordinator.installArrowMonitor(for: tf)
         return tf
     }
 
-    static func dismantleNSView(_ nsView: NSTextField, coordinator: Coordinator) {
+    static func dismantleNSView(_ nsView: WrappingTextField, coordinator: Coordinator) {
         coordinator.removeArrowMonitor()
     }
 
-    func updateNSView(_ tf: NSTextField, context: Context) {
+    func updateNSView(_ tf: WrappingTextField, context: Context) {
         let c = context.coordinator
         c.parent = self
         // Pin the appearance so `.labelColor` always resolves to the right
