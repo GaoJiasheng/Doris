@@ -37,8 +37,15 @@ public enum QuotaReader {
 
     static func codexWindows() -> [QuotaWindow] {
         let root = integrationsRealHome().appendingPathComponent(".codex/sessions", isDirectory: true)
+        // Only RECENTLY-WRITTEN rollouts: rate_limits from an old CLI session
+        // are stale (the user may be on the Codex desktop app, whose live
+        // limits aren't on disk). Stale data showed "reset weeks ago" and the
+        // wrong %. 6h covers the 5-hour window. This also avoids reading huge
+        // old rollout files (they can be hundreds of MB).
+        let freshCutoff = Date().addingTimeInterval(-6 * 3600)
         let files = JSONLScanner.jsonlFiles(under: root)
             .filter { $0.lastPathComponent.hasPrefix("rollout-") }
+            .filter { (mtime($0) ?? .distantPast) > freshCutoff }
             .sorted { (mtime($0) ?? .distantPast) > (mtime($1) ?? .distantPast) }
         // Newest rollouts first; use the most recent file that has a
         // non-null rate_limits payload.
@@ -58,6 +65,9 @@ public enum QuotaReader {
         let used = (d["used_percent"] as? Double) ?? (d["used_percent"] as? NSNumber)?.doubleValue ?? 0
         let mins = (d["window_minutes"] as? Int) ?? (d["window_minutes"] as? NSNumber)?.intValue ?? 0
         let reset: Date? = (d["resets_at"] as? NSNumber).map { Date(timeIntervalSince1970: $0.doubleValue) }
+        // Skip a window whose reset is already in the past — that means the
+        // data is stale (the window rolled over long ago), so the % is wrong.
+        guard let reset, reset > Date() else { return nil }
         return QuotaWindow(
             toolRaw: tool.rawValue, toolName: tool.displayName,
             label: windowLabel(minutes: mins),
@@ -74,13 +84,22 @@ public enum QuotaReader {
         }
     }
 
-    /// Read a rollout and return the LAST non-null `rate_limits` dict.
+    /// Return the LAST non-null `rate_limits` dict in a rollout. Reads only
+    /// the file's TAIL (rollouts can be hundreds of MB; the latest token_count
+    /// event is near the end), so we never load the whole file into memory.
     private static func lastRateLimits(in file: URL) -> [String: Any]? {
-        guard let data = try? Data(contentsOf: file),
-              let text = String(data: data, encoding: .utf8) else { return nil }
+        guard let fh = try? FileHandle(forReadingFrom: file) else { return nil }
+        defer { try? fh.close() }
+        let size = (try? fh.seekToEnd()) ?? 0
+        let tail: UInt64 = 2_000_000
+        let start = size > tail ? size - tail : 0
+        try? fh.seek(toOffset: start)
+        guard let data = try? fh.readToEnd(), let text = String(data: data, encoding: .utf8) else { return nil }
         var latest: [String: Any]?
         for line in text.split(separator: "\n") {
             guard line.contains("rate_limits") else { continue }
+            // The first line in the tail may be partial → JSON parse fails →
+            // skipped, which is fine; complete lines after it parse normally.
             guard let obj = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
                   let payload = obj["payload"] as? [String: Any],
                   let rl = payload["rate_limits"] as? [String: Any] else { continue }
