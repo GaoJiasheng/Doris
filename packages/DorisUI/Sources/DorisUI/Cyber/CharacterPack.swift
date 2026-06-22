@@ -131,12 +131,19 @@ public struct CharacterPack: Identifiable, Equatable {
     /// Convention: an "iOS App Icon" set named `AppIcon-<id>` compiled into
     /// the catalog (the iOS target sets
     /// `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES`). nil for the
-    /// default girl and any pack without a custom icon (→ primary icon).
+    /// DEFAULT pack (its art IS the primary AppIcon) and any pack without a
+    /// custom icon (→ primary icon).
     public var alternateIconName: String? {
-        (hasCustomIcon && id != "girl") ? "AppIcon-\(id)" : nil
+        (hasCustomIcon && id != CharacterPack.defaultPackID) ? "AppIcon-\(id)" : nil
     }
 
-    /// The always-present built-in. Used as the default selection and as a
+    /// The id of the pack shown by default (and sorted first in the picker).
+    /// The cat set is Doris's primary identity; `girl` stays selectable + is
+    /// the code-level safety fallback. Lives here (a nonisolated struct) so
+    /// non-MainActor call sites like `alternateIconName` can read it.
+    public static let defaultPackID = "cat"
+
+    /// The always-present built-in. Used as a selectable pack and as a
     /// safety net if discovery finds nothing.
     public static let girl = CharacterPack(
         id: "girl",
@@ -181,7 +188,7 @@ public final class CharacterPackStore: ObservableObject {
     private init() {
         let packs = Self.discover()
         self.available = packs
-        let saved = UserDefaults.standard.string(forKey: Self.key) ?? CharacterPack.girl.id
+        let saved = UserDefaults.standard.string(forKey: Self.key) ?? CharacterPack.defaultPackID
         self.selectedID = packs.contains(where: { $0.id == saved }) ? saved : (packs.first?.id ?? CharacterPack.girl.id)
         // Apply the selected pack's theme before any surface renders.
         CyberPalette.activeTheme = (packs.first(where: { $0.id == self.selectedID }) ?? .girl).theme
@@ -294,9 +301,9 @@ public final class CharacterPackStore: ObservableObject {
         if !packs.contains(where: { $0.id == CharacterPack.girl.id }) {
             packs.insert(.girl, at: 0)
         }
-        // Stable order: built-in girl first, then alphabetical.
+        // Stable order: the default pack (cat) first, then alphabetical.
         return packs.sorted {
-            ($0.id == "girl" ? "\u{0}" : $0.displayName) < ($1.id == "girl" ? "\u{0}" : $1.displayName)
+            ($0.id == CharacterPack.defaultPackID ? "\u{0}" : $0.displayName) < ($1.id == CharacterPack.defaultPackID ? "\u{0}" : $1.displayName)
         }
     }
 

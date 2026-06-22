@@ -1,0 +1,15 @@
+{
+  "id": "cat",
+  "displayName": "赛博猫",
+  "displayNameEN": "Cyber Cat",
+  "moods": ["idle", "greeting", "celebrating", "alerted", "listening", "confused", "walking"],
+  "fps": 12,
+  "loopFps": 12,
+  "theme": {
+    "accentPrimary":   { "light": "#2E9FE0", "dark": "#5CC8FF" },
+    "accentSecondary": { "light": "#1AA7C9", "dark": "#74E4FF" },
+    "done":            "#9AA0A6",
+    "backdropTop":     { "light": "#E9F1F8", "dark": "#0E1925" },
+    "backdropBottom":  { "light": "#FBFDFF", "dark": "#05080F" }
+  }
+}

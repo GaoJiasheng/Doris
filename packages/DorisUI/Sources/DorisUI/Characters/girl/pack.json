@@ -1,9 +1,15 @@
 {
   "id": "girl",
-  "displayName": "小姑娘",
-  "displayNameEN": "Doris",
-  "moods": ["idle", "greeting", "alerted", "listening", "celebrating", "walking", "confused"],
-  "fps": 16,
+  "displayName": "赛博·女孩",
+  "displayNameEN": "Cyber Girl",
+  "moods": ["idle", "greeting", "celebrating", "alerted", "listening", "confused", "walking"],
+  "fps": 12,
   "loopFps": 12,
-  "animDirectoryOverride": "HeroAnim"
+  "theme": {
+    "accentPrimary":   { "light": "#0C9B98", "dark": "#2EF0EA" },
+    "accentSecondary": { "light": "#C0398A", "dark": "#FF5CC0" },
+    "done":            { "light": "#14A88C", "dark": "#46E6C2" },
+    "backdropTop":     { "light": "#E7F5F5", "dark": "#0C1018" },
+    "backdropBottom":  { "light": "#FBFEFE", "dark": "#05070C" }
+  }
 }

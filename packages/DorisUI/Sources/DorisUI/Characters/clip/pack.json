@@ -1,0 +1,15 @@
+{
+  "id": "clip",
+  "displayName": "回形针",
+  "displayNameEN": "Clip",
+  "moods": ["idle", "greeting", "celebrating", "alerted", "listening", "confused", "walking"],
+  "fps": 12,
+  "loopFps": 12,
+  "theme": {
+    "accentPrimary":   { "light": "#C28A00", "dark": "#FFD23E" },
+    "accentSecondary": { "light": "#1E88D8", "dark": "#4FB8F5" },
+    "done":            { "light": "#1F9E5A", "dark": "#46D98A" },
+    "backdropTop":     { "light": "#F4F2EA", "dark": "#14161D" },
+    "backdropBottom":  { "light": "#FEFEFB", "dark": "#08090D" }
+  }
+}

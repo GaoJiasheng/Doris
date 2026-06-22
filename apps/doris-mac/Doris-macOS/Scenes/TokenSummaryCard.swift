@@ -20,49 +20,84 @@ struct TokenSummaryCard: View {
 
 private struct TokenSummaryCardInner: View {
     @ObservedObject private var lang = LanguageSettings.shared
+    @ObservedObject private var weather = WeatherViewModel.shared
     @Query(sort: [SortDescriptor(\TokenUsageDaily.day, order: .reverse)])
     private var dailies: [TokenUsageDaily]
     var onTap: () -> Void
 
+    /// Theme-aware accent gradient (adapts per character pack:
+    /// secondary → primary accent).
+    private var accent: LinearGradient {
+        LinearGradient(colors: [CyberPalette.neonCyan, CyberPalette.neonPink],
+                       startPoint: .leading, endPoint: .trailing)
+    }
+
     var body: some View {
         let today = TokenStats.totals(dailies, .today)
 
+        // Borderless glance — no CyberCard box (the Today screen already has
+        // plenty of bordered cards below). A gradient headline number + a soft
+        // icon + a faint gradient hairline read as a light "today" header.
         Button(action: onTap) {
-            CyberCard {
-                HStack(alignment: .center, spacing: 14) {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(CyberPalette.neonCyan)
-                        .frame(width: 26)
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(CyberPalette.neonCyan.opacity(0.10)))
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(L("Token usage · today", "Token 用量 · 今日"))
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.primary.opacity(0.55))
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(TokenFormat.tokens(today.billable))
-                                .font(.system(size: 22, weight: .heavy, design: .rounded))
-                                .foregroundStyle(.primary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(L("TOKEN USAGE · TODAY", "TOKEN 用量 · 今日"))
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary.opacity(0.4))
+                        .tracking(0.6)
+                    HStack(alignment: .firstTextBaseline, spacing: 7) {
+                        Text(TokenFormat.tokens(today.billable))
+                            .font(.system(size: 25, weight: .heavy, design: .rounded))
+                            .foregroundStyle(accent)
+                            .monospacedDigit()
+                        if today.cost > 0 {
+                            Text(TokenFormat.usd(today.cost))
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary.opacity(0.45))
                                 .monospacedDigit()
-                            if today.cost > 0 {
-                                Text(TokenFormat.usd(today.cost))
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(CyberPalette.neonPink)
-                                    .monospacedDigit()
-                            }
                         }
                     }
-
-                    Spacer(minLength: 8)
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.primary.opacity(0.3))
                 }
-                .padding(14)
+
+                Spacer(minLength: 8)
+
+                // Weather glance — fills the otherwise-empty right side
+                // (same shared snapshot the sidebar avatar uses).
+                if let w = weather.snapshot {
+                    HStack(spacing: 7) {
+                        Image(systemName: w.symbolName)
+                            .font(.system(size: 16))
+                            .symbolRenderingMode(.multicolor)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("\(Int(w.temperatureC.rounded()))°")
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(.primary.opacity(0.85))
+                            Text(w.locationName)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.primary.opacity(0.4))
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.trailing, 4)
+                }
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.primary.opacity(0.25))
             }
+            .padding(.horizontal, 2)
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onAppear { weather.start() }
         .help(L("Open token dashboard", "打开 Token 看板"))
     }
 }

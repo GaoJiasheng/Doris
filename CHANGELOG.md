@@ -6,6 +6,35 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.4.0 — 2026-06-22
+
+Swappable characters, a lighter Today, and a trimmer token monitor.
+
+### Added
+
+- **Swappable characters.** Three full character packs — **赛博猫 / Cyber Cat**
+  (the new default), **赛博·女孩 / Cyber Girl**, and **回形针 / Clip** — each ships a
+  seven-mood animated avatar, a menu-bar / notch mark, an app icon, and its own
+  light/dark color theme. Switch in Settings → Appearance → Character; the
+  avatar, notch mark, Dock icon, and theme all change together.
+
+### Changed
+
+- **Today token-usage glance** is now a borderless gradient headline instead of
+  a boxed card, with the local weather — condition, temperature, location —
+  filling the right side.
+- **Main window:** the avatar / detail split divider is draggable to resize the
+  panes, and window-dragging is scoped to the header strip.
+- **App icons** (macOS + iOS) now show the default Cyber Cat.
+
+### Removed
+
+- **Subscription-quota estimate.** The remaining-% / 5-hour-cap estimate and the
+  Claude Code status-line capture are gone — they were never reliable. Token
+  *usage* tracking (consumption + cost, by tool and model) is unchanged.
+
+---
+
 ## 1.3.0 — 2026-06-21
 
 Token usage monitor + a unified, borderless main window.

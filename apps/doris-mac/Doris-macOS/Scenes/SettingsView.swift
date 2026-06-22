@@ -108,37 +108,6 @@ struct SettingsView: View {
                 }
             }
 
-            Section(header: Text(L("Quota", "额度"))) {
-                Toggle(isOn: Binding(
-                    get: { tokenSettings.claudeStatusLineEnabled },
-                    set: { on in
-                        tokenSettings.claudeStatusLineEnabled = on
-                        do {
-                            if on { try ClaudeStatusLineInstaller.install() }
-                            else  { try ClaudeStatusLineInstaller.uninstall() }
-                        } catch {
-                            tokenSettings.claudeStatusLineEnabled = !on   // revert on failure
-                        }
-                    })) {
-                    Text(L("Real Claude quota via status line", "用状态栏读取 Claude 真实额度"))
-                }
-                Text(L("Sets Doris as your Claude Code status line to capture the real 5h/weekly limits (your previous status line is restored when off). Open a Claude Code session for it to populate.",
-                       "把 Doris 设为你的 Claude Code 状态栏以读取真实 5h/每周额度(关闭时恢复你原来的)。开一个 Claude Code 会话后才会有数据。"))
-                    .font(.caption).foregroundStyle(.secondary)
-                LabeledContent(L("Codex", "Codex")) {
-                    Text(L("real (from Codex rate limits)", "真实(来自 Codex 限额)"))
-                        .foregroundStyle(.secondary).font(.caption)
-                }
-                TextField(L("Claude 5h cap (tokens, 0 = usage only)",
-                            "Claude 5 小时额度(tokens,0=仅显示用量)"),
-                          value: Binding(get: { tokenSettings.claudeWindowCap },
-                                         set: { tokenSettings.claudeWindowCap = max(0, $0) }),
-                          format: .number)
-                Text(L("Anthropic publishes no exact token cap, so Claude's % is an estimate against the cap you set.",
-                       "Anthropic 未公布确切 token 上限,Claude 的百分比是按你设的上限估算。"))
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-
             Section {
                 Button(L("Rescan now", "立即扫描")) {
                     TokenCollectionService.shared.triggerNow()

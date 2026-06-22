@@ -105,11 +105,13 @@ struct AnchorAvatarView: View {
     @ViewBuilder
     private var avatarArt: some View {
         if let mark = packStore.notchImage() {
-            // Pixel-art mark: crisp nearest-neighbor, square (no circle crop
-            // / no head crop — the mark is already composed).
+            // Composed pack mark, square (no circle / head crop — already
+            // composed). Smooth interpolation: these marks are photographic
+            // (e.g. the cat's head), not pixel art, so nearest-neighbor would
+            // look jagged when scaled down to the menu-bar size.
             Image(nsImage: mark)
                 .resizable()
-                .interpolation(.none)
+                .interpolation(.high)
                 .scaledToFit()
                 .frame(width: size, height: size)
         } else if let nsImage = bundledAvatarImage() {

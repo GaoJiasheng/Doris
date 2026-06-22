@@ -101,18 +101,9 @@ struct MainTodayView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
 
-                // Token-usage glance — leads the Today content; tap to open
-                // the full Tokens dashboard. Placed in an IDENTICAL adaptive
-                // grid (one cell, same GridItem as the pinned grid below) so
-                // it's exactly one card wide and its box lines up pixel-perfect
-                // with the pinned cards — not half the whole window.
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 270), spacing: 10)],
-                    alignment: .leading,
-                    spacing: 10
-                ) {
-                    TokenSummaryCard(onTap: onOpenTokens)
-                }
+                // Token-usage glance — a borderless gradient headline that
+                // leads the Today content; tap to open the full dashboard.
+                TokenSummaryCard(onTap: onOpenTokens)
 
                 // The date is rendered up in `MainWindowView`'s detail
                 // header (next to the tab strip, only while Today is

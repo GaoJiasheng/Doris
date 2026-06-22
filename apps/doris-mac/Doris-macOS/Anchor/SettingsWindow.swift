@@ -125,6 +125,9 @@ private struct AppearanceSettingsView: View {
     @ObservedObject var integrations = IntegrationsRegistry.shared
     @ObservedObject var avatarSettings = AvatarSettings.shared
     @ObservedObject var desktopPanel = DesktopPanelSettings.shared
+    /// Drives the character-pack picker in `appearanceSection`. Switching a
+    /// pack re-skins the avatar, portrait, notch mark, app icon, and theme.
+    @ObservedObject var packStore = CharacterPackStore.shared
     /// Toggled by the "Install CLI…" button on a .missingCLI integration
     /// row — presents the InstallCLIWizardView as a sheet so the user
     /// can finish the wizard without leaving Settings. On dismiss we
@@ -600,6 +603,31 @@ private struct AppearanceSettingsView: View {
             Text(L("Appearance", "外观"))
                 .font(.headline)
                 .foregroundStyle(.primary)
+
+            // Character-pack picker — shown once more than the built-in pack
+            // is installed. Switching re-skins avatar / portrait / notch mark
+            // / app icon / color theme live.
+            if packStore.available.count > 1 {
+                HStack {
+                    Text(L("Character", "形象"))
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Picker("", selection: $packStore.selectedID) {
+                        ForEach(packStore.available) { pack in
+                            Text(L(pack.displayNameEN, pack.displayName)).tag(pack.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: 180)
+                }
+                Text(L("Pick the character Doris uses — animation, portrait, menu-bar mark, and color theme switch with it.",
+                       "选择桌宠形象 —— 动画、头像、刘海图标与配色主题随之切换。"))
+                    .font(.caption)
+                    .foregroundStyle(.primary.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
+                Divider().overlay(Color.primary.opacity(0.08))
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
