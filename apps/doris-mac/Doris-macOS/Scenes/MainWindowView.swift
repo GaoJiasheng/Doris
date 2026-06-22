@@ -1,7 +1,20 @@
 import SwiftUI
 import SwiftData
+import AppKit
 import DorisCore
 import DorisUI
+
+/// A transparent region that drags the (borderless) window — used behind the
+/// header strip so it acts like a title bar. The window has
+/// `isMovableByWindowBackground = false`, so the split divider + content keep
+/// their own drag/resize behavior; only this region moves the window.
+private struct WindowDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { DragNSView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+    private final class DragNSView: NSView {
+        override func mouseDown(with event: NSEvent) { window?.performDrag(with: event) }
+    }
+}
 
 /// "Deep work" main window. Same cyber vocabulary as the dropdown panel —
 /// adaptive backdrop (dark or light, controlled by `ThemeSettings`), the
@@ -117,7 +130,10 @@ struct MainWindowView: View {
     private var sidebar: some View {
         AvatarHero(compact: true, showWeather: true, selfChrome: false)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .frame(minWidth: 240)
+            // Resizable column: gives the split divider a drag range so the
+            // user can re-proportion avatar ↔ content (was non-resizable, so
+            // dragging the divider just moved the window).
+            .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 460)
             .background(
                 LinearGradient(
                     colors: [
@@ -284,6 +300,11 @@ struct MainWindowView: View {
         // small top gutter so the row sits comfortably at the very top.
         .padding(.top, 12)
         .padding(.bottom, 12)
+        // This header strip IS the title bar: dragging its empty areas moves
+        // the window. (The window is no longer movable-by-background, so the
+        // split divider resizes instead of moving the window.) Buttons sit on
+        // top and keep their clicks.
+        .background(WindowDragArea())
     }
 
     /// Capsule-style tab button. Selected = cyan-accented, unselected =

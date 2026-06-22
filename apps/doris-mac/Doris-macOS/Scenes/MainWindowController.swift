@@ -105,10 +105,13 @@ final class MainWindowController: NSObject, NSWindowDelegate {
             defer: true
         )
         win.title = "Doris"
-        // Drag the window by its (non-control) background; resize from edges
+        // NOT movable-by-background: that made dragging the split divider move
+        // the whole window instead of resizing the panes. Window dragging is
+        // now scoped to the header strip (MainWindowView's WindowDragArea),
+        // leaving the divider free to resize. Edge-resize still works
         // (.resizable). Clear + non-opaque so the SwiftUI content's own
         // rounded backdrop defines the visible window shape + shadow.
-        win.isMovableByWindowBackground = true
+        win.isMovableByWindowBackground = false
         win.backgroundColor = .clear
         win.isOpaque = false
         win.hasShadow = true
