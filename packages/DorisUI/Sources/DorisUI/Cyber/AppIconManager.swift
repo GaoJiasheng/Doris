@@ -5,46 +5,33 @@ import AppKit
 import UIKit
 #endif
 
-/// Applies the selected character pack's **app icon** — the desktop / Dock /
-/// home-screen icon, distinct from the in-app avatar.
+/// Manages the app's **launcher icon** (Dock / home-screen), distinct from
+/// the in-app avatar.
 ///
-/// The two platforms work very differently:
-///
-/// - **macOS** — fully runtime. We swap the running **Dock tile** via
-///   `NSApp.applicationIconImage` using the pack's `icon.png`. Setting it to
-///   `nil` restores the bundled icon. (The file's Finder icon is fixed at
-///   build time and can't change per-user; the Dock tile is what users see
-///   while the app runs.)
-///
-/// - **iOS** — compile-time. iOS only allows switching to **alternate icons
-///   that were bundled into the asset catalog at build time** (the iOS target
-///   sets `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES`, and each
-///   icon-bearing pack adds an "iOS App Icon" set named `AppIcon-<id>`). At
-///   runtime we call `setAlternateIconName("AppIcon-<id>")` (or `nil` for the
-///   primary icon). If a pack's alternate isn't bundled, the call errors and
-///   we no-op — so this is safe to ship before any pack icons exist.
-///   Note: iOS shows a system "You have changed the icon" alert on switch —
-///   that's unavoidable OS behavior.
+/// The icon is intentionally FIXED to the bundled build-time icon — the
+/// default Cyber Cat on a white background — for every character pack.
+/// Switching a character changes the avatar, notch mark, and color theme,
+/// but the launcher icon stays the cat. So `apply()` just restores the
+/// build-time icon (macOS: `applicationIconImage = nil`; iOS: primary icon)
+/// regardless of which pack is passed.
 @MainActor
 public enum AppIconManager {
 
-    /// Apply `pack`'s app icon. Safe to call repeatedly; on iOS it no-ops
-    /// when the desired icon already matches the current one.
+    /// The app icon is FIXED to the bundled build-time icon (the default
+    /// Cyber Cat, white background) for every pack — picking a character
+    /// re-skins the avatar / notch / theme but NOT the Dock / home-screen
+    /// icon. `pack` is ignored; we always restore the build-time icon.
+    /// Safe to call repeatedly.
     public static func apply(_ pack: CharacterPack) {
         #if os(macOS)
-        // nil → AppKit restores the bundle icon for packs without one.
-        NSApp.applicationIconImage = CharacterPackStore.shared.appIconImage(for: pack)
+        // nil → AppKit shows the bundled (build-time) icon, i.e. the cat.
+        NSApp.applicationIconImage = nil
         #else
-        guard UIApplication.shared.supportsAlternateIcons else { return }
-        let desired = pack.alternateIconName            // nil = primary icon
-        guard desired != UIApplication.shared.alternateIconName else { return }
-        UIApplication.shared.setAlternateIconName(desired) { error in
-            if let error {
-                #if DEBUG
-                print("[AppIconManager] alternate icon \(desired ?? "primary") failed: \(error.localizedDescription)")
-                #endif
-            }
-        }
+        // Always the primary (build-time) icon; only reset if an alternate
+        // was somehow set, to avoid a needless system "icon changed" alert.
+        guard UIApplication.shared.supportsAlternateIcons,
+              UIApplication.shared.alternateIconName != nil else { return }
+        UIApplication.shared.setAlternateIconName(nil)
         #endif
     }
 
