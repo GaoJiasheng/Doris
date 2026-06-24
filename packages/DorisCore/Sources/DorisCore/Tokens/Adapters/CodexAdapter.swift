@@ -33,7 +33,6 @@ public struct CodexAdapter: TokenSourceAdapter {
 
         var samples: [TokenSample] = []
         var modelByPath: [String: String] = [:]
-        var seqByPath: [String: Int] = [:]
 
         let newOffsets = JSONLScanner.scanNewLines(files: files, offsets: offsets) { path, data in
             guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
@@ -59,15 +58,23 @@ public struct CodexAdapter: TokenSourceAdapter {
             let uncachedInput = max(0, inputAll - cached)
             guard uncachedInput + cached + output + reasoning > 0 else { return }
 
-            let seq = (seqByPath[path] ?? 0)
-            seqByPath[path] = seq + 1
+            // Stable, content-based dedup key. `total_token_usage.total_tokens`
+            // is cumulative + monotonic, so it's unique per non-zero turn and
+            // survives incremental re-scans. The OLD key used a per-collect
+            // sequence number (`seq`) that reset every collect — so re-scanning
+            // a still-growing session produced colliding keys and the new turns
+            // were silently dropped as "duplicates" (only the first few turns of
+            // long sessions ever got recorded; e.g. a 24M-token session showed
+            // ~0.6M). Timestamp tiebreak guards a missing total_token_usage.
+            let cumTotal = (info["total_token_usage"] as? [String: Any])?["total_tokens"] as? Int ?? 0
+            let file = URL(fileURLWithPath: path).lastPathComponent
             let sessionId = (modelByPath[path] != nil) ? URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent : ""
             let tsStr = (obj["timestamp"] as? String) ?? ""
             let ts = iso.date(from: tsStr) ?? isoPlain.date(from: tsStr) ?? Date()
 
             samples.append(TokenSample(
                 tool: .codex, model: modelByPath[path] ?? "codex", sessionId: sessionId,
-                dedupKey: "codex:\(URL(fileURLWithPath: path).lastPathComponent)#\(seq)",
+                dedupKey: "codex:\(file)#\(cumTotal):\(tsStr)",
                 inputTokens: uncachedInput, outputTokens: output,
                 cacheCreateTokens: 0, cacheReadTokens: cached,
                 reasoningTokens: reasoning, serviceTier: nil, ts: ts))

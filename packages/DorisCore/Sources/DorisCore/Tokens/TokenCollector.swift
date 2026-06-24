@@ -2,6 +2,7 @@
 
 import Foundation
 import SwiftData
+import DorisIPC
 
 /// Runs the enabled adapters, deduplicates, and folds new samples into the
 /// raw-event table + daily rollups. Builds its own `ModelContext` so it can
@@ -20,6 +21,27 @@ public final class TokenCollector: @unchecked Sendable {
     @discardableResult
     public func collect(tools: Set<TokenTool>) -> Summary {
         let ctx = ModelContext(container)
+
+        // ── One-time fix (codexDedupFixV2) ──────────────────────────────
+        // The Codex dedup key used a per-collect sequence number that reset
+        // every collect, so re-scanning a still-growing session produced
+        // colliding keys and the new turns were dropped as "duplicates" — only
+        // the first few turns of long sessions were ever recorded (a 24M-token
+        // session showed ~0.6M). The key is now content-stable; wipe the old
+        // codex rows + reset its ingest cursor so the next scan re-reads every
+        // codex rollout from the top and recovers the lost history.
+        let mdefaults = UserDefaults(suiteName: DorisIdentifiers.appGroup) ?? .standard
+        let migFlag = "doris.tokens.codexDedupFixV2"
+        if !mdefaults.bool(forKey: migFlag) {
+            let codexRaw = TokenTool.codex.rawValue
+            try? ctx.delete(model: TokenUsageEvent.self, where: #Predicate { $0.toolRaw == codexRaw })
+            try? ctx.delete(model: TokenUsageDaily.self, where: #Predicate { $0.toolRaw == codexRaw })
+            var stFd = FetchDescriptor<TokenIngestState>(predicate: #Predicate { $0.sourceId == codexRaw })
+            stFd.fetchLimit = 1
+            if let st = try? ctx.fetch(stFd).first { ctx.delete(st) }
+            try? ctx.save()
+            mdefaults.set(true, forKey: migFlag)
+        }
 
         // Existing dedup keys (cross-run dedup — resumed sessions re-emit old
         // requestIds). propertiesToFetch keeps this light.
