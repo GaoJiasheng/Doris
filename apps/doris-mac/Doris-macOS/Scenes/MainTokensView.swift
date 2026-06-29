@@ -83,10 +83,12 @@ private struct MainTokensInner: View {
                         Text(TokenFormat.tokens(t.billable))
                             .font(.system(size: 19, weight: .heavy, design: .rounded))
                             .monospacedDigit()
+                            .lineLimit(1).minimumScaleFactor(0.5)
                         Text(TokenFormat.usd(t.cost))
                             .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundStyle(CyberPalette.neonPink)
                             .monospacedDigit()
+                            .lineLimit(1).minimumScaleFactor(0.5)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
@@ -161,7 +163,8 @@ private struct MainTokensInner: View {
                                 .font(.system(size: 12, weight: .semibold, design: .rounded)).monospacedDigit()
                             Text(TokenFormat.usd(t.cost))
                                 .font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
-                                .frame(width: 56, alignment: .trailing)
+                                .lineLimit(1).minimumScaleFactor(0.6)
+                                .frame(width: 76, alignment: .trailing)
                         }
                         GeometryReader { geo in
                             Capsule()
@@ -198,7 +201,8 @@ private struct MainTokensInner: View {
                             .frame(width: 64, alignment: .trailing)
                         Text(TokenFormat.usd(t.cost))
                             .font(.system(size: 11)).foregroundStyle(CyberPalette.neonPink).monospacedDigit()
-                            .frame(width: 56, alignment: .trailing)
+                            .lineLimit(1).minimumScaleFactor(0.6)
+                            .frame(width: 76, alignment: .trailing)
                     }
                 }
             }
