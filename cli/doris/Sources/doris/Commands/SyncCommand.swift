@@ -10,7 +10,7 @@ struct SyncCommand: AsyncParsableCommand {
 
     func run() async throws {
         let request = IPCRequest(kind: .sync, payload: .sync)
-        try? IPCDirectory.ensureDirectories()
+        try? IPCDirectory.ensureIPCDirectories()
         try IPCWriter.enqueue(request)
         IPCWriter.kick()
         if !AppLauncher.isRunning() { _ = AppLauncher.launchIfNeeded() }

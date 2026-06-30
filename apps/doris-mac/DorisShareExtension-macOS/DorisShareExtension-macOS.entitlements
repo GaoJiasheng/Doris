@@ -8,6 +8,14 @@
     <array>
         <string>group.com.gavin.doris.shared</string>
     </array>
+    <!-- The CLI<->app IPC inbox moved to ~/.doris (out of the App-Group
+         container) to avoid macOS's "wants to access other apps' data"
+         prompt; this extension enqueues shares to that inbox, so it needs
+         the same home-relative-path exception. -->
+    <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+    <array>
+        <string>/.doris/</string>
+    </array>
     <key>keychain-access-groups</key>
     <array>
         <string>$(AppIdentifierPrefix)group.com.gavin.doris.shared</string>

@@ -14,13 +14,17 @@
     <true/>
     <!-- Integration registration writes the user's real ~/.claude
          (Claude Code Stop hook) and ~/.codex (Codex notify dispatcher).
-         A sandboxed app's home is its container, so without these the
-         "Register" buttons silently wrote into the jail. Allowed for
-         Developer-ID distribution (App Store would scrutinize these). -->
+         ~/.doris holds the CLI<->app IPC inbox — moved out of the App-Group
+         container so the Claude/Codex `doris notify` hooks (run by those CLIs)
+         don't trip macOS's "wants to access other apps' data" prompt on every
+         run. A sandboxed app's home is its container, so without these the
+         writes land in the jail. Allowed for Developer-ID distribution
+         (App Store would scrutinize these). -->
     <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
     <array>
         <string>/.codex/</string>
         <string>/.claude/</string>
+        <string>/.doris/</string>
     </array>
     <key>com.apple.security.network.client</key>
     <true/>

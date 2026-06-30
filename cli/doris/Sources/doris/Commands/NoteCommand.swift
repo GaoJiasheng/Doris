@@ -29,7 +29,7 @@ struct NoteCommand: AsyncParsableCommand {
             let payload = IPCNoteAddPayload(title: title, body: resolvedBody, folderName: folder, tags: tags)
             let request = IPCRequest(kind: .noteAdd, payload: .noteAdd(payload))
 
-            try? IPCDirectory.ensureDirectories()
+            try? IPCDirectory.ensureIPCDirectories()
             do {
                 try IPCWriter.enqueue(request)
                 IPCWriter.kick()

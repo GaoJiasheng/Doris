@@ -55,7 +55,7 @@ struct NotifyCommand: AsyncParsableCommand {
         let request = IPCRequest(kind: .notify, payload: .notify(payload))
 
         do {
-            try IPCDirectory.ensureDirectories()
+            try IPCDirectory.ensureIPCDirectories()
             try IPCWriter.enqueue(request)
             IPCWriter.kick()
         } catch {

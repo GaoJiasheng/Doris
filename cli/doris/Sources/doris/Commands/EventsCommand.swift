@@ -24,7 +24,7 @@ struct EventsCommand: AsyncParsableCommand {
                 limit: limit
             )
             let request = IPCRequest(kind: .eventsList, payload: .eventsList(payload))
-            try? IPCDirectory.ensureDirectories()
+            try? IPCDirectory.ensureIPCDirectories()
             do {
                 try IPCWriter.enqueue(request)
                 IPCWriter.kick()
@@ -48,7 +48,7 @@ struct EventsCommand: AsyncParsableCommand {
         func run() async throws {
             guard let uuid = UUID(uuidString: id) else { dieUsage("doris: invalid event id") }
             let request = IPCRequest(kind: .eventsDismiss, payload: .eventsDismiss(messageID: uuid))
-            try? IPCDirectory.ensureDirectories()
+            try? IPCDirectory.ensureIPCDirectories()
             try IPCWriter.enqueue(request)
             IPCWriter.kick()
             print("doris: dismiss queued")
@@ -61,7 +61,7 @@ struct EventsCommand: AsyncParsableCommand {
         func run() async throws {
             guard let uuid = UUID(uuidString: id) else { dieUsage("doris: invalid event id") }
             let request = IPCRequest(kind: .eventsDone, payload: .eventsDone(messageID: uuid))
-            try? IPCDirectory.ensureDirectories()
+            try? IPCDirectory.ensureIPCDirectories()
             try IPCWriter.enqueue(request)
             IPCWriter.kick()
             print("doris: done queued")
