@@ -105,6 +105,18 @@ final class StickyPanel: NSPanel {
     var onFrameChanged: ((CGRect) -> Void)?
     var onClosed: (() -> Void)?
 
+    /// When true (desktop panel, "always on top" OFF), a click "peeks" the
+    /// panel above normal windows by raising it to `.floating`, and it
+    /// recedes to `.normal` when the user next clicks outside it. A level-3
+    /// window sits above every level-0 window regardless of which app is
+    /// active, so no focus-stealing activation is needed. Left false for
+    /// sticky notes and for the always-on-top case (permanently `.floating`).
+    var raisesToFrontOnClick = false
+    /// Global click monitor installed while a peeked panel is floated; a
+    /// click anywhere OUTSIDE our windows recedes it. (Global monitors never
+    /// see clicks inside our own windows, so reading/editing keeps it up.)
+    private var peekClickMonitor: Any?
+
     init(contentViewController: NSViewController) {
         super.init(
             contentRect: NSRect(origin: .zero, size: StickyStore.defaultSize),
@@ -142,6 +154,53 @@ final class StickyPanel: NSPanel {
     // the title / checklist text fields are editable.
     override var canBecomeKey: Bool { true }
 
+    // "Peek" a not-always-on-top panel above normal windows on click, then
+    // recede when the user clicks elsewhere. `sendEvent` sees the click
+    // before the content view consumes it (we don't swallow it, so the
+    // button / field underneath still gets it).
+    override func sendEvent(_ event: NSEvent) {
+        if raisesToFrontOnClick, event.type == .leftMouseDown {
+            peekToFront()
+        }
+        super.sendEvent(event)
+    }
+
+    /// Float the panel above all normal-level windows. Codex / Lark / WeChat
+    /// are level-0 windows, so raising to level-3 `.floating` clears them
+    /// purely by window level — no `NSApp.activate` (which, on a
+    /// non-activating panel, bounced focus and dropped the panel right back).
+    /// Then watch for a click elsewhere to recede.
+    private func peekToFront() {
+        level = .floating
+        orderFrontRegardless()
+        guard peekClickMonitor == nil else { return }
+        peekClickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        ) { [weak self] _ in
+            self?.recedeFromPeek()
+        }
+    }
+
+    /// Drop back to `.normal` once the user clicks outside the panel.
+    private func recedeFromPeek() {
+        if let m = peekClickMonitor { NSEvent.removeMonitor(m); peekClickMonitor = nil }
+        if raisesToFrontOnClick { level = .normal }
+    }
+
+    /// Controller entry point for the "always on top" toggle. ON → permanent
+    /// `.floating`; OFF → start at `.normal`, peeking on click. Either way,
+    /// cancel any in-progress peek so a stale monitor can't fight the toggle.
+    func applyAlwaysOnTop(_ on: Bool) {
+        raisesToFrontOnClick = !on
+        if let m = peekClickMonitor { NSEvent.removeMonitor(m); peekClickMonitor = nil }
+        level = on ? .floating : .normal
+    }
+
     @objc private func frameChanged() { onFrameChanged?(frame) }
     @objc private func willClose() { onClosed?() }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        if let m = peekClickMonitor { NSEvent.removeMonitor(m) }
+    }
 }

@@ -26,11 +26,20 @@ final class DesktopPanelController {
             return
         }
         let container = DorisRuntime.shared.container
-        let root = DesktopPanelView(onClose: { [weak self] in self?.hide() })
-            .modelContainer(container)
+        let root = DesktopPanelView(
+            onClose: { [weak self] in self?.hide() },
+            onAlwaysOnTopChanged: { [weak self] on in
+                self?.panel?.applyAlwaysOnTop(on)
+            }
+        )
+        .modelContainer(container)
         let hosting = NSHostingController(rootView: root)
         let p = StickyPanel(contentViewController: hosting)
         p.setContentSize(NSSize(width: 290, height: 380))
+        // Honor the saved always-on-top preference. StickyPanel defaults
+        // to `.floating` (the alwaysOnTop == true case); drop to `.normal`
+        // when the user turned it off so the panel can be covered.
+        p.applyAlwaysOnTop(DesktopPanelSettings.shared.alwaysOnTop)
 
         let saved = DesktopPanelSettings.shared.position
         if saved == .zero {
@@ -48,7 +57,12 @@ final class DesktopPanelController {
 
         p.onFrameChanged = { rect in DesktopPanelSettings.shared.position = rect.origin }
         p.onClosed = { [weak self] in
-            DesktopPanelSettings.shared.visible = false
+            // Only clear `panel` here. Do NOT persist visible=false: this
+            // fires on app termination too (windows close on quit), which
+            // would stop the panel from restoring on the next launch. The
+            // explicit close (X button → hide()) owns the visible=false and
+            // nils this handler before closing, so we never lose the panel
+            // just because the app quit / was relaunched for an update.
             self?.panel = nil
         }
         panel = p

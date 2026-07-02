@@ -14,9 +14,18 @@ import DorisUI
 /// fill bar, overdue-red due dates, a count chip in the header.
 struct DesktopPanelView: View {
     let onClose: () -> Void
+    /// Push the "always on top" toggle to the hosting NSPanel's window
+    /// level live — the controller owns the panel, the view only knows
+    /// the setting. Opacity is applied in-view, so it needs no hook.
+    var onAlwaysOnTopChanged: (Bool) -> Void = { _ in }
     @Environment(\.modelContext) private var ctx
     @ObservedObject private var theme = ThemeSettings.shared
     @ObservedObject private var lang = LanguageSettings.shared
+    @ObservedObject private var panelSettings = DesktopPanelSettings.shared
+    /// Inline controls strip (opacity + always-on-top) toggled from the
+    /// header. Inline rather than a popover: popovers on a non-activating
+    /// panel are unreliable, and an inline strip can host a live slider.
+    @State private var showControls = false
 
     // 长期 violet — same accent the main Today view uses for the bucket.
     private let longTermViolet = Color(red: 0.62, green: 0.51, blue: 1.0)
@@ -65,10 +74,14 @@ struct DesktopPanelView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(panelBackground)
+        // Only the background + edge fade with the opacity slider; the
+        // content (tasks, controls) stays fully opaque so a see-through
+        // panel is still readable and the slider never fades itself out.
+        .background(panelBackground.opacity(panelSettings.opacity))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(CyberPalette.dimPanelStroke, lineWidth: 0.9)
+                .opacity(panelSettings.opacity)
         )
         .preferredColorScheme(theme.mode.colorScheme)
     }
@@ -76,6 +89,7 @@ struct DesktopPanelView: View {
     private var dashboard: some View {
         VStack(alignment: .leading, spacing: 9) {
             header
+            if showControls { controlsStrip }
             Divider().overlay(Color.primary.opacity(0.08))
 
             if total == 0 {
@@ -130,6 +144,16 @@ struct DesktopPanelView: View {
                     .padding(.vertical, 1.5)
                     .background(Capsule().fill(CyberPalette.neonCyan.opacity(0.16)))
             }
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { showControls.toggle() }
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(showControls ? CyberPalette.neonCyan
+                                                  : CyberPalette.neonCyan.opacity(0.55))
+            }
+            .buttonStyle(.plain)
+            .help(L("Panel options", "面板选项"))
             Button { AppCommands.openMainWindow() } label: {
                 Image(systemName: "macwindow")
                     .font(.system(size: 11, weight: .semibold))
@@ -145,6 +169,45 @@ struct DesktopPanelView: View {
             .buttonStyle(.plain)
             .help(L("Hide desktop panel", "隐藏桌面面板"))
         }
+    }
+
+    // MARK: Controls (opacity + always-on-top)
+
+    private var controlsStrip: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Toggle(isOn: Binding(
+                get: { panelSettings.alwaysOnTop },
+                set: { on in
+                    panelSettings.alwaysOnTop = on   // persist
+                    onAlwaysOnTopChanged(on)         // apply to the window live
+                }
+            )) {
+                Label(L("Always on top", "总在最前"), systemImage: "pin.fill")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .tint(CyberPalette.neonPink)
+
+            HStack(spacing: 8) {
+                Image(systemName: "circle.lefthalf.filled")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                Slider(value: $panelSettings.opacity,
+                       in: DesktopPanelSettings.minOpacity...1.0)
+                    .controlSize(.mini)
+                    .tint(CyberPalette.neonCyan)
+                Text("\(Int((panelSettings.opacity * 100).rounded()))%")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 32, alignment: .trailing)
+            }
+        }
+        .padding(9)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.primary.opacity(0.06))
+        )
     }
 
     // MARK: Section
