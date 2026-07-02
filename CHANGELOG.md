@@ -6,6 +6,34 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.5.0 — 2026-07-02
+
+A hands-on desktop panel, plus the fixes that landed after 1.4.0.
+
+### Added
+
+- **The desktop panel is now interactive.** Tap a task's title to open it in
+  place and edit its sub-tasks and text (the row was previously read-only
+  apart from the done circle). A new control in the panel header adds an
+  **opacity** slider (fades just the background, so tasks stay readable) and
+  an **always-on-top** toggle. With always-on-top off, clicking the panel
+  "peeks" it above other windows and it recedes when you click away.
+
+### Fixed
+
+- **Desktop panel no longer disappears** after the app relaunches or updates
+  (closing it on quit was wrongly treated as "hidden by the user").
+- **App icon** is always the default Cyber Cat on macOS (Dock) and iOS,
+  regardless of the selected character pack.
+- **Cross-mood avatar alignment** calibrated for every character pack, so the
+  avatar no longer shifts position when it switches moods.
+- **Codex token usage** no longer under-counts long sessions — the dedup key
+  is now content-stable, with a one-time re-scan to recover lost history.
+- **Tokens dashboard** keeps the cost column on a single line.
+- Removed the recurring macOS "Doris wants to access data from other apps"
+  prompt on Claude / Codex task completion (the CLI↔app inbox moved out of
+  the App-Group container to `~/.doris`).
+
 ## 1.4.0 — 2026-06-22
 
 Swappable characters, a lighter Today, and a trimmer token monitor.
