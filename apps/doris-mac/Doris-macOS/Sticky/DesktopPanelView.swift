@@ -48,7 +48,32 @@ struct DesktopPanelView: View {
 
     private var total: Int { regularPinned.count + longTermNotes.count + todayNotes.count }
 
+    /// Set when the user taps a task to edit it. Swaps the whole panel to
+    /// an in-place `InlineNoteEditor` — the SAME full-pane editor the notch
+    /// dropdown (`AnchorView`) uses — since that's the only surface where a
+    /// note's sub-tasks / text can actually be changed. The panel is a
+    /// key-capable `StickyPanel`, so the editor's text fields are editable.
+    @State private var editingNote: Note?
+
     var body: some View {
+        Group {
+            if let editingNote {
+                InlineNoteEditor(note: editingNote) { self.editingNote = nil }
+                    .padding(6)
+            } else {
+                dashboard
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(panelBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(CyberPalette.dimPanelStroke, lineWidth: 0.9)
+        )
+        .preferredColorScheme(theme.mode.colorScheme)
+    }
+
+    private var dashboard: some View {
         VStack(alignment: .leading, spacing: 9) {
             header
             Divider().overlay(Color.primary.opacity(0.08))
@@ -75,13 +100,6 @@ struct DesktopPanelView: View {
             }
         }
         .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(panelBackground)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(CyberPalette.dimPanelStroke, lineWidth: 0.9)
-        )
-        .preferredColorScheme(theme.mode.colorScheme)
     }
 
     // MARK: Header
@@ -170,18 +188,31 @@ struct DesktopPanelView: View {
                                                       : AnyShapeStyle(tint))
             }
             .buttonStyle(.plain)
+            .help(note.isCompleted ? L("Mark not done", "标为未完成")
+                                   : L("Mark done", "标记完成"))
 
-            Text(note.title.isEmpty ? L("Untitled", "无标题") : note.title)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .strikethrough(note.isCompleted, color: CyberPalette.doneAccent.opacity(0.85))
-                .foregroundStyle(note.isCompleted
-                    ? AnyShapeStyle(HierarchicalShapeStyle.primary.opacity(0.42))
-                    : AnyShapeStyle(HierarchicalShapeStyle.primary))
-                .lineLimit(1)
+            // Tap the title / meta — everything except the done circle —
+            // to open the note for editing. This is the entry point to a
+            // task's sub-tasks (the checklist) and its text; the row was
+            // otherwise a read-only glance with just the done toggle.
+            Button { editingNote = note } label: {
+                HStack(spacing: 8) {
+                    Text(note.title.isEmpty ? L("Untitled", "无标题") : note.title)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .strikethrough(note.isCompleted, color: CyberPalette.doneAccent.opacity(0.85))
+                        .foregroundStyle(note.isCompleted
+                            ? AnyShapeStyle(HierarchicalShapeStyle.primary.opacity(0.42))
+                            : AnyShapeStyle(HierarchicalShapeStyle.primary))
+                        .lineLimit(1)
 
-            Spacer(minLength: 4)
+                    Spacer(minLength: 4)
 
-            trailing(note, tint: tint)
+                    trailing(note, tint: tint)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(L("Edit task", "编辑任务"))
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 6)
