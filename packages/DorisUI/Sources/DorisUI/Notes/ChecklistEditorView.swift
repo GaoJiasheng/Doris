@@ -4,6 +4,9 @@ import DorisCore
 #if canImport(AppKit)
 import AppKit
 #endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Renders the note's `bodyMarkdown` as a list of editable rows.
 /// **Same single source of truth** as the plain-text editor: every row
@@ -27,17 +30,13 @@ public struct ChecklistEditorView: View {
     /// keyboard. Set right after inserting a row so the cursor lands in
     /// the freshly-created item (Enter / "Add item" both route here).
     ///
-    /// macOS uses a PLAIN `@State`, not `@FocusState`: the macOS rows are
-    /// AppKit fields that manage first-responder themselves. `@FocusState`
-    /// only retains a programmatically-set value when a SwiftUI
-    /// `.focused()` modifier claims it — there is none on macOS, so the
-    /// set reverted to nil and the new row never focused. iOS keeps
-    /// `@FocusState` for its native `.focused()` modifier.
-    #if os(macOS)
+    /// A PLAIN `@State`, not `@FocusState`, on BOTH platforms: each row is an
+    /// AppKit (macOS) / UIKit (iOS) representable field that drives its own
+    /// first responder from the `isFocused` input. `@FocusState` only retains
+    /// a programmatically-set value when a SwiftUI `.focused()` modifier
+    /// claims it — there is none here, so the set would revert to nil and a
+    /// freshly-inserted row would never grab the keyboard.
     @State private var focusedLine: Int?
-    #else
-    @FocusState private var focusedLine: Int?
-    #endif
 
     public init(note: Note) {
         self.note = note
@@ -100,18 +99,28 @@ public struct ChecklistEditorView: View {
             // its multi-line height) rather than growing horizontally.
             .frame(maxWidth: .infinity, alignment: .leading)
             #else
-            // `axis: .vertical` lets a long item wrap onto multiple lines
-            // instead of scrolling horizontally inside a single-line field.
-            TextField("", text: textBinding(at: idx), axis: .vertical)
-                .textFieldStyle(.plain)
-                .font(.body)
-                .lineLimit(1...8)
-                .strikethrough(line.checked == true, color: .secondary)
-                .foregroundStyle(line.checked == true
-                                 ? Color.primary.opacity(0.45)
-                                 : Color.primary)
-                .focused($focusedLine, equals: idx)
-                .onSubmit { insertLine(after: idx) }
+            // UIKit-backed field (mirrors the macOS ChecklistItemField). A
+            // plain SwiftUI TextField can't do what we need: with
+            // `axis: .vertical` Return inserts a newline (never fires
+            // onSubmit), and there's no hook for Backspace-on-empty. A
+            // non-scrolling UITextView subclass wraps long items AND lets us
+            // intercept Return → new item and Backspace-on-empty → merge up.
+            ChecklistItemFieldIOS(
+                text: textBinding(at: idx),
+                checked: line.checked == true,
+                isFocused: focusedLine == idx,
+                onFocusChange: { gained in
+                    if gained { focusedLine = idx }
+                    else if focusedLine == idx { focusedLine = nil }
+                },
+                onSubmit: { insertLine(after: idx) },
+                onDeleteEmpty: {
+                    let arr = lines
+                    guard idx > 0, idx < arr.count, arr[idx].text.isEmpty else { return }
+                    backspaceMergeIntoPrevious(at: idx)
+                }
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
             #endif
 
             // No Spacer: the field above fills the width (maxWidth .infinity);
@@ -475,6 +484,139 @@ struct ChecklistItemField: NSViewRepresentable {
 }
 
 #endif // os(macOS)
+
+#if os(iOS)
+
+// MARK: - iOS checklist item field (UIKit)
+
+/// Make `tv` first responder with the caret at the END, retrying briefly if
+/// the view isn't in a window yet — a freshly-inserted row's UITextView can
+/// have a nil `window` for a few runloop ticks, and a single shot would
+/// silently skip focusing it. Mirrors the macOS `dorisFocusFieldToEnd`.
+func dorisFocusTextViewToEnd(_ tv: UITextView, tries: Int = 6) {
+    DispatchQueue.main.async {
+        guard !tv.isFirstResponder else { return }
+        guard tv.window != nil else {
+            if tries > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                    dorisFocusTextViewToEnd(tv, tries: tries - 1)
+                }
+            }
+            return
+        }
+        tv.becomeFirstResponder()
+        let end = (tv.text as NSString).length
+        tv.selectedRange = NSRange(location: end, length: 0)
+    }
+}
+
+/// Non-scrolling `UITextView` subclass that reports a Backspace pressed
+/// while the field is empty. That's the reliable way to catch
+/// "delete on an empty row" — the delegate's `shouldChangeTextIn` doesn't
+/// fire for a backspace when there's nothing left to delete.
+final class BackspaceReportingTextView: UITextView {
+    var onBackspaceWhenEmpty: () -> Void = {}
+    override func deleteBackward() {
+        if text.isEmpty {
+            onBackspaceWhenEmpty()
+            return
+        }
+        super.deleteBackward()
+    }
+}
+
+/// Editable checklist item for iOS, backed by a non-scrolling `UITextView`
+/// so long items WRAP (matching macOS) while we intercept the editing keys
+/// a SwiftUI `TextField` can't:
+///   • Return             → onSubmit      (new item below)
+///   • Backspace on empty → onDeleteEmpty (merge into the previous row)
+/// Focus is driven by `isFocused` (the parent's `@State`), mirroring the
+/// macOS `ChecklistItemField`. Checked items dim via text color — same as
+/// macOS (which also doesn't strike through).
+struct ChecklistItemFieldIOS: UIViewRepresentable {
+    @Binding var text: String
+    var checked: Bool
+    var isFocused: Bool
+    var onFocusChange: (Bool) -> Void
+    var onSubmit: () -> Void
+    var onDeleteEmpty: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> BackspaceReportingTextView {
+        let tv = BackspaceReportingTextView()
+        tv.delegate = context.coordinator
+        tv.isScrollEnabled = false            // grow to fit + word-wrap
+        tv.backgroundColor = .clear
+        tv.textContainerInset = .zero
+        tv.textContainer.lineFragmentPadding = 0
+        tv.font = UIFont.preferredFont(forTextStyle: .body)
+        tv.adjustsFontForContentSizeCategory = true   // track Dynamic Type live
+        tv.returnKeyType = .next
+        tv.smartDashesType = .no
+        tv.smartQuotesType = .no
+        tv.onBackspaceWhenEmpty = { [weak c = context.coordinator] in c?.parent.onDeleteEmpty() }
+        // Hug content vertically so the row is exactly as tall as its text.
+        tv.setContentHuggingPriority(.required, for: .vertical)
+        tv.setContentCompressionResistancePriority(.required, for: .vertical)
+        return tv
+    }
+
+    func updateUIView(_ tv: BackspaceReportingTextView, context: Context) {
+        context.coordinator.parent = self
+        if tv.text != text { tv.text = text }
+        let color: UIColor = checked ? UIColor.label.withAlphaComponent(0.45) : .label
+        if tv.textColor != color { tv.textColor = color }
+        // Become first responder when the parent marks this row focused
+        // (e.g. right after Enter inserts a new row), caret at the end.
+        if isFocused, !tv.isFirstResponder {
+            dorisFocusTextViewToEnd(tv)
+        }
+    }
+
+    /// Report the wrapped height at SwiftUI's proposed width so the row grows
+    /// to fit multi-line text instead of clipping.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: BackspaceReportingTextView,
+                      context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0, width != .infinity else { return nil }
+        let fit = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: ceil(fit.height))
+    }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: ChecklistItemFieldIOS
+        init(_ parent: ChecklistItemFieldIOS) { self.parent = parent }
+
+        func textViewDidChange(_ tv: UITextView) { parent.text = tv.text }
+        func textViewDidBeginEditing(_ tv: UITextView) { parent.onFocusChange(true) }
+        func textViewDidEndEditing(_ tv: UITextView) { parent.onFocusChange(false) }
+
+        func textView(_ tv: UITextView, shouldChangeTextIn range: NSRange,
+                      replacementText text: String) -> Bool {
+            // Return → new item (swallow the newline instead of inserting it).
+            if text == "\n" {
+                parent.onSubmit()
+                return false
+            }
+            // Multi-line paste / dictation: never let a raw "\n" reach the item
+            // text — the shared parser splits bodyMarkdown on "\n", so an
+            // embedded newline would explode one paste into phantom "loose"
+            // rows. Flatten newlines to spaces so the paste stays in this item.
+            if text.contains("\n") {
+                let flat = text.replacingOccurrences(of: "\n", with: " ")
+                let updated = (tv.text as NSString).replacingCharacters(in: range, with: flat)
+                tv.text = updated
+                parent.text = updated
+                let caret = range.location + (flat as NSString).length
+                tv.selectedRange = NSRange(location: caret, length: 0)
+                return false
+            }
+            return true
+        }
+    }
+}
+
+#endif // os(iOS)
 
 // MARK: - Line model (parse / serialize markdown checkbox syntax)
 
