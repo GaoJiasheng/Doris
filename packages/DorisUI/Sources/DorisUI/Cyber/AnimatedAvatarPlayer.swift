@@ -38,6 +38,11 @@ public struct AnimatedAvatarPlayer: View {
     /// for the active character pack — e.g. "HeroAnim" (built-in girl) or
     /// "Characters/<id>/anim". Frames load from `<animDirectory>/<clip>/`.
     let animDirectory: String
+    /// When true, freeze on a single static frame with NO `TimelineView`, so
+    /// the periodic frame timer stops firing entirely. Driven by the host's
+    /// window visibility (see AvatarHero) — a hidden / occluded window then
+    /// burns zero CPU on avatar animation.
+    let paused: Bool
 
     public init(
         clip: String,
@@ -45,6 +50,7 @@ public struct AnimatedAvatarPlayer: View {
         fps: Double = 16,
         verticalOffset: CGFloat = 0,
         animDirectory: String = "HeroAnim",
+        paused: Bool = false,
         onFinished: (() -> Void)? = nil
     ) {
         self.clip = clip
@@ -52,6 +58,7 @@ public struct AnimatedAvatarPlayer: View {
         self.fps = fps
         self.verticalOffset = verticalOffset
         self.animDirectory = animDirectory
+        self.paused = paused
         self.onFinished = onFinished
     }
 
@@ -72,8 +79,17 @@ public struct AnimatedAvatarPlayer: View {
         // sync isn't useful for a 10fps PNG sequence anyway, and it
         // stops SwiftUI's `AnimatorState` from ticking at the display's
         // refresh rate — which was the dominant CPU cost.
-        TimelineView(.periodic(from: .now, by: 1.0 / max(fps, 1.0))) { context in
-            content(at: context.date)
+        Group {
+            if paused {
+                // Off-screen / occluded host: hold a single static frame with
+                // NO TimelineView, so the periodic timer stops firing. This is
+                // the main energy win — a hidden window animates nothing.
+                content(at: startTime)
+            } else {
+                TimelineView(.periodic(from: .now, by: 1.0 / max(fps, 1.0))) { context in
+                    content(at: context.date)
+                }
+            }
         }
         .offset(y: verticalOffset)
         .clipped()
@@ -88,6 +104,15 @@ public struct AnimatedAvatarPlayer: View {
             ensureLoaded()
             startTime = Date()
             hasFired = false
+        }
+        // Resume cleanly: restart the clip from frame 0 when we come back on
+        // screen, so a looping mood doesn't jump to a far-future frame based
+        // on wall-clock elapsed while it was paused.
+        .onChange(of: paused) { _, isPaused in
+            if !isPaused {
+                startTime = Date()
+                hasFired = false
+            }
         }
     }
 

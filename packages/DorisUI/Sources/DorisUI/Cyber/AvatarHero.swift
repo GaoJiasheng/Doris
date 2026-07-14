@@ -139,6 +139,13 @@ public struct AvatarHero: View {
     @State private var scanlineOffset: CGFloat = 0
     @State private var particles: [HeroParticle] = []
     @State private var autoSleeping: Bool = false
+    /// Host-window visibility (macOS occlusion). When the window is hidden /
+    /// occluded / minimized / on another Space / display asleep, we freeze ALL
+    /// avatar animation — the character player and the ambient Canvas — so an
+    /// avatar nobody can see burns no CPU (the main energy fix). Defaults true;
+    /// the macOS `WindowVisibilityReader` flips it as occlusion changes. iOS
+    /// leaves it true (the OS suspends background apps anyway).
+    @State private var isOnScreen: Bool = true
 
     // MARK: - Body
 
@@ -203,12 +210,18 @@ public struct AvatarHero: View {
             // character — the clip's PNGs are alpha-transparent, so just the
             // character floats on the desktop with no card / backdrop / HUD.
             if !transparentBackdrop {
-                ambientBackdrop        // day-sky / night-space gradient
+                ambientBackdrop        // day-sky / night-space gradient (static)
                 cursorHalo             // re-renders only on cursor move (Mac)
-                animatedAmbientLayers  // 12fps Canvas layer for stars/particles/ripples
+                // The 20fps starfield/particle/ripple Canvas is the dominant
+                // CPU cost. Skip it when (a) the avatar is compact/small — the
+                // effect is imperceptible at sidebar/menu-bar size — or (b) the
+                // host window isn't visible (occluded / hidden / off-screen).
+                if !compact && isOnScreen {
+                    animatedAmbientLayers
+                }
                 scanlines              // CoreAnimation-driven offset, cheap
             }
-            character                  // owns its own 16fps player TimelineView
+            character                  // frozen to a static frame when off-screen
             if !transparentBackdrop {
                 cornerAccents          // static
                 if showWeather { weatherOverlay }
@@ -217,6 +230,8 @@ public struct AvatarHero: View {
         .opacity(moodOpacity)
         .modifier(SelfChromeModifier(enabled: selfChrome && !transparentBackdrop, compact: compact))
         .contentShape(Rectangle())
+        // Report host-window occlusion → isOnScreen (drives the pause). Invisible.
+        .background { visibilityProbe }
     }
 
     #if os(macOS)
@@ -489,6 +504,7 @@ public struct AvatarHero: View {
             fps: playingMood.isLooping ? pack.loopFps : pack.fps,
             verticalOffset: showWeather ? (compact ? 36 : 50) : 0,
             animDirectory: pack.animDirectory,
+            paused: !isOnScreen,   // freeze the frame timer when the host is hidden
             onFinished: { handleOneShotFinished() }
         )
     }
@@ -526,6 +542,20 @@ public struct AvatarHero: View {
                 .padding(.top, compact ? 12 : 22)
             Spacer()
         }
+    }
+
+    /// Invisible probe that watches the host NSWindow's occlusion state and
+    /// updates `isOnScreen`. macOS only; iOS has no occlusion API (and the OS
+    /// suspends background apps), so it stays a no-op there.
+    @ViewBuilder
+    private var visibilityProbe: some View {
+        #if os(macOS)
+        WindowVisibilityReader { visible in
+            if visible != isOnScreen { isOnScreen = visible }
+        }
+        #else
+        Color.clear
+        #endif
     }
 
     /// Particle layer drawn into the shared ambient `GraphicsContext`.
@@ -866,3 +896,46 @@ private struct HudBracket: View {
         }
     }
 }
+
+#if os(macOS)
+/// Zero-size, invisible probe that reports its host `NSWindow`'s occlusion
+/// state to SwiftUI. Place it in a `.background`. A window that is fully
+/// covered, minimized, ordered-out, on another Space, or on a sleeping
+/// display clears its `.visible` occlusion flag — AvatarHero uses that to
+/// freeze all avatar animation while nobody can see it.
+struct WindowVisibilityReader: NSViewRepresentable {
+    var onChange: (Bool) -> Void
+
+    func makeNSView(context: Context) -> TrackerView {
+        let v = TrackerView()
+        v.onChange = onChange
+        return v
+    }
+
+    func updateNSView(_ nsView: TrackerView, context: Context) {
+        nsView.onChange = onChange
+    }
+
+    final class TrackerView: NSView {
+        var onChange: ((Bool) -> Void)?
+        private var observer: NSObjectProtocol?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let observer { NotificationCenter.default.removeObserver(observer); self.observer = nil }
+            guard let window else { return }   // detached: leave last value
+            report()
+            observer = NotificationCenter.default.addObserver(
+                forName: NSWindow.didChangeOcclusionStateNotification,
+                object: window, queue: .main
+            ) { [weak self] _ in self?.report() }
+        }
+
+        private func report() {
+            onChange?(window?.occlusionState.contains(.visible) ?? false)
+        }
+
+        deinit { if let observer { NotificationCenter.default.removeObserver(observer) } }
+    }
+}
+#endif
