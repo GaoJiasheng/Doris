@@ -6,6 +6,22 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.5.1 — 2026-07-14
+
+A large CPU / energy fix, plus iOS checklist keys matching macOS.
+
+### Fixed
+
+- **Big CPU / energy drop.** The animated avatar and the shared window
+  backdrop were redrawing every display frame even when idle or hidden —
+  pinning a CPU core near 100% and tripping the macOS "using significant
+  energy" warning. Now: the avatar pauses when its window is hidden or
+  occluded and skips its particle effects in the compact sidebar, and the
+  backdrop's halo + scanlines are static instead of animating continuously.
+- **iOS checklist keys.** In a checklist note, **Return** adds a new item and
+  **Backspace on an empty item** deletes it / merges into the previous row —
+  matching macOS. Long items wrap; multi-line paste stays in one item.
+
 ## 1.5.0 — 2026-07-02
 
 A hands-on desktop panel, plus the fixes that landed after 1.4.0.
