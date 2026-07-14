@@ -6,8 +6,6 @@ import SwiftUI
 /// the same cyber atmosphere across Mac windows, iOS screens, and the
 /// dropdown panel.
 public struct CyberBackground: View {
-    @State private var glowPhase: Double = 0
-    @State private var scanlineOffset: CGFloat = 0
     /// Strength of the brand color halos. The main window has a smaller
     /// frame and looks washed out at full intensity, so we expose this so
     /// hosts can tune it.
@@ -17,6 +15,15 @@ public struct CyberBackground: View {
         self.haloIntensity = haloIntensity
     }
 
+    // STATIC backdrop. Previously the pink halo "breathed" and the scanlines
+    // "drifted" via `.repeatForever` animations on @State. SwiftUI animates
+    // @State by re-evaluating the body every DISPLAY frame (60–120fps), which
+    // forced a full recomposite of the whole window backdrop — including the
+    // ~N-Rectangle `.plusLighter` scanline overlay — nonstop. On the main
+    // window that alone pinned CPU at 60–90% and tripped the energy warning
+    // even when the window was idle. The ambient motion was imperceptible;
+    // holding both halo + scanlines static lets CoreAnimation cache the layer
+    // once. (Same call AvatarHero already made for its own scanlines.)
     public var body: some View {
         ZStack {
             CyberPalette.backdrop
@@ -28,7 +35,7 @@ public struct CyberBackground: View {
                 startRadius: 4, endRadius: 280
             )
             .blur(radius: 20)
-            .opacity(0.6 + glowPhase * 0.4)
+            .opacity(0.85)
             .ignoresSafeArea()
             // Cyan rim bottom-right
             RadialGradient(
@@ -39,14 +46,6 @@ public struct CyberBackground: View {
             .blur(radius: 16)
             .ignoresSafeArea()
             scanlines
-        }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 4.0).repeatForever(autoreverses: true)) {
-                glowPhase = 1
-            }
-            withAnimation(.linear(duration: 9).repeatForever(autoreverses: false)) {
-                scanlineOffset = 1
-            }
         }
     }
 
@@ -61,11 +60,12 @@ public struct CyberBackground: View {
                         .frame(height: stripeHeight)
                 }
             }
-            .offset(y: -scanlineOffset * stripeHeight * 2)
             .blendMode(.plusLighter)
         }
         .allowsHitTesting(false)
         .ignoresSafeArea()
+        // Static: with no per-frame offset animation, CoreAnimation composites
+        // this overlay once and caches it instead of redrawing every frame.
     }
 }
 
