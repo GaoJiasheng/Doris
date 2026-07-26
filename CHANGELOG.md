@@ -6,6 +6,51 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.6.0 — 2026-07-26
+
+Focus (pomodoro) on both platforms — highlight what you're doing right now.
+
+### Added
+
+- **Focus timer.** Start a 15 / 25 / 45-minute focus on any task *or*
+  sub-task (right-click a task, or the ▷ button on a checklist row). One
+  session at a time — this is a "what am I on right now" highlighter, not a
+  stats tool. No history, no charts, no schema change: the session lives in
+  memory + UserDefaults and survives a relaunch.
+- **macOS: a countdown ring in the notch.** On a notched display the ring
+  sits opposite the avatar, symmetric across the camera cutout; on any other
+  screen edge it shares the avatar's tab, so the pair drags as one panel with
+  one background and one opacity. Hover for the task name, click to jump
+  straight to the task (a sub-task focus also drops the caret on that
+  checklist line), right-click for duration / pause / stop. Clicking the
+  avatar itself is unchanged.
+- **macOS: the focus overlay follows the character.** Pull the avatar out to
+  the desktop and the task name + countdown layer over the animation.
+- **iOS: a full-screen dial.** Starting a focus opens one big ring with the
+  clock inside it and a small ✕ to close. Closing leaves the clock running —
+  a compact chip brings you back.
+- **Ring states.** Running shows the remaining minutes inside the ring,
+  paused dims it and shows `II`, finished turns it into a green check.
+- **When a session ends** you're offered: keep going for another 5 / 15 / 25
+  minutes, exit, or complete the task (which marks the task done, or ticks
+  the focused checklist line).
+- **Pause / resume.** Holding the clock freezes the remaining time rather
+  than trusting the wall clock, so a paused session stays paused across a
+  relaunch.
+
+### Fixed
+
+- **macOS: an exit from the "focus done" prompt.** A completable task offered
+  only Again / Break / Done — there was no way to dismiss the prompt without
+  marking the task complete.
+
+### Notes
+
+- On iOS the end-of-session alert is a scheduled local notification, not an
+  in-app timer callback: the 1 Hz countdown stops as soon as iOS suspends the
+  app, so a phone locked to help you focus would otherwise never be told the
+  session was over.
+
 ## 1.5.1 — 2026-07-14
 
 A large CPU / energy fix, plus iOS checklist keys matching macOS.

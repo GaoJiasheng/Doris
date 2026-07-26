@@ -49,6 +49,9 @@ struct MainWindowView: View {
     /// detail's leading edge. The detail header needs to reserve room
     /// for those, otherwise the DORIS / tabs strip slides under them.
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    /// Used to fetch a note by id when the focus ring is clicked
+    /// (`.dorisOpenNote`) so we can drop straight into its editor.
+    @Environment(\.modelContext) private var ctx
 
     enum Tab: Hashable { case today, events, notes, tokens }
 
@@ -198,6 +201,19 @@ struct MainWindowView: View {
         }
         .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Focus-ring click → open that note's editor. Fetch by id from our
+        // own context and set `editingNote` (the editor shows regardless of
+        // the current tab).
+        .onReceive(NotificationCenter.default.publisher(for: .dorisOpenNote)) { note in
+            guard let id = note.object as? UUID else { return }
+            var fd = FetchDescriptor<Note>(predicate: #Predicate { $0.id == id })
+            fd.fetchLimit = 1
+            // Opening the note is all we do here — if the focus was on a
+            // SUB-task, `ChecklistEditorView` sees the same notification and
+            // puts the caret on the matching line itself.
+            guard let target = try? ctx.fetch(fd).first else { return }
+            editingNote = target
+        }
     }
 
     /// Right-pane header: DORIS brand on the left, tab buttons next to

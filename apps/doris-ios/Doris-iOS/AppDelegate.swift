@@ -58,6 +58,14 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
                 }
             }
         }
+
+        // Focus dial's "完成" → mark the note done (or tick the focused
+        // checklist line). The end-of-session ALERT is a scheduled local
+        // notification (see `FocusNotifier`) rather than `FocusTimer.notify`,
+        // because the in-process 1 Hz timer stops once iOS suspends us.
+        FocusTimer.completeHandler = { session in
+            FocusTaskCompleter.complete(session)
+        }
         return true
     }
 

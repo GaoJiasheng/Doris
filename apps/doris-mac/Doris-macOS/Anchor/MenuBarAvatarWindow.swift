@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Combine
 import DorisCore
 import DorisIPC
 import DorisMacChrome
@@ -28,12 +29,26 @@ final class MenuBarAvatarWindow {
     /// screen coords. Using global cursor + this offset avoids the feedback loop you get
     /// when a SwiftUI DragGesture's view-local translation shifts as the window moves.
     private var dragCursorOffset: CGPoint?
+    /// Fires after the tab re-lays-out (drag re-dock / edge change / focus
+    /// start-stop) so the controller can reposition or hide the notch pip.
+    var onRelayout: () -> Void = {}
+    private var focusSink: AnyCancellable?
 
-    var screenFrame: NSRect { window.frame }
+    /// The frame the tab is laid out to occupy. NOT `window.frame` — during
+    /// `relayoutAnimated()`'s 0.22s animation that returns an intermediate
+    /// (or still-old) rect, and anything deriving geometry from it mid-flight
+    /// (the focus pip) would size/place itself off the stale value.
+    private var targetFrame: NSRect = .zero
+    var screenFrame: NSRect { targetFrame == .zero ? window.frame : targetFrame }
     var screen: NSScreen? { window.screen ?? bestScreen() }
     var edge: AnchorEdge { model.edge }
+    /// True only when docked to a physical camera notch (`.notchExtension`).
+    /// The inline ring is suppressed here and the separate mirrored pip is
+    /// used instead — so exactly one of the two ever shows.
+    var isRealNotch: Bool { model.shape == .notchExtension }
 
     init(onClick: @escaping () -> Void,
+         onRingClick: @escaping () -> Void = {},
          onDragMove: @escaping (CGPoint, CGPoint) -> Void = { _, _ in },
          onDragEnded: @escaping (CGPoint, CGPoint) -> Bool = { _, _ in false }) {
         self.onClick = onClick
@@ -61,6 +76,7 @@ final class MenuBarAvatarWindow {
         let host = NSHostingController(rootView: MenuBarAvatarContent(
             model: m,
             onClick: onClick,
+            onRingClick: onRingClick,
             onDragChanged: { [weak self] t in self?.dragChanged(t) },
             onDragEnded:   { [weak self] _ in self?.dragEnded() }
         ))
@@ -74,8 +90,34 @@ final class MenuBarAvatarWindow {
         host.view.layerContentsRedrawPolicy = .onSetNeedsDisplay
         win.contentViewController = host
 
+        // Hover tooltip. Built on our own `.activeAlways` tracking overlay —
+        // AppKit's `toolTip` / SwiftUI's `.help` are gated on the owning app
+        // being active, and Doris (LSUIElement) never is.
+        let tracker = HoverTrackingView(frame: host.view.bounds)
+        tracker.autoresizingMask = [.width, .height]
+        tracker.tipProvider = { [weak self] _ in
+            guard let self, self.model.focusRing else { return nil }
+            return FocusTimer.shared.session?.displayTitle
+        }
+        host.view.addSubview(tracker)
+
         relayout()
+        focusSink = FocusTimer.shared.$session
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.refreshFocus() }
+        refreshFocus()
         win.orderFrontRegardless()
+    }
+
+    /// Show the inline countdown ring beside the avatar while focusing on a
+    /// NON-notch edge (the real-notch case uses the separate mirrored pip).
+    /// The edge tabs are long enough to hold both, so nothing resizes.
+    private func refreshFocus() {
+        // Any session draws the ring — running, paused (`II`), or finished
+        // (green check); it clears only when the session is cleared.
+        let s = FocusTimer.shared.session
+        model.focusRing = s != nil && model.shape != .notchExtension
+        onRelayout()
     }
 
     func hide() { window.orderOut(nil) }
@@ -101,8 +143,10 @@ final class MenuBarAvatarWindow {
         model.edge = edge
         let layout = Self.layoutFor(edge: edge, screen: s)
         model.shape = layout.shape
+        targetFrame = layout.frame
         window.setFrame(layout.frame, display: true)
         AnchorScreenStore.save(screen: s)
+        refreshFocus()   // shape may have changed (notch ↔ edge) → re-eval ring
     }
 
     // MARK: - Drag
@@ -168,12 +212,14 @@ final class MenuBarAvatarWindow {
         model.edge = edge
         let layout = Self.layoutFor(edge: edge, screen: s)
         model.shape = layout.shape
+        targetFrame = layout.frame
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.22
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             ctx.allowsImplicitAnimation = true
             window.animator().setFrame(layout.frame, display: true)
         })
+        refreshFocus()   // re-dock may switch notch ↔ edge → re-eval ring
     }
 
     // MARK: - Edge → frame + shape
@@ -323,21 +369,39 @@ final class MenuBarAvatarWindow {
 
 // MARK: - SwiftUI
 
+/// Carries the ring's frame up to the tab so a click can be routed to the
+/// ring vs the cat without giving the ring its own gesture (which would
+/// break dragging the pair as one panel).
+private struct RingRectKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) { value = nextValue() }
+}
+
 @MainActor
 final class MenuBarModel: ObservableObject {
     enum Shape { case notchExtension, fakeNotch, edgeRight, edgeLeft, edgeBottom }
     @Published var shape: Shape = .notchExtension
     @Published var edge: AnchorEdge = .top
+    /// True → draw the focus countdown ring inline beside the avatar (edge /
+    /// fake-notch only; the real notch uses a separate mirrored pip).
+    @Published var focusRing: Bool = false
 }
 
 private struct MenuBarAvatarContent: View {
     @ObservedObject var model: MenuBarModel
     @ObservedObject var settings = AppearanceSettings.shared
     @ObservedObject private var lang = LanguageSettings.shared
+    @ObservedObject private var focus = FocusTimer.shared
     let onClick: () -> Void
+    /// Click landed on the countdown ring (not the cat) → open the task.
+    let onRingClick: () -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: (CGSize) -> Void
     @State private var hovered = false
+    /// The ring's rect inside this tab, in the `tabSpace` coordinate space.
+    /// A press that STARTS here is a ring click; anywhere else is a cat
+    /// click. Recorded by the badge's geometry background below.
+    @State private var ringRect: CGRect = .zero
     /// Whether the current press has crossed the drag threshold. Lets us
     /// cleanly separate click (open) from drag (move) — a `Button` +
     /// simultaneous drag fired BOTH on release, so a drag also opened the panel.
@@ -346,18 +410,21 @@ private struct MenuBarAvatarContent: View {
     var body: some View {
         ZStack {
             background
-            // AvatarPortrait self-clips (circle for a photo portrait,
-            // no crop for a pixel notch mark), so no clipShape here.
-            AvatarPortrait()
-                .frame(width: 26, height: 26)
-                .modifier(AvatarOffsetModifier(shape: model.shape))
+            if model.focusRing {
+                // Focusing on an edge/fake-notch: cat + countdown ring share
+                // this one tab (one panel, one background/opacity, drags as one).
+                focusedTab
+            } else {
+                // AvatarPortrait self-clips (circle for a photo portrait,
+                // no crop for a pixel notch mark), so no clipShape here.
+                AvatarPortrait()
+                    .frame(width: 26, height: 26)
+                    .modifier(AvatarOffsetModifier(shape: model.shape))
+            }
         }
         .contentShape(Rectangle())
+        .coordinateSpace(name: Self.tabSpace)
         .onHover { hovered = $0 }
-        .help(L(
-            "Doris — drag to a different screen edge · right-click for settings",
-            "Doris — 拖动可切换屏幕边缘 · 右键打开设置"
-        ))
         .contextMenu {
             Button(L("Open Main Window", "打开主窗口")) {
                 AppCommands.openMainWindow()
@@ -374,20 +441,67 @@ private struct MenuBarAvatarContent: View {
                 NSApp.terminate(nil)
             }
         }
-        // Single gesture decides click vs drag: movement under the
-        // threshold for the whole press → click (open); past it → drag only.
+        // ONE gesture for the whole tab decides click vs drag: movement under
+        // the threshold → click; past it → drag. Keeping it on the whole tab
+        // (rather than a separate tap on the ring) is what lets the cat and
+        // the ring drag together as a single panel. A click is then routed by
+        // WHERE it started — on the ring → open the task, anywhere else →
+        // the cat's original behavior, unchanged.
         .gesture(
-            DragGesture(minimumDistance: 0)
+            DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.tabSpace))
                 .onChanged { v in
                     if !dragMoved && hypot(v.translation.width, v.translation.height) < 6 { return }
                     dragMoved = true
                     onDragChanged(v.translation)
                 }
                 .onEnded { v in
-                    if dragMoved { onDragEnded(v.translation) } else { onClick() }
+                    if dragMoved {
+                        onDragEnded(v.translation)
+                    } else if model.focusRing && ringRect.contains(v.startLocation) {
+                        onRingClick()
+                    } else {
+                        onClick()
+                    }
                     dragMoved = false
                 }
         )
+    }
+
+    /// Coordinate space shared by the drag gesture and the ring's geometry
+    /// probe, so `startLocation` and `ringRect` are directly comparable.
+    private static let tabSpace = "doris.menubar.tab"
+
+    /// Cat + countdown ring inside the one avatar tab. Laid out along the
+    /// edge: horizontal for top/bottom, vertical for the side edges.
+    @ViewBuilder
+    private var focusedTab: some View {
+        let cat = AvatarPortrait().frame(width: 22, height: 22)
+        switch model.shape {
+        case .edgeRight, .edgeLeft:
+            VStack(spacing: 9) { cat; focusRingCircle }
+        default:
+            HStack(spacing: 9) { cat; focusRingCircle }
+                .padding(.bottom, model.shape == .edgeBottom ? 0 : 2)
+        }
+    }
+
+    /// The countdown ring: shared badge (running ring / paused `II` /
+    /// finished green check), a geometry probe so the click router knows
+    /// where it is, and its own right-click actions.
+    private var focusRingCircle: some View {
+        FocusRingBadge(diameter: 18, lineWidth: 2.5)
+            .background(
+                GeometryReader { g in
+                    Color.clear.preference(
+                        key: RingRectKey.self,
+                        value: g.frame(in: .named(Self.tabSpace))
+                    )
+                }
+            )
+            .onPreferenceChange(RingRectKey.self) { ringRect = $0 }
+            // Innermost context menu wins over the tab's avatar menu, so
+            // right-clicking the ring gets the focus actions instead.
+            .contextMenu { FocusRingActions() }
     }
 
     /// Notch-extension always solid black (so it fuses with the real notch).

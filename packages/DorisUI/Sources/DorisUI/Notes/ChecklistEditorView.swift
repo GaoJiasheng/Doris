@@ -50,6 +50,26 @@ public struct ChecklistEditorView: View {
             addButton
                 .padding(.top, 4)
         }
+        // Focus ring clicked for a SUB-task → land the caret on that line.
+        // A notification (rather than an init parameter) because it must also
+        // work when this note is ALREADY open: `onAppear` wouldn't fire again,
+        // so the caret would never move.
+        .onReceive(NotificationCenter.default.publisher(for: .dorisOpenNote)) { n in
+            guard n.object as? UUID == note.id else { return }
+            focusSubtaskLine(n.userInfo?["subtask"] as? String)
+        }
+    }
+
+    /// Land the caret on the sub-task the focus ring pointed at. Matched on
+    /// trimmed text (the stored session text came from the same parse), and
+    /// deferred a runloop so the row's field exists to take first responder.
+    private func focusSubtaskLine(_ subtask: String?) {
+        guard let wanted = subtask?.trimmingCharacters(in: .whitespaces),
+              !wanted.isEmpty else { return }
+        guard let idx = lines.firstIndex(where: {
+            $0.text.trimmingCharacters(in: .whitespaces) == wanted
+        }) else { return }
+        DispatchQueue.main.async { focusedLine = idx }
     }
 
     /// Live re-parse from `note.bodyMarkdown` — never store derived
@@ -125,6 +145,43 @@ public struct ChecklistEditorView: View {
 
             // No Spacer: the field above fills the width (maxWidth .infinity);
             // a Spacer would split the slack and wrap the text too early.
+
+            // Focus (pomodoro) on this sub-task — a small timer menu (15/25/45).
+            // Only for lines that have text (a loose empty row isn't a task).
+            if !line.text.trimmingCharacters(in: .whitespaces).isEmpty {
+                Menu {
+                    ForEach([15, 25, 45], id: \.self) { m in
+                        Button(L("\(m) min", "\(m) 分钟")) {
+                            FocusTimer.shared.start(
+                                noteID: note.id, title: note.title,
+                                subtask: line.text, minutes: m
+                            )
+                        }
+                    }
+                } label: {
+                    Image(systemName: "timer")
+                        #if os(macOS)
+                        .font(.system(size: 11))
+                        #else
+                        // Bigger on iOS: this is a touch target, not a
+                        // pointer target.
+                        .font(.system(size: 15))
+                        .frame(width: 30, height: 30)
+                        .contentShape(Rectangle())
+                        #endif
+                        .foregroundStyle(
+                            FocusTimer.shared.isFocused(noteID: note.id, subtask: line.text)
+                                ? CyberPalette.neonPink
+                                : Color.primary.opacity(0.3)
+                        )
+                }
+                #if os(macOS)
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                #endif
+                .help(L("Focus on this item", "专注此条"))
+            }
 
             Button(role: .destructive) {
                 removeLine(at: idx)

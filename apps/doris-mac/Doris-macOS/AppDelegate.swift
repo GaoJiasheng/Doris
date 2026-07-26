@@ -145,6 +145,27 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
                 SettingsWindowController.shared.show()
             }
 
+            // Focus (pomodoro) timer hooks — DorisUI owns the timer + UI, but
+            // the banner (notch) and "完成" (SwiftData) live in the app target.
+            FocusTimer.notify = { [weak self] session in
+                self?.anchorController?.presentBanner(PresentableMessage(
+                    id: UUID(),
+                    title: session.isRest ? L("Break over", "休息结束") : L("Focus done", "专注结束"),
+                    body: session.displayTitle,
+                    source: .cliGeneric,
+                    sourceAppId: nil,
+                    iconName: "timer",
+                    level: .reminder,
+                    displayMode: .banner,
+                    receivedAt: Date(),
+                    clickAction: nil
+                ))
+            }
+            FocusTimer.completeHandler = { session in
+                FocusTaskCompleter.complete(session)
+                HeroEvents.shared.celebrate(minActivity: 0)
+            }
+
             // Voice capture: long-press the configured modifier → mic →
             // route to ChatGPT (or web fallback).
             self.voiceController = VoiceController()

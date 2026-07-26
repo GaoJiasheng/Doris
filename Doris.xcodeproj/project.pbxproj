@@ -29,6 +29,7 @@
 		294983F21EEEC7DFB7A5E538 /* AppearanceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8D4FCB090245F62C745832 /* AppearanceSettings.swift */; };
 		2B1E7665B38A5332C54C6414 /* Doris.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B5396492AF76E484A7B09C /* Doris.swift */; };
 		300EC0F3B6FB60CF9D44D400 /* DorisWidget-iOS.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 25C8267A2810EE34195F1355 /* DorisWidget-iOS.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		33C83864611AB57E91836D38 /* FocusPipWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F47770B8A6CBC64EF5B974 /* FocusPipWindow.swift */; };
 		35112A479B47FFB163F1F9E9 /* DorisMacChrome in Frameworks */ = {isa = PBXBuildFile; productRef = D0FDF7CCD62DD6C044AF0CA7 /* DorisMacChrome */; };
 		3D8EAB7F8B417ED258C0765B /* AnchorController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F917FF55F7AE753CE04C0714 /* AnchorController.swift */; };
 		434DB57A49A8B0D99FDC2FC4 /* SidebarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165BF99C90BB28EB26A5D3D1 /* SidebarController.swift */; };
@@ -115,6 +116,7 @@
 		F87B15508619139626BAB672 /* AvatarSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */; };
 		FCE5B30D06A345D7F7F149AD /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC6D9364F0DDD9193D0C20C8 /* MainWindowView.swift */; };
 		FCF68FD5D0FF4E8842C08219 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E06A5801ADADFF5C8CC26B70 /* Assets.xcassets */; };
+		FEB790F013AFD62DCF2ADAD3 /* HoverTipWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3AC4D770F0C00CC464920C /* HoverTipWindow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -240,6 +242,7 @@
 		BB71668C471E5FF4D4AF7C06 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BC455D587B89C7FF473794D7 /* Doris-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Doris-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEA9B7F3E7B56E2FE2927C83 /* AuthCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthCommand.swift; sourceTree = "<group>"; };
+		BF3AC4D770F0C00CC464920C /* HoverTipWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverTipWindow.swift; sourceTree = "<group>"; };
 		CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarSettings.swift; sourceTree = "<group>"; };
 		CC6D9364F0DDD9193D0C20C8 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		CE1DB98BBE156A6C003C5363 /* doris-avatar.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "doris-avatar.png"; sourceTree = "<group>"; };
@@ -253,6 +256,7 @@
 		DA461842DCD0E41922F27A58 /* AvatarSnap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarSnap.swift; sourceTree = "<group>"; };
 		DB8853F1317B2486DAB7E291 /* SpeechRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognizer.swift; sourceTree = "<group>"; };
 		E06A5801ADADFF5C8CC26B70 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E1F47770B8A6CBC64EF5B974 /* FocusPipWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusPipWindow.swift; sourceTree = "<group>"; };
 		E2C43AC1A96796BEB25788BA /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		E3C831EF6888C420AAC24118 /* NoteCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteCommand.swift; sourceTree = "<group>"; };
 		E94332B9CD417EEC812A1F43 /* EventsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsScreen.swift; sourceTree = "<group>"; };
@@ -605,6 +609,8 @@
 				DA461842DCD0E41922F27A58 /* AvatarSnap.swift */,
 				68A7DF1DA0D5BE2ACB2B2F1D /* DailyRitual.swift */,
 				5616260E3BE68E019F297D88 /* DesktopPetController.swift */,
+				E1F47770B8A6CBC64EF5B974 /* FocusPipWindow.swift */,
+				BF3AC4D770F0C00CC464920C /* HoverTipWindow.swift */,
 				0239401BE0698A4354F48B33 /* MenuBarAvatarWindow.swift */,
 				AD66496AECE70963437B750C /* SettingsWindow.swift */,
 				B0CD86FBE958FBDC8D1F6B9F /* SnapPreviewWindow.swift */,
@@ -1156,7 +1162,9 @@
 				6785932C8C20FE6106D45907 /* DorisCommands.swift in Sources */,
 				75A567DCBBD5A17176094D43 /* DorisScriptCommands.swift in Sources */,
 				6058073F1675ED142AFD6CB8 /* FixNotchView.swift in Sources */,
+				33C83864611AB57E91836D38 /* FocusPipWindow.swift in Sources */,
 				A6855D156B8AB8040C74AFD6 /* HotkeyEngine.swift in Sources */,
+				FEB790F013AFD62DCF2ADAD3 /* HoverTipWindow.swift in Sources */,
 				7650F868B576783BBDB02F79 /* IPCFSEventReader.swift in Sources */,
 				876FD52E07C7DC2ED1B0F03C /* InstallCLIWizardView.swift in Sources */,
 				05E598C378B531293A80E1FA /* MainTodayView.swift in Sources */,
@@ -1204,14 +1212,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/DorisWidget-iOS/DorisWidget-iOS.entitlements";
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 25;
 				INFOPLIST_FILE = "apps/doris-ios/DorisWidget-iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios.widget;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1350,14 +1358,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/DorisWidget-iOS/DorisWidget-iOS.entitlements";
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 25;
 				INFOPLIST_FILE = "apps/doris-ios/DorisWidget-iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios.widget;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1393,14 +1401,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-mac/Doris-macOS/Doris-macOS.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 14;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "apps/doris-mac/Doris-macOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris;
 				PRODUCT_NAME = Doris;
 				SDKROOT = macosx;
@@ -1446,13 +1454,13 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 25;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios;
 				PRODUCT_NAME = Doris;
 				SDKROOT = iphoneos;
@@ -1467,13 +1475,13 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 25;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios;
 				PRODUCT_NAME = Doris;
 				SDKROOT = iphoneos;
@@ -1581,14 +1589,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-mac/Doris-macOS/Doris-macOS.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 14;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "apps/doris-mac/Doris-macOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris;
 				PRODUCT_NAME = Doris;
 				SDKROOT = macosx;

@@ -26,6 +26,11 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     /// mouse-down outside Doris's own windows, so we can collapse the
     /// panel popover-style. Nil when not expanded.
     private var outsideClickMonitor: Any?
+    /// Second "logo": the focus countdown ring, shown opposite the avatar
+    /// while a focus session runs (mirrored across a real notch, or beside
+    /// the avatar on a non-notch edge).
+    private var focusPip: FocusPipWindow?
+    private var focusSink: AnyCancellable?
 
     /// Expanded panel size when user clicks the anchor (no notification active).
     /// Wider than v0.1 to give the cyber-girl scene a proper hero column on the left.
@@ -40,10 +45,17 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     func show() {
         if avatarWindow == nil {
             avatarWindow = MenuBarAvatarWindow(
+                // The CAT keeps its original behavior — click opens the
+                // panel, focus session or not. Only the ring jumps to a task.
                 onClick: { [weak self] in self?.toggleExpanded() },
+                onRingClick: { [weak self] in self?.toggleFocusedTask() },
                 onDragMove: { [weak self] cursor, center in self?.previewAvatarDrag(cursor: cursor, windowCenter: center) },
                 onDragEnded: { [weak self] cursor, center in self?.commitEdgeDrag(cursor: cursor, windowCenter: center) ?? false }
             )
+            // Reposition / hide the notch pip whenever the avatar re-lays-out
+            // (drag re-dock, edge change) — otherwise a pip could be left
+            // stranded on an old edge.
+            avatarWindow?.onRelayout = { [weak self] in self?.updateFocusPip() }
         }
         if screenObserver == nil {
             screenObserver = NotificationCenter.default.addObserver(
@@ -61,6 +73,15 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
                 // late-arriving geometry gets a chance to be picked up.
                 self?.scheduleAvatarRelayoutsAfterScreenChange()
             }
+        }
+        if focusPip == nil {
+            // The pip IS the focus ring → clicking it jumps to the task.
+            focusPip = FocusPipWindow(onClick: { [weak self] in self?.toggleFocusedTask() })
+        }
+        if focusSink == nil {
+            focusSink = FocusTimer.shared.$session
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in self?.updateFocusPip() }
         }
         if desktopPet == nil {
             desktopPet = DesktopPetController(
@@ -256,6 +277,29 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
 
     // MARK: - Expand / collapse
 
+    /// Clicking the RING behaves exactly like clicking the cat — same window,
+    /// same placement, and a second click collapses it again — except that it
+    /// also opens the task being focused: the note itself for a main-task
+    /// focus, or the parent note with the caret dropped on the matching
+    /// checklist line for a sub-task focus.
+    private func toggleFocusedTask() {
+        let willOpen = !MainWindowController.shared.isMainWindowVisible
+        toggleExpanded()
+        guard willOpen,
+              let s = FocusTimer.shared.session,
+              let noteID = s.noteID else { return }
+        let info: [AnyHashable: Any] = s.subtaskText.map { ["subtask": $0] } ?? [:]
+        // Post now (the editor may already be mounted) AND after a beat (the
+        // window is mounting fresh and its subscriber isn't attached yet).
+        // Idempotent — re-selecting the same note is a no-op.
+        let post = {
+            NotificationCenter.default.post(
+                name: .dorisOpenNote, object: noteID, userInfo: info)
+        }
+        post()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: post)
+    }
+
     private func toggleExpanded() {
         // Unified surface: the "展开窗口" summoned from the notch/pet IS the
         // main window in transient (focus-loss-close) mode, sharing
@@ -445,6 +489,45 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             desktopPet?.hide()
             avatarWindow?.show()
         }
+        updateFocusPip()
+    }
+
+    // MARK: - Focus pip (the second countdown-ring logo)
+
+    /// Show the focus pip beside/opposite the edge avatar while a session is
+    /// running. Hidden in desktop-pet mode (the pet shows the focus overlay on
+    /// the character itself) and when finished/idle.
+    private func updateFocusPip() {
+        // Any session shows the ring — running, paused (`II`), or finished
+        // (green check). It clears only when the session itself is cleared.
+        let hasSession = FocusTimer.shared.session != nil
+        // The separate pip is ONLY for a physical notch (its ring can't share
+        // the avatar's window across the camera cutout). Every other edge draws
+        // the ring inline in the avatar window (`MenuBarModel.focusRing`), so
+        // the two are mutually exclusive and never double-render.
+        let shouldShow = AvatarSettings.shared.placement == .edge
+            && hasSession
+            && (avatarWindow?.isRealNotch ?? false)
+        guard shouldShow else { focusPip?.hide(); return }
+        positionFocusPip()
+        focusPip?.show()
+    }
+
+    /// Mirror the avatar's notch-extension tab across the screen center, so
+    /// the ring hugs the RIGHT of the camera cutout exactly as the cat hugs
+    /// the left — identical size, symmetric position.
+    ///
+    /// Only ever called for a real notch (`updateFocusPip` gates on
+    /// `isRealNotch`). `avatar.screenFrame` is the tab's TARGET frame, not
+    /// the live window frame: during a drag re-dock the window animates for
+    /// 0.22s, and reading the in-flight rect here used to size the pip off
+    /// the previous edge tab (44×96) and paint a giant misplaced slab.
+    private func positionFocusPip() {
+        guard let pip = focusPip, let avatar = avatarWindow, let screen = avatar.screen else { return }
+        let c = avatar.screenFrame
+        let sf = screen.frame
+        guard c.width > 0, c.height > 0 else { return }
+        pip.update(frame: NSRect(x: 2 * sf.midX - c.maxX, y: c.minY, width: c.width, height: c.height))
     }
 
     // MARK: - Drag dock / detach (logo ↔ desktop pet)

@@ -93,6 +93,10 @@ private struct NoteContextMenuModifier: ViewModifier {
                     systemImage: note.done ? "arrow.uturn.backward" : "checkmark.circle.fill"
                 )
             }
+            // Focus (pomodoro). macOS highlights the task on the notch +
+            // avatar; iOS opens the full-screen dial. Toggles to "停止专注"
+            // while active.
+            focusMenu
             // One-shot "complete + archive" shortcut for the workflow
             // where finishing a task should also clear it from active
             // lists. Only offered when the row isn't already archived
@@ -154,6 +158,31 @@ private struct NoteContextMenuModifier: ViewModifier {
                 note.updatedAt = now
             } label: {
                 Label(L("Move to trash", "移到回收站"), systemImage: "trash")
+            }
+        }
+    }
+
+    // MARK: - Focus submenu
+
+    /// "Start focus" (15/25/45 min submenu) or "Stop focus" when this note is
+    /// the active session. Evaluated when the menu opens, so a plain
+    /// `FocusTimer.shared` read is enough (no need for @ObservedObject here).
+    @ViewBuilder
+    private var focusMenu: some View {
+        let ft = FocusTimer.shared
+        if ft.isFocused(noteID: note.id) {
+            Button { ft.stop() } label: {
+                Label(L("Stop focus", "停止专注"), systemImage: "stop.circle")
+            }
+        } else {
+            Menu {
+                ForEach([15, 25, 45], id: \.self) { m in
+                    Button(L("\(m) min", "\(m) 分钟")) {
+                        ft.start(noteID: note.id, title: note.title, subtask: nil, minutes: m)
+                    }
+                }
+            } label: {
+                Label(L("Start focus", "开始专注"), systemImage: "timer")
             }
         }
     }

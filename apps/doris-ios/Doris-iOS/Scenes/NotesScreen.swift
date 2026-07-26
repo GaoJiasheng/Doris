@@ -271,6 +271,26 @@ struct NotesScreen: View {
             } label: {
                 Label(L("Set due date", "设置截止日期"), systemImage: "calendar")
             }
+            // Focus (pomodoro) → opens the full-screen dial.
+            if FocusTimer.shared.isFocused(noteID: n.id) {
+                Button {
+                    FocusTimer.shared.stop()
+                } label: {
+                    Label(L("Stop focus", "停止专注"), systemImage: "stop.circle")
+                }
+            } else {
+                Menu {
+                    ForEach([15, 25, 45], id: \.self) { m in
+                        Button(L("\(m) min", "\(m) 分钟")) {
+                            FocusTimer.shared.start(
+                                noteID: n.id, title: n.title, subtask: nil, minutes: m
+                            )
+                        }
+                    }
+                } label: {
+                    Label(L("Start focus", "开始专注"), systemImage: "timer")
+                }
+            }
             Divider()
             Button(role: .destructive) {
                 n.archive()

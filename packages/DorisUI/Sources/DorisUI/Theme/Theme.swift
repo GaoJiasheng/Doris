@@ -91,6 +91,14 @@ public enum CyberPalette {
     /// pill, completed-card border, seal icon.
     public static var doneAccent: Color { activeTheme.doneAccent }
 
+    /// Success green — the focus ring's "session complete" checkmark. Not
+    /// themeable: "finished" should read the same in every character pack
+    /// (and `doneAccent` is a muted grey, not a completion signal).
+    public static let neonGreen = Color(
+        light: Color(red: 0.05, green: 0.55, blue: 0.30),
+        dark:  Color(red: 0.20, green: 0.95, blue: 0.55)
+    )
+
     // MARK: Adaptive backdrop (themeable)
 
     public static var backdropTop: Color { activeTheme.backdropTop }

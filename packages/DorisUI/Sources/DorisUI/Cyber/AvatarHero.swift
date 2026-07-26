@@ -92,6 +92,7 @@ public struct AvatarHero: View {
     /// fresh fetch.
     @ObservedObject private var weather = WeatherViewModel.shared
     @ObservedObject private var heroEvents = HeroEvents.shared
+    @ObservedObject private var focus = FocusTimer.shared
     /// Active visual identity. Switching the selected pack swaps the
     /// character's frames live (the player keys its cache on the pack's
     /// anim directory, so the same mood name reloads new art).
@@ -226,6 +227,10 @@ public struct AvatarHero: View {
                 cornerAccents          // static
                 if showWeather { weatherOverlay }
             }
+            // Focus (pomodoro) overlay — task name + countdown on TOP of the
+            // character. Rendered in pet mode too (that's the whole point of
+            // "拉出来后在动画上覆盖图层"). Nothing renders when no session.
+            focusOverlay
         }
         .opacity(moodOpacity)
         .modifier(SelfChromeModifier(enabled: selfChrome && !transparentBackdrop, compact: compact))
@@ -542,6 +547,120 @@ public struct AvatarHero: View {
                 .padding(.top, compact ? 12 : 22)
             Spacer()
         }
+    }
+
+    // MARK: - Focus (pomodoro) overlay
+
+    /// Current-task highlight + countdown layered on top of the character.
+    /// `running`/`resting` → a compact badge pinned near the bottom (so it
+    /// doesn't cover the face). `finished` → the "next step" prompt. Renders
+    /// nothing when there's no session, so idle avatars pay zero cost.
+    @ViewBuilder
+    private var focusOverlay: some View {
+        if let s = focus.session {
+            VStack {
+                Spacer(minLength: 0)
+                if s.phase == .finished {
+                    focusFinishedPrompt(s)                 // has buttons → interactive
+                } else {
+                    focusRunningBadge(s)
+                        .allowsHitTesting(false)            // display-only
+                }
+            }
+            .padding(compact ? 8 : 12)
+        }
+    }
+
+    private func focusAccent(_ s: FocusTimer.Session) -> Color {
+        s.isRest ? CyberPalette.neonCyan : CyberPalette.neonPink
+    }
+
+    private func focusRunningBadge(_ s: FocusTimer.Session) -> some View {
+        HStack(spacing: 6) {
+            // Shared badge, so a paused session shows the same `II` here as
+            // it does on the notch / edge tab.
+            FocusRingBadge(diameter: 20, lineWidth: 2.5)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(s.displayTitle)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                Text(s.isPaused
+                     ? L("Paused", "已暂停")
+                     : CountdownRing.mmss(focus.remaining))
+                    .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(.ultraThinMaterial))
+        .overlay(Capsule().strokeBorder(focusAccent(s).opacity(0.5), lineWidth: 0.7))
+    }
+
+    private func focusFinishedPrompt(_ s: FocusTimer.Session) -> some View {
+        VStack(spacing: 6) {
+            Text(s.isRest ? L("Break over", "休息结束") : L("Focus done", "专注结束"))
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(focusAccent(s))
+            Text(s.displayTitle)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            HStack(spacing: 5) {
+                // Keep going for another N minutes on the same task.
+                focusExtendMenu
+                focusPromptButton(L("Break", "休息"), "cup.and.saucer") { focus.startRest() }
+                if focus.canComplete {
+                    focusPromptButton(L("Done", "完成"), "checkmark") { focus.completeTask() }
+                }
+                // Always offer a plain way out — previously a completable
+                // task had no exit that wasn't "mark it done".
+                focusPromptButton(L("Exit", "退出"), "xmark") { focus.stop() }
+            }
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(.ultraThinMaterial))
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .strokeBorder(focusAccent(s).opacity(0.55), lineWidth: 0.7))
+    }
+
+    /// "再续" — rerun the same task for another N minutes. A menu rather than
+    /// four more buttons, so the prompt stays small enough for the pet.
+    private var focusExtendMenu: some View {
+        Menu {
+            ForEach([5, 15, 25], id: \.self) { m in
+                Button(L("\(m) min", "\(m) 分钟")) { focus.adjust(minutes: m) }
+            }
+        } label: {
+            focusPromptLabel(L("More", "再续"), "arrow.clockwise")
+        }
+        #if os(macOS)
+        // `.borderlessButton` is macOS-only; without it the menu draws its
+        // own chrome and swamps this tiny prompt.
+        .menuStyle(.borderlessButton)
+        #endif
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    private func focusPromptButton(_ title: String, _ icon: String,
+                                   _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            focusPromptLabel(title, icon)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func focusPromptLabel(_ title: String, _ icon: String) -> some View {
+        VStack(spacing: 2) {
+            Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+            Text(title).font(.system(size: 8, weight: .medium))
+        }
+        .frame(minWidth: 34)
+        .padding(.vertical, 4)
+        .padding(.horizontal, 3)
+        .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.primary.opacity(0.08)))
+        .contentShape(Rectangle())
     }
 
     /// Invisible probe that watches the host NSWindow's occlusion state and
