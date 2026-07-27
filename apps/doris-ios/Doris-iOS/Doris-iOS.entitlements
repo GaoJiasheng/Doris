@@ -14,6 +14,16 @@
     <array>
         <string>iCloud.com.gavin.doris</string>
     </array>
+    <!-- Required for CloudKit sync to work AT ALL in the inbound direction.
+         SwiftData's CloudKit mirror learns about remote changes through a
+         CKDatabase subscription push; with no push entitlement the phone is
+         never notified and therefore never imports — the store just sits
+         there, stale, while the UI reports "synced". macOS has always had
+         this (see Doris-macOS.entitlements), which is why the Mac stayed
+         current and only the phone fell behind. Value matches macOS:
+         TestFlight / App Store builds run in the production APNs env. -->
+    <key>com.apple.developer.aps-environment</key>
+    <string>production</string>
     <key>keychain-access-groups</key>
     <array>
         <string>$(AppIdentifierPrefix)group.com.gavin.doris.shared</string>

@@ -10,17 +10,28 @@ import DorisUI
 /// `ModelContainerFactory`, the same `SchemaV2`, and the same CloudKit
 /// private container (`iCloud.com.gavin.doris`).
 ///
-/// Event-handling (silent pushes, BGTask refreshes, local notification
-/// fan-out, IPC/router/outbox drainage) deliberately stays on macOS —
-/// the Mac is the event hub. iOS relies on CloudKit's automatic mirror
-/// sync + the 60-second `SyncTimer` poke. This means we do NOT wire:
-///   · `UNUserNotificationCenter` authorization
-///   · `application.registerForRemoteNotifications()`
+/// Doris's OWN event plumbing (BGTask refreshes, notification fan-out,
+/// IPC/router/outbox drainage) deliberately stays on macOS — the Mac is the
+/// event hub. So we still do NOT wire:
 ///   · `BGTaskScheduler` background refresh
 ///   · `NotificationRouter` / `OutboxPublisher` / `SilentPushHandler`
-///   · `CloudKitBootstrap.ensureZonesAndSubscriptions()`
+///   · `CloudKitBootstrap.ensureZonesAndSubscriptions()` (that's the
+///     *outbox* subscription, which is Mac-only machinery)
 ///
-/// If iOS ever needs to ingest events directly, those pieces wire back in.
+/// We DO register for remote notifications, though, and that is not part of
+/// the "event hub" question at all — it's what makes iCloud sync work in the
+/// inbound direction. SwiftData's CloudKit mirror imports remote changes when
+/// a CKDatabase subscription push wakes it; the container manages that
+/// subscription itself, but the push can only be delivered if the app is
+/// registered for remote notifications and signed with `aps-environment`.
+///
+/// This was previously omitted on the theory that "CloudKit's automatic
+/// mirror sync + the 60-second SyncTimer poke" covered iOS. It did not:
+/// `SyncTimer.poke()` only calls `context.save()`, which is an OUTBOUND
+/// flush. So the phone published its own edits but never pulled the Mac's —
+/// notes archived or created on the Mac simply never appeared — and because
+/// `poke()` reports success on "local save ok + iCloud account reachable",
+/// the UI cheerfully said "同步成功" the whole time.
 @MainActor
 final class DorisAppDelegate: NSObject, UIApplicationDelegate {
     private var syncTimer: SyncTimer?
@@ -32,6 +43,11 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         DueDateNotifier.requestAuthorization()
+        // THE inbound-sync switch. Without this the SwiftData CloudKit mirror
+        // never receives its subscription pushes, so changes made on the Mac
+        // are never imported. No user-visible alerts come from this — the
+        // pushes are silent and consumed by the mirror.
+        application.registerForRemoteNotifications()
         // Match the home-screen icon to the selected character pack (no-op
         // for the default pack / when its alternate icon isn't bundled).
         AppIconManager.applyCurrent()
@@ -67,6 +83,37 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
             FocusTaskCompleter.complete(session)
         }
         return true
+    }
+
+    // MARK: - CloudKit inbound (silent pushes)
+
+    /// Silent CloudKit subscription push. SwiftData's mirror observes these
+    /// itself and does the actual import; we only have to exist so iOS is
+    /// willing to deliver them (a registered app that never implements this
+    /// gets throttled) and to close the completion handler promptly.
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        DorisLog.sync.debug("CloudKit silent push received — mirror will import")
+        // Give the mirror a moment to apply the change before we report, then
+        // refresh the widgets off whatever it pulled in.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            WidgetReloadCoordinator.reloadIfChanged(container: DorisRuntime.shared.container)
+            completionHandler(.newData)
+        }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        // Worth surfacing: without push, inbound iCloud sync silently stops
+        // working, which is exactly the failure this registration fixes.
+        DorisLog.sync.error(
+            "remote notification registration FAILED — inbound iCloud sync will not work: \(error.localizedDescription, privacy: .public)"
+        )
     }
 
     /// Called every time the user brings the app to the foreground —

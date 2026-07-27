@@ -114,6 +114,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.gavin.doris
         CODE_SIGN_ENTITLEMENTS: apps/doris-mac/Doris-macOS/Doris-macOS.entitlements
         ENABLE_HARDENED_RUNTIME: YES
+        # Stays at 1.6.0/14: the 1.6.1 fix is iOS-only (push entitlement +
+        # remote-notification background mode), so there is no macOS
+        # re-release. The shipped 1.6.0 DMG remains current for the Mac.
         MARKETING_VERSION: "1.6.0"
         CURRENT_PROJECT_VERSION: "14"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -270,10 +273,19 @@ targets:
         # the dashboard would otherwise hide the build until answered.
         ITSAppUsesNonExemptEncryption: false
         # iOS Doris is a full read/write editor of the iCloud-mirrored
-        # store. Silent pushes, background refresh, and local notifications
-        # are still Mac-only (the Mac is the event hub); iOS relies on
-        # CloudKit's automatic mirror sync + the SyncTimer poke.
-        # See `DorisAppDelegate` for the rationale.
+        # store. Doris's OWN event plumbing (outbox/router/notification
+        # fan-out) is still Mac-only — the Mac is the event hub.
+        #
+        # `remote-notification` is NOT part of that, though: SwiftData's
+        # CloudKit mirror imports remote changes only when a CKDatabase
+        # subscription push wakes it. This target used to omit it (and the
+        # aps-environment entitlement) on the assumption that "CloudKit's
+        # automatic mirror sync + the SyncTimer poke" was enough. It isn't
+        # — the poke only calls context.save() (an OUTBOUND flush), so the
+        # phone pushed its own edits but never pulled the Mac's, silently,
+        # while the UI reported success. See `DorisAppDelegate`.
+        UIBackgroundModes:
+          - remote-notification
     settings:
       base:
         # See the macOS target above for why this is set explicitly:
@@ -283,8 +295,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.gavin.doris.ios
         CODE_SIGN_ENTITLEMENTS: apps/doris-ios/Doris-iOS/Doris-iOS.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
-        MARKETING_VERSION: "1.6.0"
-        CURRENT_PROJECT_VERSION: "26"
+        MARKETING_VERSION: "1.6.1"
+        CURRENT_PROJECT_VERSION: "27"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Compile *all* "iOS App Icon" sets in the catalog (not just the
         # primary) so per-pack alternate icons named `AppIcon-<id>` become
@@ -343,8 +355,8 @@ targets:
         # Embedded extensions must carry the SAME version as the host app
         # or App Store Connect rejects the upload. Keep in lock-step with
         # the Doris-iOS target's MARKETING_VERSION / CURRENT_PROJECT_VERSION.
-        MARKETING_VERSION: "1.6.0"
-        CURRENT_PROJECT_VERSION: "26"
+        MARKETING_VERSION: "1.6.1"
+        CURRENT_PROJECT_VERSION: "27"
     info:
       path: apps/doris-ios/DorisWidget-iOS/Info.plist
       properties:
