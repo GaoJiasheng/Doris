@@ -24,6 +24,14 @@ import DorisIPC
 public final class DorisRuntime {
     public static let shared = DorisRuntime()
 
+    /// Whether the live container is ACTUALLY mirroring to CloudKit — as
+    /// opposed to `SyncSettings.cloudKitEnabled`, which is only the user's
+    /// intent. The two diverge whenever the fallback chain below degrades a
+    /// requested CloudKit container to local-only, and every sync indicator
+    /// used to read the intent, so a degraded container still displayed as
+    /// "iCloud on / synced". Nil until the container is first built.
+    public private(set) static var cloudKitActive: Bool?
+
     /// Lazily-built primary container. If construction fails (e.g. the user
     /// asked for CloudKit but isn't signed in), falls back through:
     ///   CloudKit  →  on-disk no-CloudKit  →  in-memory
@@ -52,18 +60,27 @@ public final class DorisRuntime {
 
         if canUseCloudKit, let c = try? ModelContainerFactory.make(useCloudKit: true) {
             DorisLog.sync.info("DorisRuntime: CloudKit-backed container ready")
+            Self.cloudKitActive = true
             return c
         }
         // CloudKit off (or failed). Try on-disk local persistence first so
         // notes survive app restarts even without iCloud.
         if let c = try? ModelContainerFactory.make(useCloudKit: false) {
             DorisLog.sync.info("DorisRuntime: local on-disk container (CloudKit off)")
+            Self.cloudKitActive = false
+            if userWantsCloudKit {
+                // Requested but not delivered. Previously invisible: every
+                // indicator read `cloudKitEnabled` (still true), so the app
+                // claimed to be syncing while writing to a local-only store.
+                DorisLog.sync.error("DorisRuntime: CloudKit was requested but the container fell back to LOCAL-ONLY")
+            }
             return c
         }
         // Last resort — in-memory. Rare; usually means the App Group container
         // can't be reached and we have no place to put the SQLite file.
         if let c = try? ModelContainerFactory.make(inMemory: true) {
             DorisLog.sync.warning("DorisRuntime: in-memory fallback (data will not persist)")
+            Self.cloudKitActive = false
             return c
         }
         // If even in-memory fails the app is unusable — but we can't return

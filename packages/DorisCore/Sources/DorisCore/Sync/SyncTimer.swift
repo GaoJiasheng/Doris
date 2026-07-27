@@ -102,16 +102,47 @@ public actor SyncTimer {
         //    asynchronous and silent on failure.
         let cloudKitEnabled = await MainActor.run { SyncSettings.shared.cloudKitEnabled }
         if cloudKitEnabled {
+            // 2a. The user asked for iCloud, but did the live container
+            //     actually get it? `DorisRuntime`'s fallback chain can quietly
+            //     hand back a local-only store; reporting "synced" for that is
+            //     how a store can sit arbitrarily stale behind a green label.
+            if await MainActor.run { SyncSettings.shared.cloudKitDegraded } {
+                let msg = Self.localized(
+                    en: "iCloud is on, but this app is running on a local-only store — nothing is syncing. Restart Doris; if it persists, check the app's signing / iCloud entitlements.",
+                    zh: "iCloud 已开启,但当前运行的是纯本地存储 —— 实际没有在同步。请重启 Doris;若仍如此,检查签名 / iCloud 权限。"
+                )
+                await MainActor.run { SyncSettings.shared.lastSyncError = msg }
+                DorisLog.sync.error("poke: cloudKitEnabled but container is local-only")
+                return
+            }
             if let cloudError = await Self.verifyCloudKit() {
                 await MainActor.run { SyncSettings.shared.lastSyncError = cloudError }
                 DorisLog.sync.error("cloud verify failed: \(cloudError, privacy: .public)")
                 return
             }
+            // 2b. Inbound changes arrive via CloudKit subscription pushes. If
+            //     APNs registration failed we can still push our own edits, so
+            //     this isn't a hard failure — but it must not read as "synced",
+            //     because remote edits will never land.
+            if await MainActor.run { !SyncSettings.shared.inboundPushReady } {
+                let msg = Self.localized(
+                    en: "Sending changes works, but this device can't receive push notifications — changes made on your other devices won't arrive. Check Settings → Notifications for Doris.",
+                    zh: "本机的改动能发出去,但收不到推送通知 —— 其他设备上的改动不会同步过来。请检查系统设置 → 通知 里 Doris 的权限。"
+                )
+                await MainActor.run { SyncSettings.shared.lastSyncError = msg }
+                DorisLog.sync.error("poke: inbound push unavailable — import will not happen")
+                return
+            }
         }
 
-        // 3. Success path — only here do we update lastSyncedAt.
+        // 3. Success path — only here do we update lastSyncedAt, and only when
+        //    iCloud is actually on. With sync off, all that happened is a local
+        //    save; stamping "last synced" for that made the Settings row read
+        //    as though data had reached the cloud.
         await MainActor.run {
-            SyncSettings.shared.markSyncedNow()
+            if cloudKitEnabled {
+                SyncSettings.shared.markSyncedNow()
+            }
             SyncSettings.shared.lastSyncError = nil
             DorisLog.sync.debug("sync poke ok (cloudKit=\(cloudKitEnabled))")
             // 4. Kick the home-screen widgets. SQLite just got fresh data

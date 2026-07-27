@@ -6,6 +6,47 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.6.2 — 2026-07-27
+
+iCloud sync fixes. If you have both a Mac and an iPhone, this is the
+important one — inbound sync on iOS never worked, and the app said it did.
+
+(1.6.1 was cut for the first fix below but superseded before release.)
+
+### Fixed
+
+- **iOS never received changes from other devices.** SwiftData's CloudKit
+  mirror imports remote changes only when a subscription push wakes it, and
+  the iOS app had none of what that requires: no `aps-environment`
+  entitlement (so APNs could not deliver to it at all), no
+  `remote-notification` background mode, and no registration call. Notes
+  archived, unpinned, or created on the Mac simply never arrived — one
+  unpinned note was a month stale — and neither waiting nor relaunching
+  helped, because there was no inbound path to wait for. macOS had all of
+  this from the start, which is why only the phone drifted.
+- **"Sync succeeded" was reported without checking whether syncing worked.**
+  Success meant "the local save worked and the iCloud account is reachable"
+  — never that anything was exchanged. So the phone showed a healthy green
+  status the entire time it was silently ignoring the cloud. Now a poke
+  fails loudly when iCloud is on but the store isn't actually mirroring, or
+  when this device can't receive pushes (so remote edits can't arrive), and
+  with sync off it no longer stamps a "last synced" time for what was only
+  a local save.
+- **iCloud sync now defaults to ON.** It defaulted to OFF and the only
+  automatic way to enable it was a *shell* environment variable
+  (`DORIS_USE_CLOUDKIT=1`) — which cannot exist for an app launched from the
+  home screen or Finder. A fresh install therefore had sync silently off.
+  Existing choices are respected: only installs that never touched the
+  toggle change. `DORIS_USE_CLOUDKIT=0` still forces it off for development.
+
+### Notes
+
+- A degraded container is now distinguishable from user intent:
+  `SyncSettings.cloudKitEnabled` is what you asked for,
+  `DorisRuntime.cloudKitActive` is what you actually got. Every sync
+  indicator used to read the former, which is how "iCloud on" could display
+  over a local-only store.
+
 ## 1.6.0 — 2026-07-26
 
 Focus (pomodoro) on both platforms — highlight what you're doing right now.

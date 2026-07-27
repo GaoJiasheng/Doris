@@ -107,10 +107,21 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        SyncSettings.shared.inboundPushReady = true
+        DorisLog.sync.info("registered for remote notifications — inbound iCloud sync active")
+    }
+
+    func application(
+        _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        // Worth surfacing: without push, inbound iCloud sync silently stops
-        // working, which is exactly the failure this registration fixes.
+        // Surfaced rather than swallowed: without push, inbound iCloud sync
+        // silently stops working — the exact failure that let the phone sit a
+        // month stale behind a "synced" label. `SyncTimer` turns this into a
+        // visible message instead of reporting success.
+        SyncSettings.shared.inboundPushReady = false
         DorisLog.sync.error(
             "remote notification registration FAILED — inbound iCloud sync will not work: \(error.localizedDescription, privacy: .public)"
         )

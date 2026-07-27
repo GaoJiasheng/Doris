@@ -114,11 +114,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.gavin.doris
         CODE_SIGN_ENTITLEMENTS: apps/doris-mac/Doris-macOS/Doris-macOS.entitlements
         ENABLE_HARDENED_RUNTIME: YES
-        # Stays at 1.6.0/14: the 1.6.1 fix is iOS-only (push entitlement +
-        # remote-notification background mode), so there is no macOS
-        # re-release. The shipped 1.6.0 DMG remains current for the Mac.
-        MARKETING_VERSION: "1.6.0"
-        CURRENT_PROJECT_VERSION: "14"
+        MARKETING_VERSION: "1.6.2"
+        CURRENT_PROJECT_VERSION: "15"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - package: DorisCore
@@ -295,8 +292,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.gavin.doris.ios
         CODE_SIGN_ENTITLEMENTS: apps/doris-ios/Doris-iOS/Doris-iOS.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
-        MARKETING_VERSION: "1.6.1"
-        CURRENT_PROJECT_VERSION: "27"
+        MARKETING_VERSION: "1.6.2"
+        CURRENT_PROJECT_VERSION: "28"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Compile *all* "iOS App Icon" sets in the catalog (not just the
         # primary) so per-pack alternate icons named `AppIcon-<id>` become
@@ -355,8 +352,8 @@ targets:
         # Embedded extensions must carry the SAME version as the host app
         # or App Store Connect rejects the upload. Keep in lock-step with
         # the Doris-iOS target's MARKETING_VERSION / CURRENT_PROJECT_VERSION.
-        MARKETING_VERSION: "1.6.1"
-        CURRENT_PROJECT_VERSION: "27"
+        MARKETING_VERSION: "1.6.2"
+        CURRENT_PROJECT_VERSION: "28"
     info:
       path: apps/doris-ios/DorisWidget-iOS/Info.plist
       properties:

@@ -62,9 +62,24 @@ public final class SyncSettings: ObservableObject {
 
     private init() {
         let store = Self.store
-        // CloudKit defaults to OFF — matches the previous env-var-gated behavior
-        // so dev builds still come up clean. Users opt-in via Settings.
-        let ck = store.object(forKey: Self.cloudKitEnabledKey) as? Bool ?? false
+        // CloudKit defaults to ON.
+        //
+        // It used to default to OFF, opt-in-able only by setting a *shell*
+        // environment variable (`DORIS_USE_CLOUDKIT=1`) — which cannot exist
+        // for an app launched from the home screen or Finder. So a fresh
+        // install had iCloud sync silently disabled with no in-app path to
+        // discover why, on a product whose whole premise is a Mac and an
+        // iPhone sharing one store.
+        //
+        // Defaulting ON is safe now: `DorisRuntime` gates the actual CloudKit
+        // container on `CodeSigningCheck.hasTeamIdentifier`, so unsigned dev
+        // builds still degrade to local-only instead of tripping SwiftData's
+        // mirror crash. `DORIS_USE_CLOUDKIT=0` remains for forcing it off.
+        //
+        // Users who deliberately turned sync off are unaffected — the setter
+        // persists the key, so an explicit `false` is read back below. Only
+        // installs that never touched the toggle flip on.
+        let ck = store.object(forKey: Self.cloudKitEnabledKey) as? Bool ?? true
         let auto = store.object(forKey: Self.autoSyncEnabledKey) as? Bool ?? true
         let last = store.object(forKey: Self.lastSyncedAtKey) as? TimeInterval
         let err = store.string(forKey: Self.lastSyncErrorKey)
@@ -74,15 +89,32 @@ public final class SyncSettings: ObservableObject {
         self.lastSyncedAt = last.map { Date(timeIntervalSince1970: $0) }
         self.lastSyncError = err
 
-        // Honor the legacy env-var override on first launch — if the user has
-        // DORIS_USE_CLOUDKIT=1 in their shell, treat it as opt-in. We only do
-        // this when the persisted value hasn't been explicitly set yet.
+        // Env-var override for development, honored only while the user hasn't
+        // made an explicit choice in Settings. Now that the default is ON, the
+        // useful direction is "=0" (run a dev build against a purely local
+        // store); "=1" is kept so existing shell setups keep working.
         if store.object(forKey: Self.cloudKitEnabledKey) == nil {
-            if ProcessInfo.processInfo.environment["DORIS_USE_CLOUDKIT"] == "1" {
-                self.cloudKitEnabled = true
+            switch ProcessInfo.processInfo.environment["DORIS_USE_CLOUDKIT"] {
+            case "0": self.cloudKitEnabled = false
+            case "1": self.cloudKitEnabled = true
+            default:  break
             }
         }
     }
+
+    /// True when the user asked for iCloud sync but the live container isn't
+    /// actually mirroring — the state that used to be reported as a healthy
+    /// "synced". Nil-safe: before the container is built we don't claim a
+    /// mismatch.
+    public var cloudKitDegraded: Bool {
+        cloudKitEnabled && DorisRuntime.cloudKitActive == false
+    }
+
+    /// iOS: set false by the app delegate if APNs registration fails. Inbound
+    /// CloudKit sync rides on those pushes, so a failure here means remote
+    /// changes will never arrive — worth saying out loud rather than reporting
+    /// a successful sync.
+    @Published public var inboundPushReady: Bool = true
 
     /// Called by SyncTimer after a successful poke. Wraps in a MainActor
     /// hop to make Combine publishing safe.
