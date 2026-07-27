@@ -18,7 +18,11 @@ struct TodayScreen: View {
     @Environment(\.modelContext) private var ctx
 
     @Query(
-        filter: #Predicate<Note> { note in !note.archived },
+        // `!deleted` matters as much as `!archived`: a trashed note is only
+        // soft-deleted, so without it a pinned note sitting in the Trash keeps
+        // showing up here — looking exactly like a sync bug against macOS,
+        // which has always filtered both.
+        filter: #Predicate<Note> { note in !note.archived && !note.deleted },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var allNotes: [Note]

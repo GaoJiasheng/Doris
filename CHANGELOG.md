@@ -40,6 +40,13 @@ Focus (pomodoro) on both platforms — highlight what you're doing right now.
 
 ### Fixed
 
+- **iOS showed trashed notes.** Today, the notes list, and the calendar
+  timeline filtered out archived notes but not *trashed* ones — and since
+  delete is a soft-delete (recoverable from Trash), anything you deleted kept
+  showing up. Most visible as a pinned count that disagreed with macOS
+  (which has always filtered both), which looked like a broken iCloud sync
+  but wasn't: the data was in sync the whole time, iOS was just drawing rows
+  it should have hidden.
 - **macOS: an exit from the "focus done" prompt.** A completable task offered
   only Again / Break / Done — there was no way to dismiss the prompt without
   marking the task complete.

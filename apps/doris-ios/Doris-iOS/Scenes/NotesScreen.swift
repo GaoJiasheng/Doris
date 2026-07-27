@@ -21,7 +21,9 @@ struct NotesScreen: View {
     @Environment(\.modelContext) private var ctx
 
     @Query(
-        filter: #Predicate<Note> { note in !note.archived },
+        // Excludes trashed rows too — `deleted` is a soft-delete flag, so
+        // without it the Trash's contents stay listed here.
+        filter: #Predicate<Note> { note in !note.archived && !note.deleted },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var notes: [Note]
