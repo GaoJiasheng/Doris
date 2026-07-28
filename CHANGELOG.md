@@ -6,6 +6,37 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.7.0 — 2026-07-28
+
+Token stats now count your local LM Studio models.
+
+### Added
+
+- **LM Studio token usage.** Both the GUI chats and — more usefully — every
+  request served by LM Studio's local server. The server is the layer
+  everything funnels through, so this counts your own code, the `lms` CLI,
+  and any agent pointed at `localhost:1234`, not just the app's own chat
+  window. Cost is 0 (they run on your Mac); the point is volume.
+  - GUI chats come from `~/.lmstudio/conversations/`. There's no per-message
+    date in that file, but each step's id is `<epochMillis>-<random>`, so
+    generations land on the day they actually happened rather than being
+    smeared onto the conversation's last-modified date.
+  - Local-server usage comes from `~/.lmstudio/server-logs/`, where each
+    answered request is logged with an OpenAI-shaped `usage` block. This
+    requires LM Studio's **File Logging Mode set to `full`** — on the default
+    `succinct` the response bodies are never written. Doris says so in the
+    source's status row instead of quietly counting nothing.
+  - The two can't double-count: GUI chats don't travel over the HTTP server.
+
+### Fixed
+
+- **A source added in a later version stayed invisible.** The set of enabled
+  token sources is persisted, so an install that predated a new adapter never
+  had it in its set — you'd upgrade and simply see no data, with nothing
+  explaining why. Zero-config sources are now switched on the first time an
+  install sees them; a source you deliberately turned off is never
+  re-enabled.
+
 ## 1.6.2 — 2026-07-27
 
 iCloud sync fixes. If you have both a Mac and an iPhone, this is the

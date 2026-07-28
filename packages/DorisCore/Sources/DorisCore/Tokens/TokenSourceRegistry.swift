@@ -10,6 +10,7 @@ public enum TokenSourceRegistry {
     public static let adapters: [any TokenSourceAdapter] = [
         ClaudeCodeAdapter(),
         CodexAdapter(),
+        LMStudioAdapter(),
     ]
 
     public static func adapter(for tool: TokenTool) -> (any TokenSourceAdapter)? {

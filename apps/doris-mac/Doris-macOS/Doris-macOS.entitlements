@@ -25,6 +25,12 @@
         <string>/.codex/</string>
         <string>/.claude/</string>
         <string>/.doris/</string>
+        <!-- Token usage from LM Studio's chat history. Read-only in practice
+             (LMStudioAdapter never writes), but this exception key has no
+             read-only variant for home-relative paths. Without it the adapter
+             silently returns zero samples in the sandboxed build while working
+             fine in an unsandboxed dev run. -->
+        <string>/.lmstudio/</string>
     </array>
     <key>com.apple.security.network.client</key>
     <true/>

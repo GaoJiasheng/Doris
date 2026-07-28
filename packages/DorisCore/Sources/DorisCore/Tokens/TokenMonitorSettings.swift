@@ -17,6 +17,9 @@ public final class TokenMonitorSettings: ObservableObject {
         static let openAIKey = "doris.tokens.openAIKey"
         static let cursorToken = "doris.tokens.cursorToken"
         static let lastCollectAt = "doris.tokens.lastCollectAt"
+        /// Every tool this install has already been offered. Lets a tool added
+        /// in a later version switch itself on once — see `init`.
+        static let seenTools = "doris.tokens.seenTools"
     }
 
     /// Master switch — off disables collection entirely.
@@ -33,11 +36,30 @@ public final class TokenMonitorSettings: ObservableObject {
         let d = UserDefaults(suiteName: DorisIdentifiers.appGroup) ?? .standard
         self.defaults = d
         self.monitoringEnabled = (d.object(forKey: Key.enabled) as? Bool) ?? true
+        // Tools whose usage sits in local logs and needs no key/config: safe to
+        // have on by default.
+        let zeroConfig = Set(TokenTool.allCases.filter(\.readsLocalLogsOnly))
         if let raw = d.array(forKey: Key.tools) as? [String] {
-            self.enabledTools = Set(raw.compactMap(TokenTool.init(rawValue:)))
+            var tools = Set(raw.compactMap(TokenTool.init(rawValue:)))
+            // A tool added in a later version isn't in this install's saved set,
+            // so it would stay invisible forever — the user adds the adapter,
+            // sees nothing, and gets no hint why. Switch on zero-config tools
+            // the first time this install ever sees them. Tools already offered
+            // are recorded, so a deliberate opt-out is never re-enabled.
+            let seen = Set((d.array(forKey: Key.seenTools) as? [String] ?? [])
+                .compactMap(TokenTool.init(rawValue:)))
+            let neverOffered = zeroConfig.subtracting(seen).subtracting(tools)
+            if !neverOffered.isEmpty {
+                tools.formUnion(neverOffered)
+                d.set(tools.map(\.rawValue), forKey: Key.tools)
+            }
+            self.enabledTools = tools
         } else {
-            self.enabledTools = [.claudeCode, .codex]   // default: local-log sources
+            self.enabledTools = zeroConfig
         }
+        // Record the full roster so today's new tools count as "offered" next
+        // launch, whether or not they were switched on above.
+        d.set(TokenTool.allCases.map(\.rawValue), forKey: Key.seenTools)
         self.openAIKey = d.string(forKey: Key.openAIKey) ?? ""
         self.cursorToken = d.string(forKey: Key.cursorToken) ?? ""
         self.lastCollectAt = d.object(forKey: Key.lastCollectAt) as? Date

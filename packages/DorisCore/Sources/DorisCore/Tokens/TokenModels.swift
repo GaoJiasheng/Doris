@@ -15,6 +15,7 @@ public enum TokenTool: String, CaseIterable, Sendable, Codable {
     case cursor
     case gemini
     case openai
+    case lmStudio = "lm-studio"
 
     public var displayName: String {
         switch self {
@@ -23,6 +24,7 @@ public enum TokenTool: String, CaseIterable, Sendable, Codable {
         case .cursor:     return "Cursor"
         case .gemini:     return "Gemini"
         case .openai:     return "OpenAI"
+        case .lmStudio:   return "LM Studio"
         }
     }
 
@@ -33,6 +35,22 @@ public enum TokenTool: String, CaseIterable, Sendable, Codable {
         case .cursor:     return "cursorarrow.rays"
         case .gemini:     return "diamond.fill"
         case .openai:     return "brain"
+        case .lmStudio:   return "desktopcomputer"
+        }
+    }
+
+    /// Runs on the user's own hardware, so its tokens cost nothing. The UI
+    /// uses this to show volume without a misleading $0.00 cost column.
+    public var isLocal: Bool { self == .lmStudio }
+
+    /// Usage is parsed from files already on this Mac — no API key, no OAuth,
+    /// nothing to configure. `TokenMonitorSettings` enables these by default
+    /// (and switches on ones added in later versions), which the key-requiring
+    /// sources must not do.
+    public var readsLocalLogsOnly: Bool {
+        switch self {
+        case .claudeCode, .codex, .lmStudio: return true
+        case .cursor, .gemini, .openai:      return false
         }
     }
 }
