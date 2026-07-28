@@ -101,6 +101,46 @@ xcodebuild \
 [ -f "$IPA" ] || { echo "❌ IPA export failed — looked for $IPA"; exit 1; }
 echo "   ✓ IPA: $IPA ($(du -h "$IPA" | cut -f1))"
 
+# ---------- entitlement guard ----------
+#
+# Xcode's automatic signing DROPS entitlements the App ID doesn't have
+# enabled, without warning and without failing the build. That is how a
+# release once shipped with `aps-environment` missing: the source
+# .entitlements asked for it, the App ID didn't grant it, the log said
+# nothing, and inbound CloudKit sync was dead on arrival because the mirror
+# never received its subscription pushes.
+#
+# So verify against the SIGNED artifact rather than trusting the inputs.
+ENT_TMP="$(mktemp -d)"
+unzip -q -o "$IPA" -d "$ENT_TMP" 'Payload/Doris.app/*' 2>/dev/null || true
+SIGNED_ENT="$(codesign -d --entitlements :- "$ENT_TMP/Payload/Doris.app" 2>/dev/null)"
+MISSING=""
+# `aps-environment` is the iOS spelling — macOS uses
+# `com.apple.developer.aps-environment`, and checking for the macOS key here
+# is how the first version of this guard reported the right failure for the
+# wrong reason. Match the exact key so a renamed/misspelled entitlement can't
+# pass by matching some other line.
+for key in \
+  "aps-environment" \
+  "com.apple.developer.icloud-services" \
+  "com.apple.security.application-groups"
+do
+  if ! printf '%s' "$SIGNED_ENT" | grep -q "<key>$key</key>"; then
+    MISSING="$MISSING $key"
+  fi
+done
+rm -rf "$ENT_TMP"
+if [ -n "$MISSING" ]; then
+  echo "❌ The signed app is MISSING entitlements:$MISSING" >&2
+  echo "   Xcode strips entitlements the App ID doesn't grant, silently." >&2
+  echo "   Enable the matching capability for com.gavin.doris.ios at" >&2
+  echo "   developer.apple.com → Identifiers, then re-run (the profile" >&2
+  echo "   regenerates automatically). Refusing to ship a build whose" >&2
+  echo "   iCloud sync would be broken." >&2
+  exit 1
+fi
+echo "   ✓ entitlements present in signed app (push + iCloud + app group)"
+
 # ---------- 3. validate ----------
 
 echo "🔍 [3/4] Validating with App Store Connect..."

@@ -125,9 +125,17 @@ public actor SyncTimer {
             //     this isn't a hard failure — but it must not read as "synced",
             //     because remote edits will never land.
             if await MainActor.run { !SyncSettings.shared.inboundPushReady } {
+                // Deliberately does NOT tell the user to check their
+                // notification permissions. CloudKit rides on SILENT pushes,
+                // which don't need that permission at all — the first version
+                // of this message said to check it and sent the user chasing
+                // a setting that was already correct. The realistic causes are
+                // a build whose App ID lacks the Push Notifications capability
+                // (the entitlement then gets stripped at signing, silently) or
+                // no network at launch.
                 let msg = Self.localized(
-                    en: "Sending changes works, but this device can't receive push notifications — changes made on your other devices won't arrive. Check Settings → Notifications for Doris.",
-                    zh: "本机的改动能发出去,但收不到推送通知 —— 其他设备上的改动不会同步过来。请检查系统设置 → 通知 里 Doris 的权限。"
+                    en: "This device can't register for push, so changes from your other devices won't arrive (sending still works). This is a build/entitlement problem, not a permissions one — nothing to change in Settings.",
+                    zh: "本机无法注册推送,因此其他设备上的改动不会同步过来(本机的改动仍能发出去)。这是构建/权限配置(entitlement)问题,不是通知权限问题 —— 系统设置里无需改动。"
                 )
                 await MainActor.run { SyncSettings.shared.lastSyncError = msg }
                 DorisLog.sync.error("poke: inbound push unavailable — import will not happen")
