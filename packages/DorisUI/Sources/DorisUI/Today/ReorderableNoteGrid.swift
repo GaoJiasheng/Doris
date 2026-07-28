@@ -54,6 +54,13 @@ public struct ReorderableNoteGrid<Card: View>: View {
     @State private var items: [Note] = []
     @State private var draggingID: UUID?
 
+    /// How long a drag may stay "in progress" with no drop before we treat it
+    /// as abandoned. See the watchdog in `body` — generous enough not to cut
+    /// a real drag short, short enough that a stuck card recovers on its own.
+    /// (A computed property, not a `static let`: this type is generic over the
+    /// card view, and generic types can't hold static stored properties.)
+    private var abandonedDragTimeout: Duration { .seconds(20) }
+
     private var sourceSignature: String {
         source.map { "\($0.id.uuidString):\($0.order)" }.joined(separator: "|")
     }
@@ -64,15 +71,41 @@ public struct ReorderableNoteGrid<Card: View>: View {
                 cell(note)
             }
         }
-        // NOTE: no grid-level catch-all dropDestination — a drop region
-        // wrapping the whole grid nests under each cell's own drop region
-        // and skews SwiftUI's hover hit-testing (the reorder fired a card
-        // late). Each cell handles its own drop; the tiny inter-card gaps
-        // are not a realistic drop target.
+        // NOTE: don't WRAP the grid in a drop region — nesting one around the
+        // cells skews SwiftUI's hover hit-testing and the reorder fires a card
+        // late. The backstop below is in `.background` (behind the cells)
+        // precisely to avoid that, while still catching drops the cells miss.
         // The single animation that makes neighbours glide as the order
         // mutates. LazyVGrid honours an explicit value-keyed spring here.
         .animation(.spring(response: 0.30, dampingFraction: 0.80), value: items)
+        // Backstop for drops that land INSIDE the grid but not on a card —
+        // the inter-card gaps, or the empty tail of the last row. Sits behind
+        // the cells, so a cell's own drop region still wins the hover; this
+        // only catches what would otherwise fall through. Without it the drag
+        // state never clears and the card stays a dashed hole.
+        .background {
+            Color.clear
+                .contentShape(Rectangle())
+                .dropDestination(for: String.self) { _, _ in
+                    finishDrop(); return true
+                }
+        }
+        // Last resort. A system drag gives no cancellation callback, so a drag
+        // released outside the grid — or a long-press that fired `.onDrag`
+        // without the user ever meaning to drag, which is all it takes on iOS
+        // — would leave `draggingID` set forever, hiding that card behind its
+        // placeholder for the rest of the session. Time it out instead.
+        .task(id: draggingID) {
+            guard draggingID != nil else { return }
+            try? await Task.sleep(for: abandonedDragTimeout)
+            guard !Task.isCancelled, draggingID != nil else { return }
+            withAnimation(.spring(response: 0.30, dampingFraction: 0.80)) {
+                draggingID = nil
+                items = source          // discard any half-finished reorder
+            }
+        }
         .onAppear { if items.isEmpty { items = source } }
+        .onDisappear { draggingID = nil }
         .onChange(of: sourceSignature) { _, _ in
             if draggingID == nil { items = source }
         }

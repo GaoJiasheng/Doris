@@ -6,6 +6,22 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.7.1 — 2026-07-28
+
+### Fixed
+
+- **A long-press could turn a pinned card into an empty dashed outline for
+  the rest of the session.** Starting a drag hid the card (its snapshot is
+  what follows your finger, so the slot becomes a gap), but the state that
+  hid it was only cleared when the card was dropped *onto another card*.
+  Release anywhere else — in the space between cards, outside the grid, or
+  without moving at all — and the card stayed invisible until the app was
+  restarted. On iOS a long-press alone begins a system drag, so simply
+  pressing and letting go was enough to trigger it. Drops that miss a card
+  are now caught by a backstop behind the grid, and a drag that never
+  reports a drop (cancelled, or released outside the app — the system gives
+  no callback for either) times out and restores the card.
+
 ## 1.7.0 — 2026-07-28
 
 Token stats now count your local LM Studio models.
