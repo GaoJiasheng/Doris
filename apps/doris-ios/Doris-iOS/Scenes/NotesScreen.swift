@@ -146,15 +146,18 @@ struct NotesScreen: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 searchBar
             }
-            // Note detail destination
+            // Note detail destination.
+            //
+            // Resolved by `NoteDetailHost`, NOT by reaching into `notes` here.
+            // This closure re-runs whenever the @Query publishes — and the
+            // query is sorted by `updatedAt`, so editing the very note being
+            // shown re-emits it. Reading `notes` here coupled the open editor
+            // to that churn, rebuilding its text fields mid-edit and breaking
+            // marked-text (Pinyin) input. The host holds the note itself, so
+            // list re-sorting no longer reaches the editor.
             .navigationDestination(for: UUID.self) { id in
-                if let note = notes.first(where: { $0.id == id }) {
-                    NoteDetailScreen(note: note) {
-                        if !path.isEmpty { path.removeLast() }
-                    }
-                } else {
-                    Text(L("Note not found", "笔记不存在"))
-                        .foregroundStyle(.secondary)
+                NoteDetailHost(id: id) {
+                    if !path.isEmpty { path.removeLast() }
                 }
             }
             // Calendar timeline destination

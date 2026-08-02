@@ -166,7 +166,8 @@ public struct TodoRow: View {
                 onSubmit: onSubmit,
                 onDeleteEmpty: onDeleteEmpty,
                 onMoveUp: onMoveUp,
-                onMoveDown: onMoveDown
+                onMoveDown: onMoveDown,
+                onDoubleClick: onExpand
             )
             // Constrain width so the field wraps to the available space (and
             // reports its multi-line height) instead of growing horizontally.
@@ -230,10 +231,13 @@ public struct TodoRow: View {
             DueDateChipButton(note: note)
         }
         .padding(.horizontal, 8)
-        // Bumped vertical padding now that rows touch (parent VStack
-        // spacing is 0). Comfortable click target without a dead gap
-        // between rows where clicks would land on neither.
-        .padding(.vertical, 7)
+        // Rows touch (parent VStack spacing is 0), so the row still needs
+        // enough height to be a comfortable target — but most of that height
+        // now belongs to the title field itself (`verticalPadding`), where it
+        // is EDITABLE rather than dead. Keeping the old 7pt here on top of
+        // that would just make rows tall again; this trims the inert part and
+        // lets the field own the space.
+        .padding(.vertical, 3)
         .background(
             // Hover highlight covers the entire row extent (hit-tested
             // by `contentShape` below). Resting state is fully clear so
@@ -420,6 +424,9 @@ struct TodoTitleField: NSViewRepresentable {
     var onDeleteEmpty: () -> Void
     var onMoveUp: () -> Void = {}
     var onMoveDown: () -> Void = {}
+    /// Double-click on a row that ISN'T already being edited → open the task.
+    /// Same action as the "open editor" toolbar button, which stays.
+    var onDoubleClick: () -> Void = {}
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -430,6 +437,15 @@ struct TodoTitleField: NSViewRepresentable {
         // delegate intercepts insertNewline), so multi-line display doesn't
         // turn into multi-line input.
         let tf = WrappingTextField()
+        // Custom cell so the text stays centred once `verticalPadding` makes
+        // the field taller than its glyphs. Must be installed before any
+        // other cell configuration below, which would otherwise be lost.
+        let cell = InsetTextFieldCell(textCell: "")
+        cell.isEditable = true
+        cell.isSelectable = true
+        cell.isBordered = false
+        cell.drawsBackground = false
+        tf.cell = cell
         tf.isEditable = true
         tf.isSelectable = true
         tf.isBordered = false
@@ -440,7 +456,15 @@ struct TodoTitleField: NSViewRepresentable {
         tf.lineBreakMode = .byWordWrapping
         tf.cell?.wraps = true
         tf.cell?.isScrollable = false
-        tf.font = NSFont.preferredFont(forTextStyle: .subheadline)
+        // 14pt, not `.subheadline` — that resolves to 11pt on macOS, which
+        // made task titles small and (because the caret is line-height) gave
+        // a stubby insertion point that was hard to place accurately.
+        tf.font = NSFont.systemFont(ofSize: 14)
+        // Grow the editable strip beyond the glyphs so clicking anywhere in
+        // the row's text column starts editing, rather than only the few
+        // points the characters happen to occupy.
+        tf.verticalPadding = 5
+
         tf.placeholderString = placeholder
         tf.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
         tf.delegate = context.coordinator
@@ -448,6 +472,7 @@ struct TodoTitleField: NSViewRepresentable {
         tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tf.setContentHuggingPriority(.required, for: .vertical)
         context.coordinator.installArrowMonitor(for: tf)
+        context.coordinator.installDoubleClickMonitor(for: tf)
         return tf
     }
 
@@ -542,14 +567,25 @@ struct TodoTitleField: NSViewRepresentable {
         /// monitor only acts while THIS field is the one being edited, and
         /// swallows the arrow so the caret doesn't jump to the line head/tail.
         var arrowMonitor: Any?
+        var clickMonitor: Any?
 
         func installArrowMonitor(for field: NSTextField) {
             guard arrowMonitor == nil else { return }
             arrowMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self, weak field] event in
                 guard let self, let field,
                       let editor = field.currentEditor(),
-                      field.window?.firstResponder === editor,
-                      event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
+                      field.window?.firstResponder === editor
+                else { return event }
+
+                // ⌘↩ while editing → open the task. Checked before the
+                // no-modifiers guard below, which exists for the plain arrows.
+                if event.keyCode == 36, event.modifierFlags.contains(.command) {
+                    field.window?.makeFirstResponder(nil)
+                    self.parent.onDoubleClick()
+                    return nil
+                }
+
+                guard event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
                 else { return event }
                 switch event.keyCode {
                 case 126: self.parent.onMoveUp();   return nil   // ↑
@@ -559,8 +595,35 @@ struct TodoTitleField: NSViewRepresentable {
             }
         }
 
+        /// Double-click anywhere on the title → open the task.
+        ///
+        /// Has to be a local event monitor, not a gesture recognizer on the
+        /// field: the first click hands first-responder status to the field
+        /// editor (an NSTextView subview), so the second click is delivered
+        /// there and a recognizer on the NSTextField never sees it — it just
+        /// became word-selection. A local monitor sees the event before
+        /// dispatch, whoever is focused. Same mechanism the arrow keys above
+        /// already rely on.
+        func installDoubleClickMonitor(for field: NSTextField) {
+            guard clickMonitor == nil else { return }
+            clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self, weak field] event in
+                guard let self, let field, event.clickCount == 2,
+                      let window = field.window, event.window === window
+                else { return event }
+                // Only ours: the monitor is global to the app, so every row's
+                // field would otherwise react to a double-click in any of them.
+                let local = field.convert(event.locationInWindow, from: nil)
+                guard field.bounds.contains(local) else { return event }
+
+                field.window?.makeFirstResponder(nil)
+                self.parent.onDoubleClick()
+                return nil          // swallow, so it doesn't also select a word
+            }
+        }
+
         func removeArrowMonitor() {
             if let m = arrowMonitor { NSEvent.removeMonitor(m); arrowMonitor = nil }
+            if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
         }
 
         deinit { removeArrowMonitor() }

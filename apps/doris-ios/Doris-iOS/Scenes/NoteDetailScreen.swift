@@ -26,6 +26,8 @@ struct NoteDetailScreen: View {
     @State private var confirmingDelete = false
     @State private var showingDatePicker = false
     @State private var showingMarkdownPreview = false
+    /// In-flight debounced `updatedAt` stamp — see `scheduleTouch()`.
+    @State private var touchTask: Task<Void, Never>?
 
     var onDelete: () -> Void
 
@@ -169,8 +171,41 @@ struct NoteDetailScreen: View {
         .sheet(isPresented: $showingDatePicker) {
             dueDatePickerSheet
         }
-        .onChange(of: note.bodyMarkdown) { _, _ in note.touch() }
-        .onChange(of: note.title)        { _, _ in note.touch() }
+        // Text edits stamp `updatedAt` on a DEBOUNCE, not per keystroke.
+        //
+        // Per-keystroke was breaking Pinyin (and any marked-text IME) input:
+        // the notes list is a @Query sorted by `updatedAt`, and this screen is
+        // resolved out of that array by `navigationDestination`. So every
+        // letter re-sorted the query, re-evaluated the destination, and
+        // rebuilt this view's TextField — which force-commits whatever the
+        // input method was still composing. Mid-word, the raw pinyin dropped
+        // in as if Return had been pressed.
+        //
+        // It also meant one CloudKit-syncable mutation per character.
+        .onChange(of: note.bodyMarkdown) { _, _ in scheduleTouch() }
+        .onChange(of: note.title)        { _, _ in scheduleTouch() }
+        // Typing may end without the view going away (tab away, background);
+        // flush so `updatedAt` can't lag behind the text.
+        .onDisappear { flushTouch() }
+    }
+
+    /// Coalesces a burst of typing into a single `updatedAt` stamp, applied
+    /// once the user pauses. Cancelling the in-flight task on each keystroke
+    /// is what keeps the query — and therefore this view — stable while a
+    /// word is being composed.
+    private func scheduleTouch() {
+        touchTask?.cancel()
+        touchTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1200))
+            guard !Task.isCancelled else { return }
+            note.touch()
+        }
+    }
+
+    private func flushTouch() {
+        touchTask?.cancel()
+        touchTask = nil
+        note.touch()
     }
 
     // MARK: - Meta row

@@ -101,6 +101,7 @@
 		D86784F76ED3B75C8F690BEF /* InstallCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976C40714C85BEA58C0D7646 /* InstallCommand.swift */; };
 		D9A5A2014C165680B7BD0DA4 /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 730F2C1AAAC114AFFE964277 /* DorisCore */; };
 		DC3062E4DFBF622D3BAD70ED /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2DBDD4CD5705CFC775419428 /* DorisCore */; };
+		DD044553771393AF73EE8613 /* NoteDetailHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502F4E727D682E231B292DEB /* NoteDetailHost.swift */; };
 		DEDAD6EE1603ABB0F65DE5FA /* TodayScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8B8DA6961CB3BF53478514 /* TodayScreen.swift */; };
 		E04B3E365C9DB9EDDA3F16B9 /* OpenBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1447CB53626E37F1DD855B25 /* OpenBarController.swift */; };
 		E0CA0E00846F392054F5E13B /* StickyWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */; };
@@ -190,6 +191,7 @@
 		49787817ECF3EE4EB1D6E5CC /* DevicesCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesCommand.swift; sourceTree = "<group>"; };
 		4ABABD988A1B81A6F7DC411C /* NotifyCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyCommand.swift; sourceTree = "<group>"; };
 		4F5C2DAC65F1EB16C5017423 /* DesktopPanelSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPanelSettings.swift; sourceTree = "<group>"; };
+		502F4E727D682E231B292DEB /* NoteDetailHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteDetailHost.swift; sourceTree = "<group>"; };
 		50476AECFF2B8FC223258807 /* DorisMacChrome */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisMacChrome; path = packages/DorisMacChrome; sourceTree = SOURCE_ROOT; };
 		510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyWindowManager.swift; sourceTree = "<group>"; };
 		5207402EE925DF6E240B5132 /* ExitCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExitCodes.swift; sourceTree = "<group>"; };
@@ -371,6 +373,7 @@
 			children = (
 				9ABB340E9D12DD0046C284D2 /* CalendarTimelineScreen.swift */,
 				E94332B9CD417EEC812A1F43 /* EventsScreen.swift */,
+				502F4E727D682E231B292DEB /* NoteDetailHost.swift */,
 				7263649E21CCBD2C930F4317 /* NoteDetailScreen.swift */,
 				3EBAD6C975AC7AE7F032E9F4 /* NotesScreen.swift */,
 				3C0A5F483ACA3F72ED343586 /* RootTabView.swift */,
@@ -1055,6 +1058,7 @@
 				7B784650FD90AC6F7C0BF3C2 /* CalendarTimelineScreen.swift in Sources */,
 				4C1CEAF18F24677CAA6C453A /* DorisApp.swift in Sources */,
 				C597EEBAAAF4373EE7F54D85 /* EventsScreen.swift in Sources */,
+				DD044553771393AF73EE8613 /* NoteDetailHost.swift in Sources */,
 				F548C0123D3DCE76BD293315 /* NoteDetailScreen.swift in Sources */,
 				585D3E3760BE6A4849A2A6D3 /* NotesScreen.swift in Sources */,
 				513597108B56CFB5759C787A /* RootTabView.swift in Sources */,

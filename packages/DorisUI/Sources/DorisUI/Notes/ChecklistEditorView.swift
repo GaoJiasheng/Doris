@@ -385,6 +385,21 @@ func dorisFocusFieldToEnd(_ tf: NSTextField, tries: Int = 8) {
 /// SwiftUI by refreshing `preferredMaxLayoutWidth` from its actual width
 /// on each layout pass and invalidating its intrinsic size.
 final class WrappingTextField: NSTextField {
+    /// Extra height added above and below the text, so the field's clickable
+    /// / editable area is taller than the glyphs themselves.
+    ///
+    /// An `NSTextField` is otherwise exactly text-high, which left the row's
+    /// surrounding padding as dead space: clicking a hair above or below the
+    /// characters hit the row, not the field, so it neither placed a caret
+    /// nor started editing. The text stays vertically centred in the taller
+    /// box (see `InsetTextFieldCell`).
+    var verticalPadding: CGFloat = 0 {
+        didSet {
+            (cell as? InsetTextFieldCell)?.verticalPadding = verticalPadding
+            invalidateIntrinsicContentSize()
+        }
+    }
+
     override func layout() {
         super.layout()
         if abs(preferredMaxLayoutWidth - bounds.width) > 0.5 {
@@ -403,7 +418,49 @@ final class WrappingTextField: NSTextField {
         guard width > 0, let cell else { return super.intrinsicContentSize }
         let h = cell.cellSize(forBounds:
             NSRect(x: 0, y: 0, width: width, height: .greatestFiniteMagnitude)).height
-        return NSSize(width: NSView.noIntrinsicMetric, height: ceil(h))
+        return NSSize(width: NSView.noIntrinsicMetric, height: ceil(h) + verticalPadding * 2)
+    }
+}
+
+/// Cell that keeps its text vertically centred inside a field made taller
+/// than the text (see `WrappingTextField.verticalPadding`). All four rects
+/// have to agree — drawing, editing, and selection each ask separately, and
+/// missing one puts the caret somewhere other than the glyphs.
+final class InsetTextFieldCell: NSTextFieldCell {
+    var verticalPadding: CGFloat = 0
+
+    private func inset(_ rect: NSRect) -> NSRect {
+        guard verticalPadding > 0 else { return rect }
+        let textHeight = cellSize(forBounds:
+            NSRect(x: 0, y: 0, width: rect.width, height: .greatestFiniteMagnitude)).height
+        // Centre the text in whatever slack the padding created. Clamped to
+        // the frame so a wrapped field that already fills its box keeps every
+        // line rather than losing the last one.
+        let h = min(rect.height, ceil(textHeight))
+        return NSRect(x: rect.minX,
+                      y: rect.minY + (rect.height - h) / 2,
+                      width: rect.width,
+                      height: h)
+    }
+
+    override func titleRect(forBounds rect: NSRect) -> NSRect {
+        inset(super.titleRect(forBounds: rect))
+    }
+
+    override func drawInterior(withFrame cellFrame: NSRect, in controlView: NSView) {
+        super.drawInterior(withFrame: inset(cellFrame), in: controlView)
+    }
+
+    override func edit(withFrame rect: NSRect, in controlView: NSView,
+                       editor: NSText, delegate: Any?, event: NSEvent?) {
+        super.edit(withFrame: inset(rect), in: controlView,
+                   editor: editor, delegate: delegate, event: event)
+    }
+
+    override func select(withFrame rect: NSRect, in controlView: NSView,
+                         editor: NSText, delegate: Any?, start: Int, length: Int) {
+        super.select(withFrame: inset(rect), in: controlView,
+                     editor: editor, delegate: delegate, start: start, length: length)
     }
 }
 
@@ -621,12 +678,24 @@ struct ChecklistItemFieldIOS: UIViewRepresentable {
 
     func updateUIView(_ tv: BackspaceReportingTextView, context: Context) {
         context.coordinator.parent = self
-        if tv.text != text { tv.text = text }
+
+        // NEVER touch the text (or the responder) while an input method is
+        // mid-composition. `markedTextRange` is non-nil exactly then — the
+        // Pinyin/Kana/Handwriting buffer that hasn't been committed yet.
+        //
+        // `tv.text` includes that uncommitted buffer while the binding holds
+        // only what's been committed, so the two ALWAYS differ during
+        // composition and this assignment would wipe it — the composition
+        // collapses to raw letters, as if Return had been pressed mid-word.
+        // Any parent re-render was enough to trigger it.
+        let isComposing = tv.markedTextRange != nil
+        if !isComposing, tv.text != text { tv.text = text }
+
         let color: UIColor = checked ? UIColor.label.withAlphaComponent(0.45) : .label
         if tv.textColor != color { tv.textColor = color }
         // Become first responder when the parent marks this row focused
         // (e.g. right after Enter inserts a new row), caret at the end.
-        if isFocused, !tv.isFirstResponder {
+        if isFocused, !tv.isFirstResponder, !isComposing {
             dorisFocusTextViewToEnd(tv)
         }
     }
@@ -644,7 +713,17 @@ struct ChecklistItemFieldIOS: UIViewRepresentable {
         var parent: ChecklistItemFieldIOS
         init(_ parent: ChecklistItemFieldIOS) { self.parent = parent }
 
-        func textViewDidChange(_ tv: UITextView) { parent.text = tv.text }
+        func textViewDidChange(_ tv: UITextView) {
+            // Don't publish a half-composed input method buffer. While
+            // `markedTextRange` is set the text is provisional (raw pinyin,
+            // kana, handwriting candidates); writing it upward would persist
+            // and sync gibberish, and every write re-renders the view that
+            // owns this field — the churn that broke composition in the first
+            // place. UIKit calls this again the moment the candidate is
+            // committed, with no marked range, so nothing is lost.
+            guard tv.markedTextRange == nil else { return }
+            parent.text = tv.text
+        }
         func textViewDidBeginEditing(_ tv: UITextView) { parent.onFocusChange(true) }
         func textViewDidEndEditing(_ tv: UITextView) { parent.onFocusChange(false) }
 
