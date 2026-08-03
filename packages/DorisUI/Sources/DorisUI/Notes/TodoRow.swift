@@ -54,6 +54,10 @@ public struct TodoRow: View {
     @Environment(\.modelContext) private var ctx
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var lang = LanguageSettings.shared
+    /// Observed so the row's focus button flips to "stop" (and back) the
+    /// moment a session starts or ends anywhere — including from the notch
+    /// ring or the context menu.
+    @ObservedObject private var focus = FocusTimer.shared
     @State private var hovering = false
     @State private var confirmingDelete = false
     @State private var isDropTarget = false
@@ -207,6 +211,14 @@ public struct TodoRow: View {
             .opacity(hovering ? 1 : 0)
             .animation(.easeInOut(duration: 0.12), value: hovering)
 
+            // Focus (pomodoro). Always visible when THIS task is the active
+            // session — it doubles as the "what am I on" indicator, so it
+            // must not be hidden behind hover like the archive/delete pair.
+            // Sub-tasks got a ▷ in the checklist editor from the start;
+            // top-level tasks only had the right-click menu, which is a poor
+            // place for something you reach for several times a day.
+            focusButton
+
             // Expand → open full editor for body / sub-checklist.
             // Icon swaps to a "doc" if the note has body content.
             Button(action: onExpand) {
@@ -318,6 +330,44 @@ public struct TodoRow: View {
     }
 
     // MARK: - Action buttons
+
+    /// Start / stop a focus session on this task. A menu when idle (so the
+    /// duration is one click away rather than a separate step), a plain stop
+    /// button while this task is the one running.
+    @ViewBuilder
+    private var focusButton: some View {
+        let isFocusedTask = focus.isFocused(noteID: note.id)
+        if isFocusedTask {
+            Button { FocusTimer.shared.stop() } label: {
+                Image(systemName: "stop.circle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(CyberPalette.neonPink)
+                    .frame(width: 16, height: 16)
+            }
+            .buttonStyle(.plain)
+            .help(L("Stop focus", "停止专注"))
+        } else if !note.done {
+            // Done tasks don't get the affordance — starting a pomodoro on
+            // something already finished is never the intent.
+            Menu {
+                ForEach([15, 25, 45], id: \.self) { m in
+                    Button(L("\(m) min", "\(m) 分钟")) {
+                        FocusTimer.shared.start(noteID: note.id, title: note.title,
+                                                subtask: nil, minutes: m)
+                    }
+                }
+            } label: {
+                Image(systemName: "timer")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(hovering ? 0.7 : 0.25))
+                    .frame(width: 16, height: 16)
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help(L("Start focus", "开始专注"))
+        }
+    }
 
     /// Left action: archive / unarchive (in active/archived view) or
     /// restore (in trash view). Icon + tooltip flip based on state.
