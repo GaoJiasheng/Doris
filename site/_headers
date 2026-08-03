@@ -1,0 +1,22 @@
+# Cloudflare Pages header rules.
+#
+# The page is a single self-contained HTML file with no external requests,
+# so the CSP can be tight — anything trying to phone out is a bug or an
+# injection. `unsafe-inline` is required only because the styles and the
+# one reveal-on-scroll script are inline (deliberately: it keeps the deploy
+# a single file and dodges Pages' 25 MiB per-asset limit entirely).
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Content-Security-Policy: default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+# HTML must revalidate so a new release's download link isn't served stale
+# from a visitor's cache.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
