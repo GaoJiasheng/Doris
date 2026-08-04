@@ -7,7 +7,7 @@
 <meta name="description" content="macOS 刘海助手 + iPhone 全功能编辑器。任务、事件与专注计时器,Token 用量统计,Claude Code / Codex 通知接管,CLI 脚本接口,以及一只可以拖到桌面的宠物。">
 <meta property="og:title" content="Doris — 赛博笔记">
 <meta property="og:description" content="住在刘海里的 AI 助理:任务、专注、Token 统计、Agent 通知,Mac 与 iPhone 实时同步。">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐱</text></svg>">
+<link rel="icon" type="image/png" href="assets/notch-cat.png">
 <style>
   :root{
     --pink:#FF4DBF; --cyan:#00D9FF; --green:#4ADE80; --violet:#7C3AED;
@@ -76,7 +76,9 @@
   .tab{position:absolute;top:0;height:30px;background:#000;z-index:3;display:flex;align-items:center;justify-content:center}
   .tab.l{right:calc(50% + 90px);width:44px;border-radius:0 0 0 12px}
   .tab.r{left:calc(50% + 90px);width:44px;border-radius:0 0 12px 0}
-  .cat{font-size:17px;animation:bob 3.2s ease-in-out infinite}
+  /* The real pack mark, not an emoji. Pixel-exact at 20px like the app's
+     own notch tab, which renders it with nearest-neighbour and no crop. */
+  .cat{width:20px;height:20px;object-fit:contain;display:block;animation:bob 3.2s ease-in-out infinite}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
   .ring{width:19px;height:19px;transform:rotate(-90deg)}
   .ring circle{fill:none;stroke-width:2.6;stroke-linecap:round}
@@ -156,15 +158,25 @@
                linear-gradient(160deg,#160D26,#07070C 72%)}
   .pet-bar{height:26px;background:rgba(0,0,0,.55);border-bottom:1px solid rgba(255,255,255,.05)}
   .pet-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:26px;background:#000;border-radius:0 0 12px 12px}
-  .pet{position:absolute;font-size:34px;filter:drop-shadow(0 8px 20px rgba(0,0,0,.5));animation:pull 7s ease-in-out infinite}
+  /* Docked in the notch tab → dragged out → sitting on the desktop → back.
+     Size is animated (18px tab mark ↔ 96px pet) because that IS the
+     transition the app makes. */
+  .pet{position:absolute;object-fit:contain;filter:drop-shadow(0 8px 20px rgba(0,0,0,.5));
+    animation:pull 7s ease-in-out infinite}
   @keyframes pull{
-    0%,10%{top:-2px;left:calc(50% - 105px);font-size:18px;opacity:.95}
-    28%,34%{top:96px;left:calc(50% - 150px);font-size:34px}
-    52%,88%{top:150px;left:calc(50% - 178px);font-size:34px}
-    97%,100%{top:-2px;left:calc(50% - 105px);font-size:18px;opacity:.95}
+    0%,10%{top:3px;left:calc(50% - 96px);width:18px;height:18px;opacity:.95}
+    30%,36%{top:78px;left:calc(50% - 150px);width:96px;height:96px;opacity:1}
+    54%,88%{top:120px;left:calc(50% - 186px);width:96px;height:96px;opacity:1}
+    97%,100%{top:3px;left:calc(50% - 96px);width:18px;height:18px;opacity:.95}
   }
   .pet-hint{position:absolute;bottom:16px;right:18px;font-size:11.5px;color:var(--dim);
     border:1px solid var(--line);background:rgba(0,0,0,.4);padding:5px 11px;border-radius:999px}
+  .packs{display:flex;gap:14px;margin-top:24px}
+  .packs figure{flex:1;text-align:center;border:1px solid var(--line);border-radius:14px;padding:12px 8px;
+    background:var(--card);transition:.22s}
+  .packs figure:hover{border-color:rgba(0,217,255,.35);transform:translateY(-3px)}
+  .packs img{width:100%;max-width:78px;height:78px;object-fit:contain}
+  .packs figcaption{font-size:11.5px;color:var(--dim);margin-top:6px}
 
   /* voice */
   .voice-demo{display:grid;place-items:center;gap:14px;padding:14px 6px}
@@ -229,7 +241,7 @@
 </nav>
 
 <header class="wrap">
-  <div class="pill">🐱 <b data-zh="住在刘海里" data-en="Lives in the notch"></b> <span data-zh="· macOS + iPhone" data-en="· macOS + iPhone"></span></div>
+  <div class="pill"><img src="assets/notch-cat.png" alt="" width="16" height="16" style="vertical-align:-3px"> <b data-zh="住在刘海里" data-en="Lives in the notch"></b> <span data-zh="· macOS + iPhone" data-en="· macOS + iPhone"></span></div>
   <h1><span data-zh="你的 Agent 干完活了," data-en="Your agent just finished."></span><br><span class="g" data-zh="让刘海告诉你。" data-en="Let the notch tell you."></span></h1>
   <p class="sub"
      data-zh="Doris 是一个常驻 macOS 菜单栏 / 刘海的赛博助理,配一个 iPhone 全功能编辑器。任务、专注计时、Token 统计、Agent 通知、CLI —— 两端共享同一个 iCloud 库。"
@@ -244,7 +256,7 @@
     <div class="macbar">
       <div class="menubar"><span>&#63743;</span><span>Finder</span><span>File</span><span>Edit</span></div>
       <div class="notch"></div>
-      <div class="tab l"><span class="cat">🐱</span></div>
+      <div class="tab l"><img class="cat" src="assets/notch-cat.png" alt="Doris" width="20" height="20"></div>
       <div class="tab r"><svg class="ring" viewBox="0 0 20 20"><circle class="bg" cx="10" cy="10" r="8"></circle><circle class="fg" cx="10" cy="10" r="8"></circle></svg></div>
       <div class="banner">
         <div class="dot">C</div>
@@ -378,12 +390,17 @@
         <li data-zh="✦ 桌面模式下点击唤出主窗口,不打断全屏应用" data-en="✦ On the desktop, click to summon the main window without disturbing full-screen apps"></li>
         <li data-zh="✦ 可换角色包,配色随之整体切换" data-en="✦ Swappable character packs re-tint the whole app"></li>
       </ul>
+      <div class="packs">
+        <figure><img src="assets/pack-cat.png"  alt="Cat pack"><figcaption data-zh="猫" data-en="Cat"></figcaption></figure>
+        <figure><img src="assets/pack-clip.png" alt="Clip pack"><figcaption data-zh="回形针" data-en="Clip"></figcaption></figure>
+        <figure><img src="assets/pack-girl.png" alt="Girl pack"><figcaption data-zh="少女" data-en="Girl"></figcaption></figure>
+      </div>
     </div>
     <div class="reveal">
       <div class="pet-stage">
         <div class="pet-bar"></div>
         <div class="pet-notch"></div>
-        <div class="pet">🐱</div>
+        <img class="pet" src="assets/pack-cat.png" alt="Doris desktop pet">
         <div class="pet-hint" data-zh="按住拖动 →" data-en="Press and drag →"></div>
       </div>
     </div>
