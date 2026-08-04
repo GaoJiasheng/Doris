@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>隐私政策 — Doris</title>
+<meta name="description" content="Doris 的隐私政策:笔记只存在你自己的 iCloud,Token 统计只在本地解析,唯一的对外请求来自天气功能。">
+<link rel="icon" type="image/png" href="assets/app-icon.png">
+<style>
+  :root{
+    --pink:#FF4DBF; --cyan:#00D9FF; --bg:#050508;
+    --txt:#EDEAF5; --dim:#9A93B0; --line:rgba(255,255,255,.09);
+    --card:rgba(255,255,255,.035);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.75;
+    -webkit-font-smoothing:antialiased}
+  a{color:var(--cyan);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px}
+  nav{border-bottom:1px solid var(--line);background:rgba(5,5,8,.8);position:sticky;top:0;backdrop-filter:blur(12px)}
+  .nav-in{max-width:760px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:9px}
+  .nav-in img{width:24px;height:24px;border-radius:6px}
+  .nav-in b{font-weight:800;letter-spacing:.16em;font-size:15px;
+    background:linear-gradient(90deg,var(--pink),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .nav-in .back{margin-left:auto;font-size:13px;color:var(--dim)}
+  header{padding:64px 0 8px}
+  h1{font-size:clamp(28px,5vw,40px);font-weight:800;letter-spacing:-.02em}
+  .updated{color:var(--dim);font-size:13px;margin-top:10px}
+  .lang{margin:26px 0 0;font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);
+    color:var(--dim);background:transparent;cursor:pointer;font-family:inherit}
+  .lang:hover{color:var(--cyan);border-color:rgba(0,217,255,.4)}
+  main{padding:34px 0 90px}
+  h2{font-size:19px;margin:38px 0 12px;font-weight:700}
+  p{margin:12px 0;color:#D7D2E4}
+  ul{margin:12px 0 12px 22px;color:#D7D2E4}
+  li{margin:7px 0}
+  code{font-family:var(--mono);font-size:.9em;background:var(--card);padding:2px 6px;border-radius:5px;color:var(--cyan)}
+  .box{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:18px 20px;margin:20px 0}
+  .box strong{color:var(--pink)}
+  footer{border-top:1px solid var(--line);padding:28px 0;color:var(--dim);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+
+<nav><div class="nav-in">
+  <img src="assets/app-icon.png" alt=""><b>DORIS</b>
+  <a href="/" class="back" data-zh="← 返回首页" data-en="← Back to site"></a>
+</div></nav>
+
+<div class="wrap">
+  <header>
+    <h1 data-zh="隐私政策" data-en="Privacy Policy"></h1>
+    <div class="updated" data-zh="最后更新:2026 年 8 月 4 日" data-en="Last updated: 4 August 2026"></div>
+    <button class="lang" id="lang" type="button">EN</button>
+  </header>
+
+  <main>
+    <div class="box">
+      <p data-zh="<strong>一句话版本:</strong>你的笔记和任务存在你自己的 iCloud 里,从不经过我们的服务器。我们没有服务器,也没有你的账号 —— 因为没有账号系统。唯一会离开你设备的数据,来自可关闭的天气功能。"
+         data-en="<strong>In one line:</strong> your notes and tasks live in your own iCloud and never pass through our servers. We don't run servers, and we don't have an account for you — there is no account system. The only data that leaves your device comes from the weather feature, which you can turn off."></p>
+    </div>
+
+    <h2 data-zh="我们收集什么" data-en="What we collect"></h2>
+    <p data-zh="就 Doris 的开发者而言:<strong>没有</strong>。我们不运营任何后端服务,没有账号体系,不做分析统计,也没有集成任何第三方追踪 SDK。你的内容不会传输给我们,我们在技术上无法读取它。"
+       data-en="As the developer of Doris: <strong>nothing</strong>. We operate no backend, there is no account system, we run no analytics, and no third-party tracking SDK is bundled. Your content is never transmitted to us, and we have no technical means of reading it."></p>
+
+    <h2 data-zh="你的笔记与任务" data-en="Your notes and tasks"></h2>
+    <p data-zh="笔记、任务、清单、事件记录都保存在你设备本地,并通过 <strong>你自己的 iCloud 私有数据库</strong>(CloudKit private database)在你的设备之间同步。这部分数据受 Apple 的 iCloud 条款与隐私政策约束,我们既看不到也无法访问。"
+       data-en="Notes, tasks, checklists and event records are stored locally on your device and synced between <em>your</em> devices through <strong>your own iCloud private database</strong> (CloudKit). That data is governed by Apple's iCloud terms and privacy policy; we can neither see nor access it."></p>
+    <p data-zh="Doris 没有任何内容分享功能 —— 没有公开库、没有协作共享、没有评论。你的内容不会流向其他用户。"
+       data-en="Doris has no content-sharing features — no public database, no shared records, no comments. Your content never reaches another user."></p>
+
+    <h2 data-zh="Token 用量统计" data-en="Token usage statistics"></h2>
+    <p data-zh="Doris 会读取本机上 Claude Code、Codex 与 LM Studio 写下的日志文件,统计 token 用量。解析<strong>全部在你的设备上完成</strong>,日志内容和统计结果都不会上传到任何地方,只写进你自己的本地存储(并随 iCloud 在你的设备间同步)。"
+       data-en="Doris reads the log files that Claude Code, Codex and LM Studio write on your machine in order to count token usage. Parsing happens <strong>entirely on your device</strong>; neither the log contents nor the resulting statistics are uploaded anywhere. They are written to your own local store (and synced across your devices via iCloud)."></p>
+
+    <h2 data-zh="语音输入" data-en="Voice input"></h2>
+    <p data-zh="使用语音功能时,Doris 通过 Apple 的语音识别框架(Speech / SFSpeechRecognizer)把你的语音转成文字。视机型与语言,该识别可能由 Apple 在设备端完成,也可能由 Apple 的服务器完成 —— 这一行为由 Apple 控制,适用 Apple 的隐私政策。转写结果只会被送到你自己选择的目标应用(ChatGPT、Claude 或当前窗口),不会发送给我们。"
+       data-en="When you use voice input, Doris uses Apple's speech framework (Speech / SFSpeechRecognizer) to turn speech into text. Depending on device and language, that recognition may run on-device or on Apple's servers — this is controlled by Apple and governed by Apple's privacy policy. The transcript is delivered only to the target app you chose (ChatGPT, Claude, or the frontmost app); it is never sent to us."></p>
+    <p data-zh="麦克风只在你按住设定的热键期间开启,松手即停。" data-en="The microphone is active only while you hold your configured hotkey, and stops the moment you release it."></p>
+
+    <h2 data-zh="天气(唯一的对外请求)" data-en="Weather — the one outbound request"></h2>
+    <p data-zh="「今日」页面的天气卡片需要知道你大致在哪。Doris 为此会请求两个第三方服务:"
+       data-en="The weather card on the Today screen needs a rough idea of where you are. For that, Doris contacts two third-party services:"></p>
+    <ul>
+      <li data-zh="<code>ipapi.co</code> —— 根据你的 IP 地址返回大致城市与经纬度。Doris 不使用系统定位权限,因此拿到的是<strong>粗略位置</strong>(通常是城市级),而非 GPS 精确坐标。该请求会让 ipapi.co 看到你的 IP 地址。"
+          data-en="<code>ipapi.co</code> — returns an approximate city and coordinates from your IP address. Doris does not request system location permission, so this is a <strong>coarse location</strong> (city-level), not GPS. Making the request necessarily exposes your IP address to ipapi.co."></li>
+      <li data-zh="<code>api.open-meteo.com</code> —— 用上述经纬度取天气数据。"
+          data-en="<code>api.open-meteo.com</code> — fetches the forecast for those coordinates."></li>
+    </ul>
+    <p data-zh="这两个请求不携带任何你的笔记内容、账号信息或设备标识符。它们各自的数据处理适用其自身的隐私政策。"
+       data-en="Neither request carries any of your notes, account information, or device identifiers. Each service's handling of that data is governed by its own privacy policy."></p>
+
+    <h2 data-zh="Agent 通知集成" data-en="Agent notification integrations"></h2>
+    <p data-zh="若你启用了 Claude Code / Codex 集成,Doris 会在这些工具的本地配置文件中写入一条 hook 命令。任务完成时,该 hook 在你的机器上调用 Doris 显示横幅。整个过程不经过网络,Doris 也不会读取这些工具的会话内容。"
+       data-en="If you enable the Claude Code / Codex integrations, Doris writes a hook command into those tools' local config files. When a task finishes, the hook invokes Doris on your machine to show a banner. Nothing traverses the network, and Doris does not read those tools' conversation contents."></p>
+
+    <h2 data-zh="儿童" data-en="Children"></h2>
+    <p data-zh="Doris 不面向儿童设计,也不会有意收集儿童的任何信息。"
+       data-en="Doris is not directed at children and does not knowingly collect information from them."></p>
+
+    <h2 data-zh="政策变更" data-en="Changes to this policy"></h2>
+    <p data-zh="政策若有更新,会在本页面公布并更新顶部的日期。Doris 是开源项目,相关改动也可在 GitHub 的提交记录中查证。"
+       data-en="Updates will be posted on this page with a revised date at the top. Doris is open source, so any related change is also verifiable in the GitHub commit history."></p>
+
+    <h2 data-zh="联系" data-en="Contact"></h2>
+    <p data-zh="有任何隐私相关的问题,可在 GitHub 提交 issue:"
+       data-en="For any privacy question, open an issue on GitHub:"></p>
+    <p><a href="https://github.com/GaoJiasheng/Doris/issues">github.com/GaoJiasheng/Doris/issues</a></p>
+  </main>
+</div>
+
+<footer><div class="wrap">© 2026 Gavin Gao · <a href="/">doris.gavin.pub</a></div></footer>
+
+<script>
+  const nodes=document.querySelectorAll('[data-zh][data-en]');
+  const btn=document.getElementById('lang');
+  function apply(l){
+    nodes.forEach(n=>{n.innerHTML=n.dataset[l]});
+    document.documentElement.lang = l==='zh'?'zh-CN':'en';
+    btn.textContent = l==='zh'?'EN':'中文';
+    try{localStorage.setItem('doris-lang',l)}catch(e){}
+  }
+  let l; try{l=localStorage.getItem('doris-lang')}catch(e){}
+  if(!l) l=(navigator.language||'').toLowerCase().startsWith('zh')?'zh':'en';
+  apply(l);
+  btn.addEventListener('click',()=>apply(document.documentElement.lang==='zh-CN'?'en':'zh'));
+</script>
+</body>
+</html>
