@@ -12,6 +12,31 @@ see [Mac DMG: which path do I use?](#mac-dmg-which-path-do-i-use).
 
 ---
 
+## App Store submission checklist
+
+Things that live in App Store Connect rather than this repo, so no script
+can enforce them — check them by hand when preparing a submission.
+
+- **Link the website.** Put <https://doris.gavin.pub> in the App Store
+  description *and* set it as the **Marketing URL**. The site is the only
+  place documenting the full feature set (agent hooks, token accounting,
+  CLI, desktop pet, voice), and it carries the macOS download — which the
+  iOS listing can't offer, because the Mac build ships as a notarized DMG
+  rather than through the Mac App Store.
+- **User-generated content: none.** Doris stores notes in the user's own
+  CloudKit **private** database (`cloudKitDatabase: .private(...)` is the
+  only scope in the codebase — no public database, no `CKShare`, no sharing
+  UI). Content never travels between users, so App Review guideline 1.2
+  (moderation, reporting, blocking) doesn't apply, and the UGC questions in
+  the age-rating form are all "no". The iOS Share Extension is inbound only
+  (other apps → Doris), and `doris push --to <device>` targets the user's
+  own devices on their own Apple Account.
+- **Privacy questionnaire.** Judge each item by whether data reaches *you*,
+  not by whether it touches the cloud: notes sync through the user's private
+  iCloud and never reach a server you control.
+
+---
+
 ## One-time setup
 
 ### 1. Apple Developer Program enrollment
