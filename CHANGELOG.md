@@ -6,6 +6,50 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.8.0 — 2026-08-04
+
+The first release with a website: <https://doris.gavin.pub>. Everything
+below shipped in 1.7.x builds that were never published as releases, so
+this is where they actually reach you.
+
+### Added
+
+- **A visible focus button on every task row.** Starting a pomodoro was
+  buried in the right-click menu, while sub-tasks had a ▷ button all along.
+  Idle it offers 15 / 25 / 45; running on that task it becomes a stop
+  button, and it stays visible (unlike the hover-only archive/delete pair)
+  because it doubles as the "which task am I on" indicator.
+- **Double-click a task row — or press ⌘↩ — to open it.** The toolbar
+  button stays. Costs in-row double-click-to-select-word.
+
+### Changed
+
+- **macOS task rows are easier to hit.** The title was 11pt (`.subheadline`
+  resolves to 11 on macOS, 15 on iOS); it's now 14pt, which also gives a
+  taller caret to aim with. And because an `NSTextField` is exactly
+  text-high, the row's padding used to be dead space — clicking just above
+  the glyphs did nothing. The field now owns that padding, roughly doubling
+  the editable area without making rows much taller.
+- **A rebuilt due-date picker.** Presets first (today / tomorrow / weekend /
+  next week), then a calendar drawn in-app. macOS's `.graphical` DatePicker
+  keeps its own intrinsic size, draws a blue system bezel that reads as an
+  error box on a dark panel, and gives ~11pt day cells — none of it
+  reachable from SwiftUI.
+
+### Fixed
+
+- **Pinyin (and any marked-text IME) input on iOS.** Composition kept
+  collapsing to raw letters mid-word, as if Return had been pressed. Three
+  causes, all "a view rebuild commits the input method's buffer": the
+  checklist field assigned its text on every update pass, its coordinator
+  published half-composed text upward, and every keystroke in a title
+  re-sorted the notes query that the open editor was resolved from.
+- **A long-press could leave a pinned card as an empty dashed outline** for
+  the rest of the session — the drag state cleared only when a card was
+  dropped *onto another card*, and on iOS a long-press alone starts a drag.
+- **Due dates picked in the popover never scheduled a reminder.** They set
+  the date without telling `DueDateNotifier`; only the right-click menu did.
+
 ## 1.7.1 — 2026-07-28
 
 ### Fixed
