@@ -99,10 +99,10 @@
      `section{padding:...}` the vertical padding silently resolved to 0 and
      the page had no section rhythm at all; the only gaps were the headings'
      own margins. Matching .wrap's specificity is what makes this apply. */
-  /* 80px top + 80px bottom → ~160px between sections. The first attempt at
-     fixing the specificity bug jumped straight to 136px, which read as a
-     hole; the original (broken) value left only the headings' own ~25px. */
-  section.wrap{padding:80px 24px;position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.05)}
+  /* Tuned by eye across three passes: the specificity bug left ~25px (far
+     too tight), 136px read as a hole, 80px was still airy. 40px each side
+     → ~100px between one section's content and the next heading. */
+  section.wrap{padding:40px 24px;position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.05)}
   section.wrap:first-of-type{border-top:0}
   h2{font-size:clamp(26px,4vw,38px);letter-spacing:-.015em;line-height:1.25;font-weight:800}
   .lede{color:var(--dim);margin-top:16px;max-width:620px;font-size:15.5px}
