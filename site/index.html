@@ -114,8 +114,15 @@
     box-shadow:0 30px 90px rgba(0,0,0,.65),0 0 70px rgba(124,58,237,.13);
     background:#0A0710;line-height:0}
   .shot img{width:100%;height:auto;display:block}
-  .shotwrap{padding-top:0!important}          /* sits right under the hero */
   #tokens .shot{margin-top:40px}
+  /* Show only the top band of the window. aspect-ratio (not a px max-height)
+     so the crop stays proportional at every width; object-position pins it
+     to the top so the nav + token row + pinned cards are what survives. */
+  /* 940 of the source's 1468 ≈ 64% — the window's content ends around 61%
+     (the second schedule row), so this stops just past it. Cutting at a
+     round "half" would slice that row in two. */
+  .shot-crop{aspect-ratio:1882/940}
+  .shot-crop img{height:100%;object-fit:cover;object-position:top}
 
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
   .card{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:26px;transition:.25s}
@@ -276,15 +283,6 @@
     </div>
   </div>
 </header>
-
-<!-- Real product shot, straight after the hero: the notch animation sells the
-     hook, this proves there's a finished app behind it. -->
-<section id="shot" class="wrap shotwrap">
-  <figure class="shot reveal">
-    <img src="assets/shot-today.webp" alt="Doris — 今日" loading="lazy"
-         onerror="this.closest('section').remove()">
-  </figure>
-</section>
 
 <!-- 1 · tasks, events, focus -->
 <section id="tasks" class="wrap">
@@ -453,6 +451,16 @@
     <div class="link"></div>
     <div class="dev"><div class="e">📱</div><div class="n" data-zh="iPhone<br>编辑器 · 小组件" data-en="iPhone<br>Editor · Widgets"></div></div>
   </div>
+</section>
+
+<!-- Closing shot. Cropped to its top band rather than shown whole: the
+     window's lower half is empty desk space, which reads as dead weight at
+     full height. Cropping in CSS keeps the source file untouched. -->
+<section id="shot" class="wrap">
+  <figure class="shot shot-crop reveal">
+    <img src="assets/shot-today.webp" alt="Doris — 今日" loading="lazy"
+         onerror="this.closest('section').remove()">
+  </figure>
 </section>
 
 <section id="download" class="wrap">
