@@ -7,7 +7,11 @@
 <meta name="description" content="macOS 刘海助手 + iPhone 全功能编辑器。任务、事件与专注计时器,Token 用量统计,Claude Code / Codex 通知接管,CLI 脚本接口,以及一只可以拖到桌面的宠物。">
 <meta property="og:title" content="Doris — 赛博笔记">
 <meta property="og:description" content="住在刘海里的 AI 助理:任务、专注、Token 统计、Agent 通知,Mac 与 iPhone 实时同步。">
-<link rel="icon" type="image/png" href="assets/notch-cat.png">
+<!-- The real app icon, not the notch mark: the notch art is a bare head on
+     transparency, meant to sit on a black tab, and it reads as a smudge on a
+     browser tab's light chrome. -->
+<link rel="icon" type="image/png" href="assets/app-icon.png">
+<link rel="apple-touch-icon" href="assets/app-icon.png">
 <style>
   :root{
     --pink:#FF4DBF; --cyan:#00D9FF; --green:#4ADE80; --violet:#7C3AED;
@@ -38,7 +42,12 @@
 
   nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(5,5,8,.72);border-bottom:1px solid var(--line)}
   .nav-in{max-width:1120px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:26px}
-  .brand{font-weight:800;letter-spacing:.16em;font-size:15px;
+  /* Icon + wordmark. The gradient clip has to sit on the <span>, not the
+     <a> — `background-clip:text` on the anchor would clip the <img> too and
+     the icon would vanish. */
+  .brand{display:flex;align-items:center;gap:9px}
+  .brand img{width:24px;height:24px;border-radius:6px;display:block}
+  .brand span{font-weight:800;letter-spacing:.16em;font-size:15px;
     background:linear-gradient(90deg,var(--pink),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
   .nav-links{display:flex;gap:20px;font-size:13.5px;color:var(--dim);margin-left:auto}
   .nav-links a:hover{color:var(--txt)}
@@ -246,7 +255,7 @@
 
 <nav>
   <div class="nav-in">
-    <a href="#" class="brand">DORIS</a>
+    <a href="#" class="brand"><img src="assets/app-icon.png" alt=""><span>DORIS</span></a>
     <div class="nav-links">
       <a href="#tasks"  data-zh="任务与专注" data-en="Tasks &amp; Focus"></a>
       <a href="#tokens" data-zh="Token 统计" data-en="Tokens"></a>
