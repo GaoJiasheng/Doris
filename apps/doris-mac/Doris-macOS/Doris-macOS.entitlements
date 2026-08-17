@@ -44,6 +44,30 @@
     <array>
         <string>iCloud.com.gavin.doris</string>
     </array>
+    <!-- Pin CloudKit to the Production database for EVERY build, including
+         local Debug runs from Xcode.
+
+         Without this key CloudKit picks its environment from the signature:
+         an Apple-Development-signed build (what `Run` produces) silently
+         lands in the *Development* database, while the notarized DMG and the
+         iPhone sit in Production. Nothing errors — mirroring reports success
+         and `ZNEEDSUPLOAD` goes to 0 — the records just go into a database no
+         other device reads. That cost us three months of notes diverging on
+         one Mac before anyone noticed.
+
+         Editing `aps-environment` alone cannot fix it: Xcode's automatic
+         signing rewrites that key to match the provisioning profile type, so
+         a Debug build gets `development` no matter what this file says.
+         `icloud-container-environment` is not rewritten, and the Mac Team
+         Provisioning Profile authorizes both values
+         (`[Production, Development]`), so a Development-signed build may
+         legally claim Production — keeping Xcode debugging fully intact.
+
+         The release re-sign in scripts/release-mac-zip.sh writes this same
+         key; declaring it here makes local builds match the shipped app
+         instead of quietly diverging. -->
+    <key>com.apple.developer.icloud-container-environment</key>
+    <string>Production</string>
     <key>com.apple.developer.aps-environment</key>
     <string>production</string>
     <key>keychain-access-groups</key>

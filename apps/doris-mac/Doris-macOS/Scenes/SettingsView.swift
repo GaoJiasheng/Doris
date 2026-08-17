@@ -293,6 +293,23 @@ private struct SyncSettingsTab: View {
                     .help(L("Mirrors notes and events through your iCloud account so other devices stay in sync.",
                             "通过 iCloud 镜像笔记和事件,让其他设备保持同步。"))
                 if sync.cloudKitEnabled {
+                    // Which database this build actually talks to. Invisible
+                    // until now, which is how a Development-signed build spent
+                    // three months mirroring "successfully" into a store no
+                    // other device read.
+                    LabeledContent(L("Database", "数据库")) {
+                        Text(CloudKitEnvironmentProbe.summary)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(CloudKitEnvironmentProbe.current == .production
+                                             ? .secondary : Color.orange)
+                            .textSelection(.enabled)
+                    }
+                    if CloudKitEnvironmentProbe.current != .production {
+                        Text(L("Not the Production database — this build syncs with a separate dataset your other devices don't read.",
+                               "不是 Production 数据库 —— 此构建同步到一份独立数据,其他设备读不到。"))
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
                     Text(L("Restart Doris after toggling iCloud for the change to take effect.",
                            "切换 iCloud 后需重启 Doris 才会生效。"))
                         .font(.caption)

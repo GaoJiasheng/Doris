@@ -91,6 +91,16 @@ struct SettingsScreen: View {
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 if sync.cloudKitEnabled {
+                    // Name the database this build actually mirrors into.
+                    // Silence here is what let a Development-signed Mac build
+                    // diverge for three months while reporting "synced".
+                    Text(CloudKitEnvironmentProbe.summary)
+                        .monospaced()
+                    if CloudKitEnvironmentProbe.current == .development {
+                        Text(L("Not the Production database — this build syncs with a separate dataset your other devices don't read.",
+                               "不是 Production 数据库 —— 此构建同步到一份独立数据,其他设备读不到。"))
+                            .foregroundStyle(.orange)
+                    }
                     Text(L("Restart Doris after toggling iCloud for the change to take effect.",
                            "切换 iCloud 后需要重启 Doris 才能生效。"))
                 } else {

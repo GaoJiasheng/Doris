@@ -59,8 +59,18 @@ public final class DorisRuntime {
         }
 
         if canUseCloudKit, let c = try? ModelContainerFactory.make(useCloudKit: true) {
-            DorisLog.sync.info("DorisRuntime: CloudKit-backed container ready")
+            DorisLog.sync.info(
+                "DorisRuntime: CloudKit-backed container ready (\(CloudKitEnvironmentProbe.summary, privacy: .public))")
             Self.cloudKitActive = true
+            // Drop any error left over from a previous launch. `lastSyncError`
+            // is persisted in App Group defaults and was only ever cleared by a
+            // *successful poke*, so a one-off failure outlived its cause: one
+            // Mac showed a "not signed with a Development Team" banner for
+            // three months after the signing was fixed, because the UI reads
+            // this field ahead of everything else. A CloudKit container that
+            // just built is proof the old reason no longer holds; if the
+            // problem is still real, SyncTimer rewrites it on the next poke.
+            SyncSettings.shared.lastSyncError = nil
             return c
         }
         // CloudKit off (or failed). Try on-disk local persistence first so
