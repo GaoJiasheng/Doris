@@ -54,12 +54,28 @@ public struct ReorderableNoteGrid<Card: View>: View {
     @State private var items: [Note] = []
     @State private var draggingID: UUID?
 
-    /// How long a drag may stay "in progress" with no drop before we treat it
-    /// as abandoned. See the watchdog in `body` — generous enough not to cut
-    /// a real drag short, short enough that a stuck card recovers on its own.
-    /// (A computed property, not a `static let`: this type is generic over the
-    /// card view, and generic types can't hold static stored properties.)
-    private var abandonedDragTimeout: Duration { .seconds(20) }
+    /// Bumped every time the drag shows a sign of life (lift, or the pointer
+    /// hovering any cell). The watchdog keys off THIS rather than off
+    /// `draggingID`, which is what makes the short timeout below safe.
+    @State private var lastDragActivity: Date = .distantPast
+
+    /// How long the drag may show no activity before we treat it as abandoned.
+    ///
+    /// This used to be 20s keyed on `draggingID`, which is set once at lift and
+    /// never changes — so the clock measured "time since the drag started" and
+    /// had to be generous enough to cover a slow deliberate drag. The cost was
+    /// paid by the failure case: `.onDrag` has no cancellation callback, so a
+    /// card released anywhere outside a drop region (the weather card, a
+    /// section header, off the edge) sat as an empty dashed hole for a full 20
+    /// seconds. That reads as a broken app, and it is trivially easy to trigger
+    /// — a horizontal swipe on a pinned card is enough.
+    ///
+    /// Keying on `lastDragActivity` changes the meaning to "time since the
+    /// drag last moved". A live drag refreshes it continuously via each cell's
+    /// `isTargeted` hover, so it can run as long as the user likes; once the
+    /// finger lifts the hovers stop and the card recovers in a couple of
+    /// seconds instead of twenty.
+    private var abandonedDragTimeout: Duration { .seconds(2.5) }
 
     private var sourceSignature: String {
         source.map { "\($0.id.uuidString):\($0.order)" }.joined(separator: "|")
@@ -95,7 +111,7 @@ public struct ReorderableNoteGrid<Card: View>: View {
         // without the user ever meaning to drag, which is all it takes on iOS
         // — would leave `draggingID` set forever, hiding that card behind its
         // placeholder for the rest of the session. Time it out instead.
-        .task(id: draggingID) {
+        .task(id: lastDragActivity) {
             guard draggingID != nil else { return }
             try? await Task.sleep(for: abandonedDragTimeout)
             guard !Task.isCancelled, draggingID != nil else { return }
@@ -135,6 +151,7 @@ public struct ReorderableNoteGrid<Card: View>: View {
             // effect opens the gap above.
             .onDrag {
                 draggingID = note.id
+                lastDragActivity = Date()
                 return NSItemProvider(object: note.id.uuidString as NSString)
             }
             // Hover-reorder: the instant the dragged card's image enters this
@@ -143,6 +160,9 @@ public struct ReorderableNoteGrid<Card: View>: View {
             .dropDestination(for: String.self) { _, _ in
                 finishDrop(); return true
             } isTargeted: { hovering in
+                // Any hover is proof the drag is still live — refresh the
+                // watchdog so a deliberate slow drag is never cut short.
+                if draggingID != nil { lastDragActivity = Date() }
                 if hovering { moveDragged(over: note) }
             }
     }
