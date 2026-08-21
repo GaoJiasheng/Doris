@@ -141,6 +141,25 @@ public struct ChecklistEditorView: View {
                 }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
+            // Publish a REAL first-text-baseline to the enclosing
+            // `HStack(alignment: .firstTextBaseline)`.
+            //
+            // A UIViewRepresentable exposes no text baseline of its own, so
+            // SwiftUI falls back to the view's bottom edge. That made the row
+            // align "checkbox baseline <-> text view bottom", which is only
+            // incidentally right: the bottom moves whenever the reported
+            // height changes, and an empty UITextView does not report the
+            // same height as one holding a line of text. The visible symptom
+            // was a freshly created sub-task whose caret sat below the
+            // checkbox and snapped into place as soon as the first character
+            // was typed.
+            //
+            // With `textContainerInset = .zero` and `lineFragmentPadding = 0`
+            // the first line's baseline is exactly `ascender` below the top,
+            // and that value does not depend on whether any text exists yet.
+            .alignmentGuide(.firstTextBaseline) { _ in
+                UIFont.preferredFont(forTextStyle: .body).ascender
+            }
             #endif
 
             // No Spacer: the field above fills the width (maxWidth .infinity);
