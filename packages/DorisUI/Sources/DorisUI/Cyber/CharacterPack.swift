@@ -16,7 +16,7 @@ import UIKit
 /// and assets (see `docs/character-packs.md`). `CharacterPackStore`
 /// discovers it at launch — no code change.
 ///
-/// Asset layout inside `Bundle.module`:
+/// Asset layout inside `the character-art bundle`:
 /// ```
 /// Characters/<id>/pack.json
 /// Characters/<id>/portrait.png            (menu-bar head)
@@ -106,10 +106,10 @@ public struct CharacterPack: Identifiable, Equatable {
     public let fps: Double
     /// Frame rate for looping moods (idle/listening/…).
     public let loopFps: Double
-    /// Subdirectory in `Bundle.module` holding the per-mood frame folders.
+    /// Subdirectory in `the character-art bundle` holding the per-mood frame folders.
     /// Default `Characters/<id>/anim`; `girl` overrides to legacy `HeroAnim`.
     public let animDirectory: String
-    /// Subdirectory in `Bundle.module` holding portrait/thumb/logo PNGs.
+    /// Subdirectory in `the character-art bundle` holding portrait/thumb/logo PNGs.
     public let resourceDirectory: String
     /// Whether the pack ships an `icon.png` (its app-icon source). Drives
     /// the macOS Dock-tile swap and signals that an iOS alternate icon
@@ -267,7 +267,7 @@ public final class CharacterPackStore: ObservableObject {
 
     private static func discover() -> [CharacterPack] {
         var packs: [CharacterPack] = []
-        if let root = Bundle.module.resourceURL?.appendingPathComponent("Characters"),
+        if let root = CharacterArtBundle.bundle?.resourceURL?.appendingPathComponent("Characters"),
            FileManager.default.fileExists(atPath: root.path) {
             let dirs = (try? FileManager.default.contentsOfDirectory(
                 at: root, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
@@ -282,7 +282,7 @@ public final class CharacterPackStore: ObservableObject {
                 let resourceDir = "Characters/\(m.id)"
                 let animDir = m.animDirectoryOverride ?? "\(resourceDir)/anim"
                 let moods = Set(m.moods ?? detectMoods(animDir: animDir))
-                let hasIcon = Bundle.module.url(
+                let hasIcon = CharacterArtBundle.bundle?.url(
                     forResource: "icon", withExtension: "png", subdirectory: resourceDir) != nil
                 packs.append(CharacterPack(
                     id: m.id,
@@ -308,7 +308,7 @@ public final class CharacterPackStore: ObservableObject {
     }
 
     private static func detectMoods(animDir: String) -> [String] {
-        guard let root = Bundle.module.resourceURL?.appendingPathComponent(animDir),
+        guard let root = CharacterArtBundle.bundle?.resourceURL?.appendingPathComponent(animDir),
               FileManager.default.fileExists(atPath: root.path) else { return [] }
         let dirs = (try? FileManager.default.contentsOfDirectory(
             at: root, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
@@ -318,7 +318,7 @@ public final class CharacterPackStore: ObservableObject {
     }
 
     nonisolated private static func image(named: String, in subdir: String) -> HeroPlatformImage? {
-        guard let url = Bundle.module.url(forResource: named, withExtension: "png", subdirectory: subdir)
+        guard let url = CharacterArtBundle.bundle?.url(forResource: named, withExtension: "png", subdirectory: subdir)
         else { return nil }
         #if os(macOS)
         return NSImage(contentsOf: url)

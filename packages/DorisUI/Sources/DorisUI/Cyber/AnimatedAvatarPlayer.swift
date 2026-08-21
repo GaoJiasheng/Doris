@@ -12,7 +12,7 @@ public typealias HeroPlatformImage = UIImage
 /// then signal completion via `onFinished` (the parent view typically
 /// uses that to drop back to the loop mood).
 ///
-/// Frames live at `Bundle.module/HeroAnim/<mood>/<mood>_NNNN.png` and are
+/// Frames live at `DorisCharacters.bundle/HeroAnim/<mood>/<mood>_NNNN.png` and are
 /// loaded lazily on first use, then cached per-mood. A weak shared cache
 /// across all instances keeps memory in check when two screens (Mac
 /// dropdown panel + main window) play the same mood.
@@ -34,7 +34,7 @@ public struct AnimatedAvatarPlayer: View {
     /// Fired once after a one-shot clip finishes its single play-through.
     /// Looping clips never fire this. Use it to revert mood → idle.
     let onFinished: (() -> Void)?
-    /// Subdirectory in `Bundle.module` holding the per-mood frame folders
+    /// Subdirectory in `DorisCharacters.bundle` holding the per-mood frame folders
     /// for the active character pack — e.g. "HeroAnim" (built-in girl) or
     /// "Characters/<id>/anim". Frames load from `<animDirectory>/<clip>/`.
     let animDirectory: String
@@ -180,7 +180,7 @@ public struct AnimatedAvatarPlayer: View {
     }
 }
 
-/// In-process cache keyed by mood clip name. The Bundle.module lookup is
+/// In-process cache keyed by mood clip name. The DorisCharacters.bundle lookup is
 /// cheap but decoding 65 PNGs adds up — cache the decoded array so a
 /// second screen showing the same clip doesn't re-decode.
 final class HeroFrameCache: @unchecked Sendable {
@@ -198,8 +198,9 @@ final class HeroFrameCache: @unchecked Sendable {
         }
         lock.unlock()
 
-        // Look for files at <animDirectory>/<clip>/<clip>_*.png in Bundle.module.
-        let bundle = Bundle.module
+        // Look for files at <animDirectory>/<clip>/<clip>_*.png in the
+        // character-art bundle. Absent on iOS, which ships no artwork.
+        guard let bundle = CharacterArtBundle.bundle else { return [] }
         guard let urls = bundle.urls(
             forResourcesWithExtension: "png",
             subdirectory: "\(animDirectory)/\(clip)"

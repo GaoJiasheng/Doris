@@ -51,6 +51,11 @@ packages:
     path: packages/DorisCore
   DorisUI:
     path: packages/DorisUI
+  # macOS only — see packages/DorisCharacters/Package.swift. Declared here so
+  # xcodegen resolves it; DorisUI pulls it in under a platform condition, so
+  # the iOS targets never link it and never carry the ~254 MB of artwork.
+  DorisCharacters:
+    path: packages/DorisCharacters
   DorisMacChrome:
     path: packages/DorisMacChrome
 

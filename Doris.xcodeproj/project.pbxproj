@@ -267,6 +267,7 @@
 		ED774E489BE2AD3814737812 /* AnchorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorState.swift; sourceTree = "<group>"; };
 		F13C5714B3654AB630384690 /* doris-avatar-trimmed.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "doris-avatar-trimmed.png"; sourceTree = "<group>"; };
 		F2A0CEF0A5026DBA42892F9F /* DorisUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisUI; path = packages/DorisUI; sourceTree = SOURCE_ROOT; };
+		F2BFA485D644A4DFA0211250 /* DorisCharacters */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisCharacters; path = packages/DorisCharacters; sourceTree = SOURCE_ROOT; };
 		F917FF55F7AE753CE04C0714 /* AnchorController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorController.swift; sourceTree = "<group>"; };
 		F95CBB9E79FDA43E0755BF23 /* VoiceFloater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFloater.swift; sourceTree = "<group>"; };
 		F9C7B70C5FCD86527B9D5FD2 /* TasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksWidget.swift; sourceTree = "<group>"; };
@@ -452,6 +453,7 @@
 		48C192608B937D89AE0E0B04 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
+				F2BFA485D644A4DFA0211250 /* DorisCharacters */,
 				650013FBBD000D878E29B94F /* DorisCore */,
 				50476AECFF2B8FC223258807 /* DorisMacChrome */,
 				F2A0CEF0A5026DBA42892F9F /* DorisUI */,
@@ -987,6 +989,7 @@
 				A8D913A2152C9330117F99E4 /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
 				2DE7CFA386BA707F8200EA29 /* XCRemoteSwiftPackageReference "DynamicNotchKit" */,
 				CB22926AD40A23085406CF4F /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				83C4FF91090183C5B0037836 /* XCLocalSwiftPackageReference "packages/DorisCharacters" */,
 				5C211FABB7935F251E1004CC /* XCLocalSwiftPackageReference "packages/DorisCore" */,
 				B48A0305027258A562D9377D /* XCLocalSwiftPackageReference "packages/DorisMacChrome" */,
 				CC674AD44A373A58A2BAF91F /* XCLocalSwiftPackageReference "packages/DorisUI" */,
@@ -1770,6 +1773,10 @@
 		5C211FABB7935F251E1004CC /* XCLocalSwiftPackageReference "packages/DorisCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = packages/DorisCore;
+		};
+		83C4FF91090183C5B0037836 /* XCLocalSwiftPackageReference "packages/DorisCharacters" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = packages/DorisCharacters;
 		};
 		B48A0305027258A562D9377D /* XCLocalSwiftPackageReference "packages/DorisMacChrome" */ = {
 			isa = XCLocalSwiftPackageReference;

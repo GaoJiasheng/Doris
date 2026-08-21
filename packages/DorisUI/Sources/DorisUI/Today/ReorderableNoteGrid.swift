@@ -106,11 +106,28 @@ public struct ReorderableNoteGrid<Card: View>: View {
                     finishDrop(); return true
                 }
         }
-        // Last resort. A system drag gives no cancellation callback, so a drag
-        // released outside the grid — or a long-press that fired `.onDrag`
-        // without the user ever meaning to drag, which is all it takes on iOS
-        // — would leave `draggingID` set forever, hiding that card behind its
-        // placeholder for the rest of the session. Time it out instead.
+        // The real end-of-drag signal on iOS. UIKit reports `sessionDidEnd`
+        // to any interaction the session passed over, so this observer hears
+        // the finger lift even when the card was released somewhere with no
+        // drop target at all — the weather card, a section header, off the
+        // edge of the screen. That is the case the watchdog below exists for,
+        // and this collapses its 2.5s wait to nothing.
+        //
+        // It only ever observes: it proposes `.cancel` for every session, so
+        // the cells' own drop regions still take every real drop.
+        .background {
+            #if os(iOS)
+            DragSessionEndObserver {
+                guard draggingID != nil else { return }
+                finishDrop()
+            }
+            #endif
+        }
+        // Backstop behind the backstop. iOS now clears the state from the real
+        // `sessionDidEnd` above, but macOS has no equivalent hook before
+        // macOS 26 (`onDragSessionUpdated` is gated there and this app ships
+        // to macOS 14), and a session that somehow never reaches the observer
+        // would still strand the card. Keep the watchdog for those.
         .task(id: lastDragActivity) {
             guard draggingID != nil else { return }
             try? await Task.sleep(for: abandonedDragTimeout)
