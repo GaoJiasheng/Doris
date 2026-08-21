@@ -78,9 +78,9 @@
        data-en="Doris reads the log files that Claude Code, Codex and LM Studio write on your machine in order to count token usage. Parsing happens <strong>entirely on your device</strong>; neither the log contents nor the resulting statistics are uploaded anywhere. They are written to your own local store (and synced across your devices via iCloud)."></p>
 
     <h2 data-zh="语音输入" data-en="Voice input"></h2>
-    <p data-zh="使用语音功能时,Doris 通过 Apple 的语音识别框架(Speech / SFSpeechRecognizer)把你的语音转成文字。视机型与语言,该识别可能由 Apple 在设备端完成,也可能由 Apple 的服务器完成 —— 这一行为由 Apple 控制,适用 Apple 的隐私政策。转写结果只会被送到你自己选择的目标应用(ChatGPT、Claude 或当前窗口),不会发送给我们。"
-       data-en="When you use voice input, Doris uses Apple's speech framework (Speech / SFSpeechRecognizer) to turn speech into text. Depending on device and language, that recognition may run on-device or on Apple's servers — this is controlled by Apple and governed by Apple's privacy policy. The transcript is delivered only to the target app you chose (ChatGPT, Claude, or the frontmost app); it is never sent to us."></p>
-    <p data-zh="麦克风只在你按住设定的热键期间开启,松手即停。" data-en="The microphone is active only while you hold your configured hotkey, and stops the moment you release it."></p>
+    <p data-zh="语音输入<strong>仅 macOS 版提供</strong>,iPhone / iPad 版没有这项功能,也不会请求麦克风权限。在 macOS 上使用语音功能时,Doris 通过 Apple 的语音识别框架(Speech / SFSpeechRecognizer)把你的语音转成文字。视机型与语言,该识别可能由 Apple 在设备端完成,也可能由 Apple 的服务器完成 —— 这一行为由 Apple 控制,适用 Apple 的隐私政策。转写结果只会被送到你自己选择的目标应用(ChatGPT、Claude 或当前窗口),不会发送给我们。"
+       data-en="Voice input is <strong>available on macOS only</strong>; the iPhone and iPad app has no such feature and never requests microphone access. On macOS, Doris uses Apple's speech framework (Speech / SFSpeechRecognizer) to turn speech into text. Depending on device and language, that recognition may run on-device or on Apple's servers — this is controlled by Apple and governed by Apple's privacy policy. The transcript is delivered only to the target app you chose (ChatGPT, Claude, or the frontmost app); it is never sent to us."></p>
+    <p data-zh="麦克风只在你按住设定的热键期间开启,松手即停 —— 同样只发生在 macOS 上。" data-en="The microphone is active only while you hold your configured hotkey, and stops the moment you release it — again, on macOS only."></p>
 
     <h2 data-zh="天气(唯一的对外请求)" data-en="Weather — the one outbound request"></h2>
     <p data-zh="「今日」页面的天气卡片需要知道你大致在哪。Doris 为此会请求两个第三方服务:"
