@@ -16,6 +16,7 @@
 //  iOS 18 / macOS 14.
 
 import SwiftUI
+import UniformTypeIdentifiers
 import DorisCore
 
 public struct ReorderableNoteGrid<Card: View>: View {
@@ -89,6 +90,14 @@ public struct ReorderableNoteGrid<Card: View>: View {
     /// seconds instead of twenty.
     private var abandonedDragTimeout: Duration { .seconds(2.5) }
 
+    /// UTTypes the drag actually registers. `.onDrag` vends an
+    /// `NSItemProvider(object: NSString)`, which publishes the plain-text
+    /// identifiers below — so the drop side must ask for those, not for a
+    /// `Transferable` type.
+    /// (Computed, not a `static let`: this type is generic over the card
+    /// view, and generic types can't hold static stored properties.)
+    private var dragTypes: [UTType] { [.plainText, .utf8PlainText, .text] }
+
     private var sourceSignature: String {
         source.map { "\($0.id.uuidString):\($0.order)" }.joined(separator: "|")
     }
@@ -114,28 +123,9 @@ public struct ReorderableNoteGrid<Card: View>: View {
         .background {
             Color.clear
                 .contentShape(Rectangle())
-                .dropDestination(for: String.self) { _, _ in
-                    probe("BG-DROP")
-                    finishDrop(); return true
-                }
-        }
-        // The real end-of-drag signal on iOS. UIKit reports `sessionDidEnd`
-        // to any interaction the session passed over, so this observer hears
-        // the finger lift even when the card was released somewhere with no
-        // drop target at all — the weather card, a section header, off the
-        // edge of the screen. That is the case the watchdog below exists for,
-        // and this collapses its 2.5s wait to nothing.
-        //
-        // It only ever observes: it proposes `.cancel` for every session, so
-        // the cells' own drop regions still take every real drop.
-        .background {
-            #if os(iOS)
-            DragSessionEndObserver {
-                probe(draggingID != nil ? "END(active)" : "END(idle)")
-                guard draggingID != nil else { return }
-                finishDrop()
-            }
-            #endif
+                .onDrop(of: dragTypes, delegate: GridDropDelegate(
+                    onPerform: { probe("BG-DROP"); finishDrop() }
+                ))
         }
         // Backstop behind the backstop. iOS now clears the state from the real
         // `sessionDidEnd` above, but macOS has no equivalent hook before
@@ -203,15 +193,15 @@ public struct ReorderableNoteGrid<Card: View>: View {
             // Hover-reorder: the instant the dragged card's image enters this
             // card's drop area, move it here (animated). This is the live
             // "push the other one aside" the user wanted.
-            .dropDestination(for: String.self) { _, _ in
-                probe("CELL-DROP")
-                finishDrop(); return true
-            } isTargeted: { hovering in
-                // Any hover is proof the drag is still live — refresh the
-                // watchdog so a deliberate slow drag is never cut short.
-                if draggingID != nil { lastDragActivity = Date() }
-                if hovering { moveDragged(over: note) }
-            }
+            .onDrop(of: dragTypes, delegate: GridDropDelegate(
+                onEnter: {
+                    // Any hover is proof the drag is still live — refresh the
+                    // watchdog so a deliberate slow drag is never cut short.
+                    if draggingID != nil { lastDragActivity = Date() }
+                    moveDragged(over: note)
+                },
+                onPerform: { probe("CELL-DROP"); finishDrop() }
+            ))
     }
 
     private func moveDragged(over target: Note) {
@@ -241,4 +231,29 @@ public struct ReorderableNoteGrid<Card: View>: View {
             draggingID = nil
         }
     }
+}
+
+/// Bridges the drop side back onto the same generation of API the drag side
+/// uses.
+///
+/// The grid previously paired `.onDrag { NSItemProvider(...) }` with
+/// `.dropDestination(for: String.self)`. Those belong to different
+/// generations: `dropDestination` decodes through `Transferable`, while
+/// `onDrag` vends a hand-registered `NSItemProvider`. Hovering still worked —
+/// `isTargeted` only matches type identifiers, which is why the live reorder
+/// looked healthy — but the drop itself never decoded, so the perform action
+/// never ran. On device the trace showed only LIFT and WATCHDOG: every drag,
+/// successful or not, was being ended 2.5 seconds later by the timeout, and
+/// the card sat as an empty dashed slot until then.
+///
+/// `DropDelegate` is the matching counterpart to `.onDrag`, and it hands us
+/// both halves we need: `dropEntered` for the live reorder and `performDrop`
+/// for the commit.
+private struct GridDropDelegate: DropDelegate {
+    var onEnter: (() -> Void)? = nil
+    var onPerform: () -> Void
+
+    func validateDrop(info: DropInfo) -> Bool { true }
+    func dropEntered(info: DropInfo) { onEnter?() }
+    func performDrop(info: DropInfo) -> Bool { onPerform(); return true }
 }

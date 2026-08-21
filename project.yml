@@ -298,7 +298,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: apps/doris-ios/Doris-iOS/Doris-iOS.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
         MARKETING_VERSION: "1.8.1"
-        CURRENT_PROJECT_VERSION: "36"
+        CURRENT_PROJECT_VERSION: "37"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Compile *all* "iOS App Icon" sets in the catalog (not just the
         # primary) so per-pack alternate icons named `AppIcon-<id>` become
@@ -358,7 +358,7 @@ targets:
         # or App Store Connect rejects the upload. Keep in lock-step with
         # the Doris-iOS target's MARKETING_VERSION / CURRENT_PROJECT_VERSION.
         MARKETING_VERSION: "1.8.1"
-        CURRENT_PROJECT_VERSION: "36"
+        CURRENT_PROJECT_VERSION: "37"
     info:
       path: apps/doris-ios/DorisWidget-iOS/Info.plist
       properties:
