@@ -6,6 +6,39 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.8.1 — 2026-08-21
+
+Three fixes, no new features. The first one is why one Mac quietly held a
+different set of notes from the iPhone for three months.
+
+### Fixed
+
+- **Local builds now use the live iCloud database.** CloudKit picks its
+  environment from the signature, so a Mac build signed for development
+  mirrored into the *Development* database — one no other device reads.
+  Nothing looked wrong: syncing reported success and the pending-upload
+  count still drained to zero; the records just went somewhere else. The
+  entitlements now pin every build to Production, and Settings names the
+  database it is actually talking to, in orange when that isn't
+  Production. Editing the push environment cannot fix this — Xcode
+  rewrites that key during signing — which is why it went unnoticed.
+
+- **A dragged pinned card no longer leaves an empty dashed hole.**
+  Releasing a card anywhere outside a drop region — the weather card, a
+  section header, off the edge — left the gap sitting there for a full
+  20 seconds. The system drag reports no cancellation, so a watchdog was
+  the only way back, and it was timing the drag from its start; it now
+  measures time since the drag last moved, and recovers in 2.5s without
+  ever cutting a slow deliberate drag short.
+
+- **The caret in a new sub-task starts where it belongs.** It sat well
+  below the checkbox and only snapped into place once you typed the first
+  character: the text field published no baseline, so the row aligned the
+  checkbox against the field's bottom edge, which moves with the reported
+  height. Measured on device, the gap went from 16.2 pt to 0.5 pt.
+
+---
+
 ## 1.8.0 — 2026-08-04
 
 The first release with a website: <https://doris.gavin.pub>. Everything
