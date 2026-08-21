@@ -27,7 +27,7 @@ struct DragSessionEndObserver: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(onEnd: onEnd) }
 
     func makeUIView(context: Context) -> UIView {
-        let view = PassthroughView()
+        let view = UIView()
         view.backgroundColor = .clear
         view.addInteraction(UIDropInteraction(delegate: context.coordinator))
         return view
@@ -37,14 +37,17 @@ struct DragSessionEndObserver: UIViewRepresentable {
         context.coordinator.onEnd = onEnd
     }
 
-    /// Drop interactions need `isUserInteractionEnabled`, but this view must
-    /// not swallow taps aimed at whatever sits behind it. Refusing to be a
-    /// hit-test result keeps touch handling exactly as it was while leaving
-    /// the drag-and-drop machinery — which does not route through
-    /// `hitTest` — free to deliver session callbacks.
-    private final class PassthroughView: UIView {
-        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? { nil }
-    }
+    // NOTE: an earlier version of this view overrode `hitTest` to return nil,
+    // on the assumption that drag-and-drop does not route through hit
+    // testing. That assumption was wrong and silently disabled the whole
+    // observer: UIKit finds a drop interaction's view by hit testing, and
+    // per UIDropInteraction.h only an interaction that received
+    // `sessionDidEnter`/`Update`/`Exit` is ever sent `sessionDidEnd`. A view
+    // that never wins a hit test receives none of them.
+    //
+    // The view stays hit-testable. It sits in `.background`, so the cards in
+    // front of it win any hit that lands on a card, and it proposes `.cancel`
+    // for every session so it can never take a drop that a card should have.
 
     final class Coordinator: NSObject, UIDropInteractionDelegate {
         var onEnd: () -> Void

@@ -59,6 +59,18 @@ public struct ReorderableNoteGrid<Card: View>: View {
     /// `draggingID`, which is what makes the short timeout below safe.
     @State private var lastDragActivity: Date = .distantPast
 
+    // ── DIAGNOSTIC BUILD ONLY ───────────────────────────────────────────
+    // On-screen trace of which code path actually ends a drag. Remove once
+    // the drop behaviour is understood; see docs/todo.md item 1.
+    @State private var probeStart: Date?
+    @State private var probeLog: [String] = []
+    private func probe(_ label: String) {
+        let ms = Int(Date().timeIntervalSince(probeStart ?? Date()) * 1000)
+        probeLog.append("\(label) +\(ms)ms")
+        if probeLog.count > 5 { probeLog.removeFirst() }
+    }
+    // ────────────────────────────────────────────────────────────────────
+
     /// How long the drag may show no activity before we treat it as abandoned.
     ///
     /// This used to be 20s keyed on `draggingID`, which is set once at lift and
@@ -103,6 +115,7 @@ public struct ReorderableNoteGrid<Card: View>: View {
             Color.clear
                 .contentShape(Rectangle())
                 .dropDestination(for: String.self) { _, _ in
+                    probe("BG-DROP")
                     finishDrop(); return true
                 }
         }
@@ -118,6 +131,7 @@ public struct ReorderableNoteGrid<Card: View>: View {
         .background {
             #if os(iOS)
             DragSessionEndObserver {
+                probe(draggingID != nil ? "END(active)" : "END(idle)")
                 guard draggingID != nil else { return }
                 finishDrop()
             }
@@ -132,9 +146,22 @@ public struct ReorderableNoteGrid<Card: View>: View {
             guard draggingID != nil else { return }
             try? await Task.sleep(for: abandonedDragTimeout)
             guard !Task.isCancelled, draggingID != nil else { return }
+            probe("WATCHDOG")
             withAnimation(.spring(response: 0.30, dampingFraction: 0.80)) {
                 draggingID = nil
                 items = source          // discard any half-finished reorder
+            }
+        }
+        // DIAGNOSTIC BUILD ONLY — read this aloud after one drag.
+        .overlay(alignment: .bottomLeading) {
+            if !probeLog.isEmpty {
+                Text(probeLog.joined(separator: "\n"))
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.black)
+                    .padding(6)
+                    .background(Color.yellow.opacity(0.92), in: RoundedRectangle(cornerRadius: 6))
+                    .offset(y: 62)
+                    .allowsHitTesting(false)
             }
         }
         .onAppear { if items.isEmpty { items = source } }
@@ -167,6 +194,8 @@ public struct ReorderableNoteGrid<Card: View>: View {
             // card, which follows the cursor. Setting `draggingID` as a side
             // effect opens the gap above.
             .onDrag {
+                probeStart = Date(); probeLog = []
+                probe("LIFT")
                 draggingID = note.id
                 lastDragActivity = Date()
                 return NSItemProvider(object: note.id.uuidString as NSString)
@@ -175,6 +204,7 @@ public struct ReorderableNoteGrid<Card: View>: View {
             // card's drop area, move it here (animated). This is the live
             // "push the other one aside" the user wanted.
             .dropDestination(for: String.self) { _, _ in
+                probe("CELL-DROP")
                 finishDrop(); return true
             } isTargeted: { hovering in
                 // Any hover is proof the drag is still live — refresh the
