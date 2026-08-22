@@ -121,11 +121,22 @@ public struct ReorderableNoteGrid<Card: View>: View {
         // only catches what would otherwise fall through. Without it the drag
         // state never clears and the card stays a dashed hole.
         .background {
+            // Deliberately far larger than the grid. A release that lands on
+            // a card is handled by that card; everything else — the weather
+            // card above, a section header, the empty space below — had no
+            // drop target at all, so the drag could only be ended by the
+            // watchdog 2.5s later, which is the blank slot users kept
+            // reporting. Stretching the catcher past the grid's own bounds
+            // gives those releases somewhere to land.
+            //
+            // It stays in `.background`, behind the cells, so a card still
+            // wins any release that lands on a card.
             Color.clear
                 .contentShape(Rectangle())
                 .onDrop(of: dragTypes, delegate: GridDropDelegate(
                     onPerform: { probe("BG-DROP"); finishDrop() }
                 ))
+                .padding(-600)
         }
         // Backstop behind the backstop. iOS now clears the state from the real
         // `sessionDidEnd` above, but macOS has no equivalent hook before
