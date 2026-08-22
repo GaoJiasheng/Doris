@@ -6,6 +6,38 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.8.2 — 2026-08-22
+
+A dragged card no longer blinks out of existence, and the iPhone app is a
+fiftieth of the size it used to be.
+
+### Fixed
+
+- **Dragging a pinned card no longer leaves an empty dashed slot behind.**
+  Releasing a card left a hole where it used to be for two or three seconds
+  before it reappeared. Three separate things were stacked underneath that:
+  the drop action never ran at all (SwiftUI's default drop proposal refuses
+  the drop unless you state one, so the release was silently declined and a
+  2.5s timeout was quietly ending every drag); releases that landed outside
+  the grid — on the weather card, a section header, the space below — had no
+  drop target to land on; and once a drop did finally register, the card
+  faded back in over another third of a second on top of the system's own
+  drop animation. Live reordering worked throughout, which is exactly why
+  this took so long to see. All three paths now settle in well under a
+  second, and the card itself snaps back in a single frame.
+
+### Changed
+
+- **The iPhone and iPad app is now about 6 MB, down from 528 MB.** The
+  menu-bar character and desktop pet are macOS features, but their artwork —
+  roughly 2,990 frame-by-frame PNGs — was declared on a target that iOS also
+  links, and SwiftPM copies a target's resources into every product that
+  links it. So the art shipped inside the iPhone app, then again inside the
+  widget extension. It now lives in a macOS-only package. Nothing about the
+  macOS app changes; it draws exactly the same artwork as before.
+
+---
+
 ## 1.8.1 — 2026-08-21
 
 Three fixes, no new features. The first one is why one Mac quietly held a
