@@ -84,11 +84,17 @@ public struct ReorderableNoteGrid<Card: View>: View {
     /// — a horizontal swipe on a pinned card is enough.
     ///
     /// Keying on `lastDragActivity` changes the meaning to "time since the
-    /// drag last moved". A live drag refreshes it continuously via each cell's
-    /// `isTargeted` hover, so it can run as long as the user likes; once the
-    /// finger lifts the hovers stop and the card recovers in a couple of
-    /// seconds instead of twenty.
-    private var abandonedDragTimeout: Duration { .seconds(2.5) }
+    /// drag last moved", refreshed from `dropUpdated`, which fires
+    /// continuously for as long as the drag is over the catcher — and the
+    /// catcher now spans well past the grid, so that is essentially the whole
+    /// screen. A live drag therefore keeps the clock pinned no matter how
+    /// slowly it moves, and the moment the finger lifts the updates stop.
+    ///
+    /// That is what lets this be short. It is now only the last resort for a
+    /// drag the system cancels outright — a long-press that fired `.onDrag`
+    /// without the user meaning to drag — where no drop is delivered
+    /// anywhere and nothing else can tell us it ended.
+    private var abandonedDragTimeout: Duration { .seconds(0.6) }
 
     /// UTTypes the drag actually registers. `.onDrag` vends an
     /// `NSItemProvider(object: NSString)`, which publishes the plain-text
@@ -134,6 +140,7 @@ public struct ReorderableNoteGrid<Card: View>: View {
             Color.clear
                 .contentShape(Rectangle())
                 .onDrop(of: dragTypes, delegate: GridDropDelegate(
+                    onUpdate: { if draggingID != nil { lastDragActivity = Date() } },
                     onPerform: { probe("BG-DROP"); finishDrop() }
                 ))
                 .padding(-600)
@@ -205,12 +212,8 @@ public struct ReorderableNoteGrid<Card: View>: View {
             // card's drop area, move it here (animated). This is the live
             // "push the other one aside" the user wanted.
             .onDrop(of: dragTypes, delegate: GridDropDelegate(
-                onEnter: {
-                    // Any hover is proof the drag is still live — refresh the
-                    // watchdog so a deliberate slow drag is never cut short.
-                    if draggingID != nil { lastDragActivity = Date() }
-                    moveDragged(over: note)
-                },
+                onEnter: { moveDragged(over: note) },
+                onUpdate: { if draggingID != nil { lastDragActivity = Date() } },
                 onPerform: { probe("CELL-DROP"); finishDrop() }
             ))
     }
@@ -262,6 +265,10 @@ public struct ReorderableNoteGrid<Card: View>: View {
 /// for the commit.
 private struct GridDropDelegate: DropDelegate {
     var onEnter: (() -> Void)? = nil
+    /// Called continuously while the drag is over this region — unlike
+    /// `dropEntered`, which fires once. It is the closest thing to a
+    /// "the drag is still alive" heartbeat SwiftUI offers.
+    var onUpdate: (() -> Void)? = nil
     var onPerform: () -> Void
 
     func validateDrop(info: DropInfo) -> Bool { true }
@@ -276,7 +283,8 @@ private struct GridDropDelegate: DropDelegate {
     /// to the 2.5s watchdog. Stating `.move` explicitly is what makes the
     /// release actually land.
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
+        onUpdate?()
+        return DropProposal(operation: .move)
     }
 
     func performDrop(info: DropInfo) -> Bool { onPerform(); return true }
