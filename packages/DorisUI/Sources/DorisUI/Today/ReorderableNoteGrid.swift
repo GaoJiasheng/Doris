@@ -255,5 +255,18 @@ private struct GridDropDelegate: DropDelegate {
 
     func validateDrop(info: DropInfo) -> Bool { true }
     func dropEntered(info: DropInfo) { onEnter?() }
+
+    /// Required for `performDrop` to ever be called.
+    ///
+    /// Without it SwiftUI supplies a default proposal, and on device that
+    /// default refuses the drop: `validateDrop` returned true and
+    /// `dropEntered` fired — the live reorder proved the type match was
+    /// fine all along — yet `performDrop` never ran, so every drag was left
+    /// to the 2.5s watchdog. Stating `.move` explicitly is what makes the
+    /// release actually land.
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
     func performDrop(info: DropInfo) -> Bool { onPerform(); return true }
 }
