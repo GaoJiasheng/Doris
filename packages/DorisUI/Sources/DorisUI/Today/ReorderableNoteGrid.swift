@@ -60,17 +60,6 @@ public struct ReorderableNoteGrid<Card: View>: View {
     /// `draggingID`, which is what makes the short timeout below safe.
     @State private var lastDragActivity: Date = .distantPast
 
-    // ── DIAGNOSTIC BUILD ONLY ───────────────────────────────────────────
-    // On-screen trace of which code path actually ends a drag. Remove once
-    // the drop behaviour is understood; see docs/todo.md item 1.
-    @State private var probeStart: Date?
-    @State private var probeLog: [String] = []
-    private func probe(_ label: String) {
-        let ms = Int(Date().timeIntervalSince(probeStart ?? Date()) * 1000)
-        probeLog.append("\(label) +\(ms)ms")
-        if probeLog.count > 5 { probeLog.removeFirst() }
-    }
-    // ────────────────────────────────────────────────────────────────────
 
     /// How long the drag may show no activity before we treat it as abandoned.
     ///
@@ -141,7 +130,7 @@ public struct ReorderableNoteGrid<Card: View>: View {
                 .contentShape(Rectangle())
                 .onDrop(of: dragTypes, delegate: GridDropDelegate(
                     onUpdate: { if draggingID != nil { lastDragActivity = Date() } },
-                    onPerform: { probe("BG-DROP"); finishDrop() }
+                    onPerform: { finishDrop() }
                 ))
                 .padding(-600)
         }
@@ -154,22 +143,9 @@ public struct ReorderableNoteGrid<Card: View>: View {
             guard draggingID != nil else { return }
             try? await Task.sleep(for: abandonedDragTimeout)
             guard !Task.isCancelled, draggingID != nil else { return }
-            probe("WATCHDOG")
-            withAnimation(.spring(response: 0.30, dampingFraction: 0.80)) {
+withAnimation(.spring(response: 0.30, dampingFraction: 0.80)) {
                 draggingID = nil
                 items = source          // discard any half-finished reorder
-            }
-        }
-        // DIAGNOSTIC BUILD ONLY — read this aloud after one drag.
-        .overlay(alignment: .bottomLeading) {
-            if !probeLog.isEmpty {
-                Text(probeLog.joined(separator: "\n"))
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.black)
-                    .padding(6)
-                    .background(Color.yellow.opacity(0.92), in: RoundedRectangle(cornerRadius: 6))
-                    .offset(y: 62)
-                    .allowsHitTesting(false)
             }
         }
         .onAppear { if items.isEmpty { items = source } }
@@ -202,8 +178,6 @@ public struct ReorderableNoteGrid<Card: View>: View {
             // card, which follows the cursor. Setting `draggingID` as a side
             // effect opens the gap above.
             .onDrag {
-                probeStart = Date(); probeLog = []
-                probe("LIFT")
                 draggingID = note.id
                 lastDragActivity = Date()
                 return NSItemProvider(object: note.id.uuidString as NSString)
@@ -214,7 +188,7 @@ public struct ReorderableNoteGrid<Card: View>: View {
             .onDrop(of: dragTypes, delegate: GridDropDelegate(
                 onEnter: { moveDragged(over: note) },
                 onUpdate: { if draggingID != nil { lastDragActivity = Date() } },
-                onPerform: { probe("CELL-DROP"); finishDrop() }
+                onPerform: { finishDrop() }
             ))
     }
 
@@ -241,9 +215,16 @@ public struct ReorderableNoteGrid<Card: View>: View {
             return
         }
         commit(items, moved)
-        withAnimation(.spring(response: 0.30, dampingFraction: 0.80)) {
-            draggingID = nil
-        }
+        // No animation here, deliberately. The moved card has been sitting
+        // at `.opacity(0)` behind its dashed placeholder since the lift; the
+        // system has just finished flying the drag preview into that slot.
+        // Springing opacity back to 1 from here adds ~300ms of fade on top
+        // of the system's own ~400ms drop animation — and with the watchdog
+        // no longer masking everything, that fade reads as the card going
+        // blank after a successful drop. Snap it back instead.
+        var tx = Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) { draggingID = nil }
     }
 }
 
