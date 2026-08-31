@@ -637,6 +637,10 @@ struct TodoTitleField: NSViewRepresentable {
 
                 guard event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
                 else { return event }
+                // See ChecklistItemField: a local monitor outruns the input
+                // method, so the arrows have to be handed back while it is
+                // composing or the candidate list can't be navigated.
+                if let tv = editor as? NSTextView, tv.hasMarkedText() { return event }
                 switch event.keyCode {
                 case 126: self.parent.onMoveUp();   return nil   // ↑
                 case 125: self.parent.onMoveDown(); return nil   // ↓

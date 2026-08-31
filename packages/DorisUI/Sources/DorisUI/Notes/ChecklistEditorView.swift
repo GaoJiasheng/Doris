@@ -600,6 +600,14 @@ struct ChecklistItemField: NSViewRepresentable {
                       field.window?.firstResponder === editor,
                       event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
                 else { return event }
+                // Hands the arrows back to the input method while it is
+                // composing. A local monitor runs BEFORE the event reaches
+                // the responder chain and `interpretKeyEvents:`, so without
+                // this the pinyin candidate list could never be navigated:
+                // ↓ moved focus to the next item instead, and losing focus
+                // discarded the in-progress composition — which is why the
+                // field appeared to drop back to English mid-word.
+                if let tv = editor as? NSTextView, tv.hasMarkedText() { return event }
                 switch event.keyCode {
                 case 126: self.parent.onMoveUp();   return nil   // ↑
                 case 125: self.parent.onMoveDown(); return nil   // ↓
