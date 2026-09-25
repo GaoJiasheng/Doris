@@ -166,4 +166,22 @@ public final class Note {
         let dueDay = calendar.startOfDay(for: due)
         return dueDay < today && isCompleted
     }
+
+    /// True when the due date falls on today, completed or not. The "今日"
+    /// glance surfaces (macOS desktop card, iOS widget) drop the date label
+    /// on these rows — the card's title already says which day it is.
+    public func isDueToday(now: Date = Date(),
+                           calendar: Calendar = .current) -> Bool {
+        guard let due = dueDate else { return false }
+        return calendar.isDate(due, inSameDayAs: now)
+    }
+
+    /// True when the due date is on a day after today. The "今日" glance
+    /// surfaces fold these under a collapsed "之后" row rather than listing
+    /// next week beside what is due now.
+    public func isDueAfterToday(now: Date = Date(),
+                                calendar: Calendar = .current) -> Bool {
+        guard let due = dueDate else { return false }
+        return calendar.startOfDay(for: due) > calendar.startOfDay(for: now)
+    }
 }

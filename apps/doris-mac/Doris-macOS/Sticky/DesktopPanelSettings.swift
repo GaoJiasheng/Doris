@@ -14,6 +14,7 @@ final class DesktopPanelSettings: ObservableObject {
     private static let posKey = "doris.desktopPanel.origin"   // [x, y]
     private static let opacityKey = "doris.desktopPanel.opacity"
     private static let onTopKey = "doris.desktopPanel.alwaysOnTop"
+    private static let laterExpandedKey = "doris.desktopPanel.laterExpanded"
 
     /// Lowest opacity the slider allows — below this the panel is
     /// effectively invisible (and hard to reclaim), so we bottom out here.
@@ -36,6 +37,12 @@ final class DesktopPanelSettings: ObservableObject {
         didSet { UserDefaults.standard.set(alwaysOnTop, forKey: Self.onTopKey) }
     }
 
+    /// Whether the folded "之后 N 项" row is open. Remembered so a user who
+    /// likes the look-ahead doesn't have to reopen it every launch.
+    @Published var laterExpanded: Bool {
+        didSet { UserDefaults.standard.set(laterExpanded, forKey: Self.laterExpandedKey) }
+    }
+
     var position: CGPoint {
         didSet {
             UserDefaults.standard.set([Double(position.x), Double(position.y)], forKey: Self.posKey)
@@ -49,6 +56,7 @@ final class DesktopPanelSettings: ObservableObject {
         let storedOpacity = UserDefaults.standard.object(forKey: Self.opacityKey) as? Double
         opacity = storedOpacity.map { min(max($0, Self.minOpacity), 1.0) } ?? 1.0
         alwaysOnTop = (UserDefaults.standard.object(forKey: Self.onTopKey) as? Bool) ?? true
+        laterExpanded = UserDefaults.standard.bool(forKey: Self.laterExpandedKey)   // default collapsed
         if let arr = UserDefaults.standard.array(forKey: Self.posKey) as? [Double], arr.count == 2 {
             position = CGPoint(x: arr[0], y: arr[1])
         } else {
