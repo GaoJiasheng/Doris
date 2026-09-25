@@ -302,6 +302,9 @@ private struct AppearanceSettingsView: View {
         case .missingCLI:
             return L("Doris CLI not installed — finish the install wizard first.",
                      "Doris CLI 还没装,请先完成安装向导。")
+        case .brokenHook(let path):
+            return L("The hook can't run doris (\(path)) — notifications aren't arriving.",
+                     "钩子无法运行 doris(\(path)),通知收不到。")
         default:
             break
         }
@@ -351,6 +354,16 @@ private struct AppearanceSettingsView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
+            case .brokenHook:
+                // Re-registering bakes the stable ~/.doris/bin/doris path.
+                // Launch already does this automatically; the button covers
+                // an app moved while running.
+                Button(L("Repair", "修复")) {
+                    Task { try? await integrations.register(provider) }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .tint(CyberPalette.alert)
             case .error:
                 Button(L("Retry", "重试")) {
                     Task { await integrations.refresh() }

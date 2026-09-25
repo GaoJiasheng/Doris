@@ -116,6 +116,12 @@ public enum IntegrationStatus: Equatable, Sendable {
     /// UI funnels into the install-CLI wizard before retrying.
     case missingCLI
 
+    /// The hook is installed but can't run: the CLI path baked into it is
+    /// gone, or (Codex) its dispatcher is a quarantined script. Every
+    /// notification through it is silently lost. Re-registering fixes it.
+    /// Carries the offending path for display.
+    case brokenHook(String)
+
     /// Something went wrong while reading the config file (perms,
     /// malformed JSON, etc.). The string is user-facing.
     case error(String)
@@ -153,17 +159,21 @@ public enum IntegrationError: Error, LocalizedError {
 /// non-interactive hook shells.
 public enum DorisCLILocator {
     /// First match wins:
-    ///   1. `/usr/local/bin/doris` (wizard default; survives app moves
-    ///      because the symlink target lives inside the bundle, which
-    ///      LaunchServices tracks)
-    ///   2. `~/.local/bin/doris` (wizard secondary)
-    ///   3. `Doris.app/Contents/Resources/doris` (always present once
+    ///   1. `~/.doris/bin/doris` — the link the app re-points at itself on
+    ///      every launch (`DorisCLILink`). The only candidate that stays
+    ///      valid when the app is moved or reinstalled somewhere else.
+    ///   2. `/usr/local/bin/doris` (install wizard default)
+    ///   3. `~/.local/bin/doris` (install wizard secondary)
+    ///   4. `Doris.app/Contents/Resources/doris` (always present once
     ///      Doris is installed, even if the user skipped the wizard)
     public static func resolve() -> String? {
         let fm = FileManager.default
         let candidates: [String] = [
+            DorisCLILink.path,
             "/usr/local/bin/doris",
-            (fm.homeDirectoryForCurrentUser.path as NSString).appendingPathComponent(".local/bin/doris"),
+            // Real home: `homeDirectoryForCurrentUser` is the sandbox
+            // container here, so this candidate could never match.
+            integrationsRealHome().appendingPathComponent(".local/bin/doris").path,
             Bundle.main.bundleURL
                 .appendingPathComponent("Contents/Resources/doris")
                 .path

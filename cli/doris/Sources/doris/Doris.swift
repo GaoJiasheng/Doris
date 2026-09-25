@@ -18,4 +18,15 @@ struct Doris: AsyncParsableCommand {
             InstallCommand.self
         ]
     )
+
+    /// Invoked through `~/.codex/doris-notify-dispatch.sh` (see
+    /// `CodexNotifyDispatch`), answer as `doris notify` for Codex instead
+    /// of parsing Codex's payload as a subcommand.
+    static func main() async {
+        if CodexNotifyDispatch.matches(CommandLine.arguments.first) {
+            await NotifyCommand.main(CodexNotifyDispatch.notifyArguments())
+            return
+        }
+        await main(nil)
+    }
 }

@@ -39,11 +39,26 @@ import DorisIPC
 ///
 /// ### Files Doris manages
 ///
-///   - `~/.codex/doris-notify-dispatch.sh` — the dispatcher (executable)
-///   - `~/.codex/config.toml`              — `notify` points at the above
+///   - `~/.codex/doris-notify-dispatch.sh` — the dispatcher: a symlink to
+///                                            `~/.doris/bin/doris`, which
+///                                            answers as Codex's notifier
+///                                            when invoked under this name
+///   - `~/.doris/codex-notify.json`        — the banner's title / level /
+///                                            click target, read by the CLI
+///   - `~/.codex/config.toml`              — `notify` points at the dispatcher
 ///   - `~/.codex/.doris-notify-backup`     — original `notify` line, for
 ///                                            clean restore on unregister
-public struct CodexIntegration: IntegrationProvider {
+///
+/// ### Why the dispatcher is a symlink, not a script
+///
+/// It used to be a bash script. Everything the sandboxed app writes gets a
+/// hard quarantine, and macOS won't exec a hard-quarantined script — so a
+/// dispatcher registered from the shipping app failed with "operation not
+/// permitted" on every turn. A symlink is resolved to the signed CLI in the
+/// app bundle, which isn't quarantined; the quarantine on the link itself
+/// doesn't stop the exec. Scripts from earlier versions are replaced at
+/// launch by `IntegrationSelfRepair`.
+public struct CodexIntegration: IntegrationProvider, CLIPathBakingIntegration {
     public let id = "codex"
     public let displayName = "Codex"
     public let summary = "Fire Doris when a Codex turn completes (notify hook)."
@@ -52,11 +67,6 @@ public struct CodexIntegration: IntegrationProvider {
     public let clickURL: URL? = URL(string: "codex://")
     public let supportTier: IntegrationSupportTier = .full
     public let tutorialURL: URL? = URL(string: "https://github.com/GaoJiasheng/Doris/blob/main/docs/integrations/codex.md")
-
-    /// Begin/end markers wrapping the generated dispatcher body so the
-    /// script is recognizable as Doris-managed.
-    static let beginMarker = "# >>> doris-codex-notify-dispatch >>>"
-    static let endMarker   = "# <<< doris-codex-notify-dispatch <<<"
 
     /// Dispatcher filename. Also doubles as the substring `currentStatus`
     /// greps for in config.toml — it shows up whether the dispatcher is
@@ -86,6 +96,10 @@ public struct CodexIntegration: IntegrationProvider {
     var configURL: URL { Self.codexHomeURL.appendingPathComponent("config.toml") }
     var dispatcherURL: URL { Self.codexHomeURL.appendingPathComponent(Self.dispatcherFilename) }
     var backupURL: URL { Self.codexHomeURL.appendingPathComponent(".doris-notify-backup") }
+    /// Banner settings the CLI reads when invoked as the dispatcher.
+    static var notifySettingsURL: URL {
+        integrationsRealHome().appendingPathComponent(".doris/codex-notify.json")
+    }
 
     // MARK: - Status
 
@@ -100,14 +114,53 @@ public struct CodexIntegration: IntegrationProvider {
         guard text.contains(Self.dispatcherFilename) else { return .notRegistered }
         // Config points at us, but verify the pieces are actually intact.
         guard fm.isExecutableFile(atPath: dispatcherURL.path) else { return .notRegistered }
+        // The CLI the dispatcher actually calls — it skips silently when
+        // that path is gone, so this is the only place it can surface.
+        if let baked = bakedCLIPath(), !fm.isExecutableFile(atPath: baked) {
+            return .brokenHook(baked)
+        }
+        // A script the sandboxed app wrote: present and chmod +x, yet the
+        // system refuses to run it.
+        if dispatcherIsQuarantinedScript {
+            return .brokenHook(dispatcherURL.path)
+        }
         if DorisCLILocator.resolve() == nil { return .missingCLI }
         return .registered
     }
 
+    func bakedCLIPath() -> String? {
+        guard let config = try? String(contentsOf: configURL, encoding: .utf8),
+              config.contains(Self.dispatcherFilename) else { return nil }
+        if let target = try? FileManager.default.destinationOfSymbolicLink(atPath: dispatcherURL.path) {
+            return target
+        }
+        guard let script = try? String(contentsOf: dispatcherURL, encoding: .utf8) else { return nil }
+        return Self.cliPath(inDispatcher: script)   // pre-1.8.3 script
+    }
+
+    /// Anything but the current form — a symlink to the stable CLI link —
+    /// gets rewritten: a legacy script may be quarantined (and so dead)
+    /// even when the path inside it is fine.
+    func hookNeedsRepair() -> Bool {
+        guard bakedCLIPath() != nil else { return false }
+        let target = try? FileManager.default.destinationOfSymbolicLink(atPath: dispatcherURL.path)
+        return target != DorisCLILink.path
+    }
+
+    private var dispatcherIsQuarantinedScript: Bool {
+        let path = dispatcherURL.path
+        guard (try? FileManager.default.destinationOfSymbolicLink(atPath: path)) == nil else { return false }
+        return getxattr(path, "com.apple.quarantine", nil, 0, 0, XATTR_NOFOLLOW) >= 0
+    }
+
+
     // MARK: - Register
 
     public func register() async throws {
-        guard let cliPath = DorisCLILocator.resolve() else {
+        // The dispatcher links to the stable CLI link (falling back to
+        // whatever CLI resolves if the link can't be made).
+        let target = DorisCLILink.refresh() ? DorisCLILink.path : DorisCLILocator.resolve()
+        guard let target else {
             throw IntegrationError.cliNotInstalled
         }
         let fm = FileManager.default
@@ -117,16 +170,26 @@ public struct CodexIntegration: IntegrationProvider {
         try? fm.createDirectory(at: Self.codexHomeURL,
                                 withIntermediateDirectories: true)
 
-        // 1) Write / refresh the dispatcher. Done first so that even on
-        //    an idempotent re-register a moved CLI path gets baked in.
-        let script = Self.generateDispatcher(cliPath: cliPath)
+        // 1) The banner settings, then the dispatcher symlink. Done first
+        //    so an idempotent re-register still replaces a stale or
+        //    legacy dispatcher.
+        let settings = ["title": Self.localizedTitle(), "level": "reminder", "clickURL": "doris://main"]
         do {
-            try script.write(to: dispatcherURL, atomically: true, encoding: .utf8)
+            try fm.createDirectory(at: Self.notifySettingsURL.deletingLastPathComponent(),
+                                   withIntermediateDirectories: true)
+            try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+                .write(to: Self.notifySettingsURL, options: .atomic)
+        } catch {
+            throw IntegrationError.writeFailed(path: Self.notifySettingsURL.path, underlying: error)
+        }
+        do {
+            if (try? fm.attributesOfItem(atPath: dispatcherURL.path)) != nil {
+                try fm.removeItem(at: dispatcherURL)   // a link is removed, never its target
+            }
+            try fm.createSymbolicLink(atPath: dispatcherURL.path, withDestinationPath: target)
         } catch {
             throw IntegrationError.writeFailed(path: dispatcherURL.path, underlying: error)
         }
-        try? fm.setAttributes([.posixPermissions: 0o755],
-                              ofItemAtPath: dispatcherURL.path)
 
         // 2) Wire config.toml's `notify` to the dispatcher.
         let configExists = fm.fileExists(atPath: configURL.path)
@@ -169,6 +232,7 @@ public struct CodexIntegration: IntegrationProvider {
             // short-circuits.
             try? fm.removeItem(at: dispatcherURL)
             try? fm.removeItem(at: backupURL)
+            try? fm.removeItem(at: Self.notifySettingsURL)
         }
         guard fm.fileExists(atPath: configURL.path),
               let current = try? String(contentsOf: configURL, encoding: .utf8),
@@ -197,40 +261,16 @@ public struct CodexIntegration: IntegrationProvider {
         }
     }
 
-    // MARK: - Dispatcher script
+    // MARK: - Legacy dispatcher script
 
-    /// Build the dispatcher. It fires the Doris banner and nothing else
-    /// (see the type doc for why it must not forward).
-    static func generateDispatcher(cliPath: String) -> String {
-        let title = localizedTitle()
-        return """
-        #!/bin/bash
-        \(beginMarker)
-        # Managed by Doris. Regenerated whenever you (re-)register the
-        # Codex integration from Doris Settings — do not edit by hand.
-        #
-        # Codex invokes its `notify` program once per turn completion.
-        # On builds with the computer-use feature the Codex app keeps
-        # its own notifier upstream of us via --previous-notify, so this
-        # script must NOT call back into it. It only fires Doris.
-        #
-        # Firing is unconditional: Codex only calls `notify` on turn
-        # completion, so there is no event type to filter on. The JSON
-        # payload arrives as "$@" and is intentionally ignored.
-
-        DORIS_CLI="\(cliPath)"
-
-        if [ -x "$DORIS_CLI" ]; then
-            "$DORIS_CLI" notify \\
-                --title '\(title)' \\
-                --source codex \\
-                --level reminder \\
-                --click-url 'doris://main' >/dev/null 2>&1 &
-        fi
-
-        exit 0
-        \(endMarker)
-        """
+    /// The `DORIS_CLI="…"` value in a pre-1.8.3 dispatcher script.
+    static func cliPath(inDispatcher script: String) -> String? {
+        for line in script.split(separator: "\n") {
+            let t = line.trimmingCharacters(in: .whitespaces)
+            guard t.hasPrefix("DORIS_CLI=\""), t.hasSuffix("\""), t.count > 12 else { continue }
+            return String(t.dropFirst("DORIS_CLI=\"".count).dropLast())
+        }
+        return nil
     }
 
     /// Title in the user's current language. Mirrors

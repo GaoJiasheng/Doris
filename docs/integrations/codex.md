@@ -12,7 +12,7 @@ Codex（OpenAI 的 agentic 编程工具）在 `~/.codex/config.toml` 里提供�
 
 ## 工作原理
 
-Doris CLI 随 App 一起分发（`Doris.app/Contents/Resources/doris`，首次启动会有 wizard 引导把它链接到 `/usr/local/bin/doris`）。`doris notify` 经 App Group 写一条事件给 Doris App，触发 banner。注册要做的，就是让 Codex 在回合结束时去调一个会 fire `doris notify` 的小脚本。
+Doris CLI 随 App 一起分发（`Doris.app/Contents/Resources/doris`）。Doris 每次启动都会把 `~/.doris/bin/doris` 这个软链接指向**当前运行的 App** 里的那份，所以 App 装在哪、有没有挪过位置，这个路径都有效。`doris notify` 往 `~/.doris/ipc/inbox` 写一条事件，由运行中的 Doris 取走并弹 banner。注册要做的，就是让 Codex 在回合结束时调到 `doris`。
 
 最终的调用链：
 
@@ -36,13 +36,15 @@ Codex  →  SkyComputerUseClient（computer-use 通知）  →  Doris 派发脚�
 
 点 **设置 → 应用集成 → Codex → 注册** 后，Doris 会：
 
-1. 定位 `doris` CLI 的绝对路径（`/usr/local/bin/doris` 或 bundle 内置那份）
-2. 写一个派发脚本 `~/.codex/doris-notify-dispatch.sh`（可执行，里面 baked 了 CLI 路径）
-3. 把 `~/.codex/config.toml` 里的 `notify` 指向这个派发脚本
+1. 刷新 `~/.doris/bin/doris` 软链接
+2. 把派发入口 `~/.codex/doris-notify-dispatch.sh` 建成**指向 `~/.doris/bin/doris` 的软链接**。CLI 发现自己是以这个名字被调起的，就按「Codex 回合结束」处理：忽略 Codex 传来的 JSON，弹 banner。banner 的标题、级别、点击跳转写在 `~/.doris/codex-notify.json`
+3. 把 `~/.codex/config.toml` 里的 `notify` 指向这个派发入口
 4. 把原本的 `notify` 那一行备份到 `~/.codex/.doris-notify-backup`，供取消注册时**原样还原**
 5. 不动 config.toml 里的任何其他内容
 
-点 **取消注册** 会还原原来的 `notify`（没有就删掉该行），并删除派发脚本与备份。
+点 **取消注册** 会还原原来的 `notify`（没有就删掉该行），并删除派发入口、`codex-notify.json` 与备份。
+
+> **为什么是软链接而不是脚本**（1.8.3 起）：沙盒 App 写出的文件都会被系统打上强制隔离标记，macOS 拒绝执行带这种标记的脚本（`operation not permitted`）。所以旧版由 App 写出的派发脚本其实跑不起来。软链接执行时解析到 App 包里已签名的 CLI，不受影响。旧版留下的脚本，Doris 启动时会自动换成软链接；设置页也会把跑不起来的钩子标红，并提供「修复」按钮。
 
 > Codex App 在运行时会把上面第 3 步的 `notify` 自动改写成「`SkyComputerUseClient` 在前、Doris 派发脚本作为 `--previous-notify`」的规范形态——这是预期行为，不用管。
 

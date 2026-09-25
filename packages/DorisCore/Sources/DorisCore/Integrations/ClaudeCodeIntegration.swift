@@ -29,7 +29,7 @@ import DorisIPC
 /// comment as a marker — it's ignored by the shell at execution time
 /// but makes the hook easy to find without parsing the command line.
 /// Any user-authored hooks in the same `Stop` array are preserved.
-public struct ClaudeCodeIntegration: IntegrationProvider {
+public struct ClaudeCodeIntegration: IntegrationProvider, CLIPathBakingIntegration {
     public let id = "claude-code"
     public let displayName = "Claude Code"
     public let summary = "Hook Stop event → Doris banner with click-to-open."
@@ -68,13 +68,49 @@ public struct ClaudeCodeIntegration: IntegrationProvider {
         // time where we need to mutate.
         if let text = String(data: data, encoding: .utf8),
            text.contains(Self.marker) {
-            // Marker is there — verify the CLI it points to still resolves.
+            // Check the CLI the hook actually calls. This used to ask
+            // whether *a* CLI could be found — and the running app always
+            // carries one — so a hook pointing at a deleted app still read
+            // as "Registered" while every notification went nowhere.
+            if let baked = bakedCLIPath(),
+               !FileManager.default.isExecutableFile(atPath: baked) {
+                return .brokenHook(baked)
+            }
             if DorisCLILocator.resolve() == nil {
                 return .missingCLI
             }
             return .registered
         }
         return .notRegistered
+    }
+
+    func bakedCLIPath() -> String? {
+        guard let root = try? readSettings(),
+              let command = Self.dorisHookCommand(in: root) else { return nil }
+        return Self.cliPath(inHookCommand: command)
+    }
+
+    /// The Doris-marked command in `hooks.Stop`, if any.
+    static func dorisHookCommand(in root: [String: Any]) -> String? {
+        let stop = ((root["hooks"] as? [String: Any])?["Stop"] as? [[String: Any]]) ?? []
+        for entry in stop {
+            for hook in (entry["hooks"] as? [[String: Any]]) ?? [] {
+                if let c = hook["command"] as? String, c.contains(marker) { return c }
+            }
+        }
+        return nil
+    }
+
+    /// The executable a hook command starts with — the inverse of the
+    /// quoting in `hookCommand(cliPath:)`.
+    static func cliPath(inHookCommand command: String) -> String? {
+        let c = command.trimmingCharacters(in: .whitespaces)
+        if c.hasPrefix("'") {
+            let rest = c.dropFirst()
+            guard let end = rest.firstIndex(of: "'") else { return nil }
+            return String(rest[..<end])
+        }
+        return c.split(separator: " ", maxSplits: 1).first.map(String.init)
     }
 
     public func register() async throws {
@@ -173,7 +209,7 @@ public struct ClaudeCodeIntegration: IntegrationProvider {
         do {
             let data = try JSONSerialization.data(
                 withJSONObject: root,
-                options: [.prettyPrinted, .sortedKeys]
+                options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
             )
             var bytes = data
             if bytes.last != 0x0a { bytes.append(0x0a) }

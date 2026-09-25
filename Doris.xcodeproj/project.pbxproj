@@ -86,6 +86,7 @@
 		A6F10058EAF7E8A0833E9D43 /* DailyRitual.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A7DF1DA0D5BE2ACB2B2F1D /* DailyRitual.swift */; };
 		AC5618F120AE8AEA3954A591 /* doris-avatar.png in Resources */ = {isa = PBXBuildFile; fileRef = CE1DB98BBE156A6C003C5363 /* doris-avatar.png */; };
 		B20447B42FDE6AA6641B9BF0 /* DesktopPetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5616260E3BE68E019F297D88 /* DesktopPetController.swift */; };
+		B4B7BF05CFDA63AECD501876 /* CodexNotifyDispatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91015872ECB896822F497EEC /* CodexNotifyDispatch.swift */; };
 		BE57B57CE9DCCD7F9B1E5175 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1428A4010334504409D6401 /* MainWindowController.swift */; };
 		C0E36B64A06FE09BF55B87AA /* MarkMessageDoneIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEB137662D3DAC600C955D36 /* MarkMessageDoneIntent.swift */; };
 		C3E00F27D14EA198A7029CE7 /* DesktopPanelSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5C2DAC65F1EB16C5017423 /* DesktopPanelSettings.swift */; };
@@ -220,6 +221,7 @@
 		8551C8092D18325AF6DBB4E7 /* DorisWidget-macOS.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "DorisWidget-macOS.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8F6AF3CCAC6CF083EB1A6ECD /* doris-cli */ = {isa = PBXFileReference; includeInIndex = 0; path = "doris-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
 		90FB0EBD7C42E77F8ABC3C6D /* DorisIntents-iOS.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = "DorisIntents-iOS.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		91015872ECB896822F497EEC /* CodexNotifyDispatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexNotifyDispatch.swift; sourceTree = "<group>"; };
 		9124431BB7A8127A5AE105A1 /* StatusBarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarItem.swift; sourceTree = "<group>"; };
 		9316D6DBC3000797FECDD49A /* NotchExpandedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchExpandedView.swift; sourceTree = "<group>"; };
 		94E05FD16AC0FD5638D6E2FB /* MainTokensView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTokensView.swift; sourceTree = "<group>"; };
@@ -667,6 +669,7 @@
 			isa = PBXGroup;
 			children = (
 				01A9CE58686CAAF9903B6EB3 /* AppLauncher.swift */,
+				91015872ECB896822F497EEC /* CodexNotifyDispatch.swift */,
 				5207402EE925DF6E240B5132 /* ExitCodes.swift */,
 			);
 			path = Support;
@@ -1134,6 +1137,7 @@
 			files = (
 				1CC29031E4B7CA20AACF625F /* AppLauncher.swift in Sources */,
 				60B07988B1B44CDEA7BF386A /* AuthCommand.swift in Sources */,
+				B4B7BF05CFDA63AECD501876 /* CodexNotifyDispatch.swift in Sources */,
 				27B58EC83E69799AF3724A4F /* DevicesCommand.swift in Sources */,
 				2B1E7665B38A5332C54C6414 /* Doris.swift in Sources */,
 				180488C61B221EA02CF48147 /* EventsCommand.swift in Sources */,

@@ -14,6 +14,11 @@ The binary ships inside the app bundle at
 (Settings → CLI Install) symlinks it to `/usr/local/bin/doris` so you
 can call it from any shell.
 
+Doris also keeps `~/.doris/bin/doris` pointed at the copy inside whichever
+Doris.app is running, re-pointing it on every launch. The Claude Code and
+Codex integrations call that path, so they keep working if the app is
+moved or reinstalled elsewhere. Scripts of your own can use it too.
+
 ---
 
 ## Quick start

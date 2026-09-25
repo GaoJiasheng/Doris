@@ -37,6 +37,14 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
 
         Task { @MainActor in
             try? IPCDirectory.ensureDirectories()
+            // Keep the Claude Code / Codex hooks calling a CLI that exists:
+            // re-point ~/.doris/bin/doris at this app, and migrate any
+            // registered hook still baking an old absolute path. Off the
+            // main actor (nonisolated async); Settings refreshes after.
+            Task {
+                let repaired = await IntegrationSelfRepair.run()
+                if !repaired.isEmpty { await IntegrationsRegistry.shared.refresh() }
+            }
             let secret = try? KeychainSecretStore.ensureSecret()
 
             // Single shared container — DorisRuntime is the only place that
