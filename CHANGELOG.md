@@ -6,6 +6,58 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.8.3 — 2026-09-25
+
+Claude Code and Codex task-done notifications work again — they had been
+failing silently since early August. The light themes are rebuilt, the
+今日 card and widget now mean "today", and the iPhone gets its colours back.
+
+### Fixed
+
+- **Claude Code and Codex notifications arrive again, and stay working.**
+  Both hooks called the CLI at a fixed path inside `/Applications/Doris.app`;
+  when the app was no longer there, every notification failed and nothing
+  said so — Settings still showed "Registered", because it only checked
+  that *a* CLI existed. Doris now keeps `~/.doris/bin/doris` pointed at
+  whichever copy of itself is running and rewrites registered hooks to call
+  it at launch, so moving or reinstalling the app no longer breaks them.
+  Settings flags a hook that can't run, with a Repair button.
+
+- **Registering Codex from the app now actually works.** The Codex hook was
+  a shell script the app wrote, and macOS refuses to run scripts written by
+  a sandboxed app. It is now a link to the Doris CLI, which the system does
+  run. Existing setups are converted at launch; `config.toml` is untouched.
+
+- **The iPhone app uses the default theme again.** Since 1.8.2 moved the
+  character art to the Mac, the iPhone couldn't read its theme and fell
+  back to an old pink-and-cyan palette. The home-screen widget now matches
+  the app too.
+
+- **Typing Chinese with the pinyin input method on the Mac.** Pressing ↓ in
+  the candidate list moved to the next task instead, and dropped what you
+  were typing. The arrows now go to the input method while it's composing.
+
+### Changed
+
+- **Light themes, all three packs.** Cards are white sheets with a soft
+  shadow instead of glass that melted into the page; accent colours are
+  deepened so text on them is readable (they were tuned for black
+  backgrounds); "due today" is amber instead of a yellow you couldn't see;
+  the scanlines and heavy colour halos are gone from light mode. On
+  iPhone, the title bar no longer goes blank in light mode. Dark mode is
+  unchanged, except that critical events are always pink — in some packs
+  they had been the same colour as ordinary ones.
+
+- **The 今日 desktop card and iOS widget show today.** They list what is
+  due today or overdue; anything later folds into a "later" row (on the
+  Mac, click to expand). Dates and sub-task progress no longer compete for
+  the same spot, so a task with sub-tasks shows its date. The card's
+  options moved to a right-click menu.
+
+- **A settings button in the Mac main window,** next to the theme toggle.
+
+---
+
 ## 1.8.2 — 2026-08-22
 
 A dragged card no longer blinks out of existence, and the iPhone app is a
