@@ -6,10 +6,10 @@
   "fps": 12,
   "loopFps": 12,
   "theme": {
-    "accentPrimary":   { "light": "#0C9B98", "dark": "#2EF0EA" },
+    "accentPrimary":   { "light": "#0A817D", "dark": "#2EF0EA" },
     "accentSecondary": { "light": "#C0398A", "dark": "#FF5CC0" },
-    "done":            { "light": "#14A88C", "dark": "#46E6C2" },
-    "backdropTop":     { "light": "#E7F5F5", "dark": "#0C1018" },
-    "backdropBottom":  { "light": "#FBFEFE", "dark": "#05070C" }
+    "done":            { "light": "#6F928A", "dark": "#46E6C2" },
+    "backdropTop":     { "light": "#EEF3F3", "dark": "#0C1018" },
+    "backdropBottom":  { "light": "#F8FAFA", "dark": "#05070C" }
   }
 }

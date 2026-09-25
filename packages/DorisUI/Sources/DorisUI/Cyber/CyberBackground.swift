@@ -10,6 +10,15 @@ public struct CyberBackground: View {
     /// frame and looks washed out at full intensity, so we expose this so
     /// hosts can tune it.
     var haloIntensity: Double
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// The halos and scanlines are dark-mode effects: neon glow on a black
+    /// page. On a pale page the same halos tint the whole window the accent
+    /// color (and muddy it where pink meets cyan), and the scanlines read as
+    /// a dirty screen rather than a CRT. Light keeps a faint halo for depth
+    /// and drops the scanlines.
+    private var isLight: Bool { colorScheme == .light }
+    private var halo: Double { haloIntensity * (isLight ? 0.4 : 1.0) }
 
     public init(haloIntensity: Double = 1.0) {
         self.haloIntensity = haloIntensity
@@ -30,7 +39,7 @@ public struct CyberBackground: View {
                 .ignoresSafeArea()
             // Pink halo top-left
             RadialGradient(
-                colors: [CyberPalette.neonPink.opacity(0.22 * haloIntensity), .clear],
+                colors: [CyberPalette.neonPink.opacity(0.22 * halo), .clear],
                 center: UnitPoint(x: 0.18, y: 0.18),
                 startRadius: 4, endRadius: 280
             )
@@ -39,13 +48,13 @@ public struct CyberBackground: View {
             .ignoresSafeArea()
             // Cyan rim bottom-right
             RadialGradient(
-                colors: [CyberPalette.neonCyan.opacity(0.18 * haloIntensity), .clear],
+                colors: [CyberPalette.neonCyan.opacity(0.18 * halo), .clear],
                 center: UnitPoint(x: 0.82, y: 0.95),
                 startRadius: 0, endRadius: 320
             )
             .blur(radius: 16)
             .ignoresSafeArea()
-            scanlines
+            if !isLight { scanlines }
         }
     }
 
@@ -75,6 +84,7 @@ public struct CyberBackground: View {
 public struct CyberCard<Content: View>: View {
     var cornerRadius: CGFloat
     @ViewBuilder var content: () -> Content
+    @Environment(\.colorScheme) private var colorScheme
 
     public init(cornerRadius: CGFloat = 18, @ViewBuilder content: @escaping () -> Content) {
         self.cornerRadius = cornerRadius
@@ -82,20 +92,54 @@ public struct CyberCard<Content: View>: View {
     }
 
     public var body: some View {
-        content()
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(CyberPalette.surfaceFill)
-                    .background(
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                            .opacity(0.4)
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(CyberPalette.panelStroke, lineWidth: 0.8)
-            )
+        if colorScheme == .light {
+            content()
+                .background(LightCardSheet(cornerRadius: cornerRadius))
+        } else {
+            content()
+                .background(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(CyberPalette.surfaceFill)
+                        .background(
+                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                                .opacity(0.4)
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(CyberPalette.panelStroke, lineWidth: 0.8)
+                )
+        }
+    }
+}
+
+/// The light-mode card: an opaque white sheet with a soft shadow and a
+/// hairline edge.
+///
+/// Dark cards are glass (`.ultraThinMaterial`) edged in neon, which is right
+/// on a black page. On a pale page there is nothing behind the glass to
+/// show, so cards took on the backdrop's tint and melted into it, and the
+/// neon edge became the only thing marking them out. Lift is what separates
+/// a card from a light page — so light cards get a shadow instead.
+///
+/// `edge` lets a state keep its colored outline (a completed card's done
+/// accent); by default the edge is a neutral hairline.
+public struct LightCardSheet: View {
+    let cornerRadius: CGFloat
+    let edge: Color
+
+    public init(cornerRadius: CGFloat, edge: Color = Color.black.opacity(0.07)) {
+        self.cornerRadius = cornerRadius
+        self.edge = edge
+    }
+
+    public var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        shape
+            .fill(Color.white)
+            .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
+            .overlay(shape.strokeBorder(edge, lineWidth: 0.6))
     }
 }
 

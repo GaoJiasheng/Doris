@@ -77,7 +77,7 @@ struct CalendarTimelineScreen: View {
                 id: "overdue",
                 label: L("Overdue", "已逾期"),
                 icon: "exclamationmark.triangle.fill",
-                tint: .red,
+                tint: CyberPalette.overdueAccent,
                 notes: sorted
             ))
         }
@@ -86,7 +86,7 @@ struct CalendarTimelineScreen: View {
                 id: "today",
                 label: L("Today", "今天"),
                 icon: "sun.max.fill",
-                tint: .yellow,
+                tint: CyberPalette.todayAccent,
                 notes: todayNotes
             ))
         }
@@ -160,7 +160,6 @@ struct CalendarTimelineScreen: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) { navTitle }
         }
@@ -177,7 +176,7 @@ struct CalendarTimelineScreen: View {
         VStack(spacing: 1) {
             Text(L("Timeline", "时间轴"))
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Text(L("AGENDA", "日程"))
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .foregroundStyle(CyberPalette.neonCyan.opacity(0.85))
@@ -230,6 +229,7 @@ struct CalendarTimelineScreen: View {
 // MARK: - Timeline row
 
 private struct TimelineNoteRow: View {
+    @Environment(\.colorScheme) private var colorScheme
     let note: Note
     let accent: Color
 
@@ -262,14 +262,20 @@ private struct TimelineNoteRow: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.4))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(accent.opacity(0.15), lineWidth: 0.6)
-        )
+        .background {
+            // Same card as TodayCalendarRow: glass in dark, a lifted white
+            // sheet in light (see LightCardSheet).
+            if colorScheme == .light {
+                LightCardSheet(cornerRadius: 14)
+            } else {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.ultraThinMaterial.opacity(0.4))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(accent.opacity(0.15), lineWidth: 0.6)
+                    )
+            }
+        }
     }
 
     @ViewBuilder

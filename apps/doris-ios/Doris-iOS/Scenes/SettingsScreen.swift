@@ -25,7 +25,6 @@ struct SettingsScreen: View {
             }
             .navigationTitle(L("Settings", "设置"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
 
@@ -43,11 +42,11 @@ struct SettingsScreen: View {
             Text(L("Appearance", "外观"))
                 .foregroundStyle(.primary.opacity(0.7))
         } footer: {
-            Text(L("Dark uses the deep purple cyber backdrop. Light uses a softer cream version with the same neon accents.",
-                   "深色为标准赛博紫黑底,浅色为柔和奶油底,两种模式都保留同样的霓虹粉青配色。"))
+            Text(L("Dark is the neon cyber look. Light is a bright version: white cards, deeper accents that stay readable.",
+                   "深色是霓虹赛博风格;浅色是明亮版本,白色卡片,强调色加深以保证清晰可读。"))
                 .foregroundStyle(.primary.opacity(0.5))
         }
-        .listRowBackground(Color.primary.opacity(0.05))
+        .listRowBackground(CyberPalette.listRowFill)
     }
 
     private var languageSection: some View {
@@ -68,7 +67,7 @@ struct SettingsScreen: View {
                    "在英文、中文或双语之间切换界面显示。"))
                 .foregroundStyle(.primary.opacity(0.5))
         }
-        .listRowBackground(Color.primary.opacity(0.05))
+        .listRowBackground(CyberPalette.listRowFill)
     }
 
     /// Sync section — mirrors the Mac Settings → Sync tab. CloudKit
@@ -110,7 +109,7 @@ struct SettingsScreen: View {
             }
             .foregroundStyle(.primary.opacity(0.5))
         }
-        .listRowBackground(Color.primary.opacity(0.05))
+        .listRowBackground(CyberPalette.listRowFill)
     }
 
     private var aboutSection: some View {
@@ -127,7 +126,7 @@ struct SettingsScreen: View {
             Text(L("About", "关于"))
                 .foregroundStyle(.primary.opacity(0.7))
         }
-        .listRowBackground(Color.primary.opacity(0.05))
+        .listRowBackground(CyberPalette.listRowFill)
     }
 
     /// "1.0.0 (2)" style — reads MARKETING_VERSION and

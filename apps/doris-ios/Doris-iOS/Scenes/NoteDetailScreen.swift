@@ -106,7 +106,6 @@ struct NoteDetailScreen: View {
         }
         .scrollContentBackground(.hidden)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Prominent Complete toggle in the nav bar — the
@@ -299,8 +298,8 @@ struct NoteDetailScreen: View {
     private var dueDateColor: Color {
         guard let due = note.dueDate else { return CyberPalette.neonCyan }
         let cal = Calendar.current
-        if due < Date() { return .red }
-        if cal.isDateInToday(due) { return .yellow }
+        if due < Date() { return CyberPalette.overdueAccent }
+        if cal.isDateInToday(due) { return CyberPalette.todayAccent }
         return CyberPalette.neonCyan
     }
 

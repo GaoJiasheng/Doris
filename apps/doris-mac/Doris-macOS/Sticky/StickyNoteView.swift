@@ -11,6 +11,7 @@ struct StickyNoteView: View {
     @Bindable var note: Note
     let onClose: () -> Void
     @ObservedObject private var theme = ThemeSettings.shared
+    private var haloScale: Double { theme.mode == .light ? 0.4 : 1.0 }
     @ObservedObject private var lang = LanguageSettings.shared
 
     var body: some View {
@@ -67,10 +68,10 @@ struct StickyNoteView: View {
                     .fill(CyberPalette.backdrop.opacity(0.92))
                 // Same pink/cyan corner glow signature as the desktop
                 // panel + iOS widget, so the desktop surfaces feel like
-                // one family.
-                RadialGradient(colors: [CyberPalette.neonCyan.opacity(0.14), .clear],
+                // one family. Softer in light, like the desktop panel.
+                RadialGradient(colors: [CyberPalette.neonCyan.opacity(0.14 * haloScale), .clear],
                                center: .topTrailing, startRadius: 0, endRadius: 150)
-                RadialGradient(colors: [CyberPalette.neonPink.opacity(0.10), .clear],
+                RadialGradient(colors: [CyberPalette.neonPink.opacity(0.10 * haloScale), .clear],
                                center: .bottomLeading, startRadius: 0, endRadius: 130)
             }
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))

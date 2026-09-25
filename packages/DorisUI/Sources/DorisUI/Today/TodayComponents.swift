@@ -231,6 +231,7 @@ public struct TodayWeatherCard: View {
 /// → red, today → yellow, future → cyan.
 public struct TodayPinnedCard: View {
     private let note: Note
+    @Environment(\.colorScheme) private var colorScheme
 
     public init(note: Note) {
         self.note = note
@@ -247,8 +248,8 @@ public struct TodayPinnedCard: View {
 
     private var dueChipColor: Color {
         guard let d = note.dueDate else { return CyberPalette.neonCyan }
-        if d < Date() { return .red }
-        if Calendar.current.isDateInToday(d) { return .yellow }
+        if d < Date() { return CyberPalette.overdueAccent }
+        if Calendar.current.isDateInToday(d) { return CyberPalette.todayAccent }
         return CyberPalette.neonCyan
     }
 
@@ -317,25 +318,31 @@ public struct TodayPinnedCard: View {
         // one line, leaving the card feeling top-heavy. 76pt still
         // accommodates a 2-line title via the Spacer absorbing slack.
         .frame(height: 76)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.45))
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            (isCompleted ? CyberPalette.doneAccent : CyberPalette.neonCyan)
-                                .opacity(0.04)
-                        )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(
-                    (isCompleted ? CyberPalette.doneAccent : CyberPalette.neonCyan)
-                        .opacity(isCompleted ? 0.45 : 0.22),
-                    lineWidth: 0.7
-                )
-        )
+        .background {
+            if colorScheme == .light {
+                LightCardSheet(cornerRadius: 14,
+                               edge: isCompleted ? CyberPalette.doneAccent.opacity(0.45)
+                                                 : Color.black.opacity(0.07))
+            } else {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.ultraThinMaterial.opacity(0.45))
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(
+                                (isCompleted ? CyberPalette.doneAccent : CyberPalette.neonCyan)
+                                    .opacity(0.04)
+                            )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(
+                                (isCompleted ? CyberPalette.doneAccent : CyberPalette.neonCyan)
+                                    .opacity(isCompleted ? 0.45 : 0.22),
+                                lineWidth: 0.7
+                            )
+                    )
+            }
+        }
         // Whole card recedes a touch when done so unfinished cards "pop"
         // forward in the grid. Animated so toggling a checkbox elsewhere
         // gives a satisfying fade rather than a hard cut.
@@ -438,6 +445,7 @@ public struct TodayPinnedCard: View {
 /// chipColor logic as the pinned card (overdue/today/future).
 public struct TodayCalendarRow: View {
     private let note: Note
+    @Environment(\.colorScheme) private var colorScheme
 
     public init(note: Note) {
         self.note = note
@@ -460,8 +468,8 @@ public struct TodayCalendarRow: View {
         // bar, due-chip text. Single accent flip = one clear "settled"
         // signal even on the small calendar row.
         if isCompleted { return CyberPalette.doneAccent }
-        if due < Date() { return .red }
-        if Calendar.current.isDateInToday(due) { return .yellow }
+        if due < Date() { return CyberPalette.overdueAccent }
+        if Calendar.current.isDateInToday(due) { return CyberPalette.todayAccent }
         return CyberPalette.neonCyan
     }
 
@@ -563,17 +571,23 @@ public struct TodayCalendarRow: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.4))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(
-                    chipColor.opacity(isCompleted ? 0.35 : 0.12),
-                    lineWidth: isCompleted ? 0.8 : 0.6
-                )
-        )
+        .background {
+            if colorScheme == .light {
+                LightCardSheet(cornerRadius: 14,
+                               edge: isCompleted ? chipColor.opacity(0.35)
+                                                 : Color.black.opacity(0.07))
+            } else {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.ultraThinMaterial.opacity(0.4))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(
+                                chipColor.opacity(isCompleted ? 0.35 : 0.12),
+                                lineWidth: isCompleted ? 0.8 : 0.6
+                            )
+                    )
+            }
+        }
         // Match the pinned card: completed rows dim slightly so unfinished
         // ones lead the list visually.
         .opacity(isCompleted ? 0.72 : 1.0)

@@ -352,6 +352,8 @@ struct DesktopPanelView: View {
 
     // MARK: Background + empty
 
+    private var haloScale: Double { theme.mode == .light ? 0.4 : 1.0 }
+
     private var panelBackground: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -359,9 +361,11 @@ struct DesktopPanelView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(CyberPalette.backdrop.opacity(0.92))
             // Corner glow — same pink/cyan signature as the iOS widget.
-            RadialGradient(colors: [CyberPalette.neonCyan.opacity(0.16), .clear],
+            // Softer in light, where full-strength glow tints the whole
+            // card instead of lighting its corners (see CyberBackground).
+            RadialGradient(colors: [CyberPalette.neonCyan.opacity(0.16 * haloScale), .clear],
                            center: .topTrailing, startRadius: 0, endRadius: 180)
-            RadialGradient(colors: [CyberPalette.neonPink.opacity(0.12), .clear],
+            RadialGradient(colors: [CyberPalette.neonPink.opacity(0.12 * haloScale), .clear],
                            center: .bottomLeading, startRadius: 0, endRadius: 160)
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

@@ -191,7 +191,12 @@ public final class CharacterPackStore: ObservableObject {
         let saved = UserDefaults.standard.string(forKey: Self.key) ?? CharacterPack.defaultPackID
         self.selectedID = packs.contains(where: { $0.id == saved }) ? saved : (packs.first?.id ?? CharacterPack.girl.id)
         // Apply the selected pack's theme before any surface renders.
-        CyberPalette.activeTheme = (packs.first(where: { $0.id == self.selectedID }) ?? .girl).theme
+        // Without the art bundle (iOS) the only "pack" is the built-in girl
+        // stub, whose theme is the pre-theming pink/cyan — not a choice
+        // anyone made. Wear the default pack's colors there instead.
+        CyberPalette.activeTheme = CharacterArtBundle.bundle == nil
+            ? .defaultPack
+            : (packs.first(where: { $0.id == self.selectedID }) ?? .girl).theme
     }
 
     /// The currently-selected pack (never nil — falls back to `girl`).

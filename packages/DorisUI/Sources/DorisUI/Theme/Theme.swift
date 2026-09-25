@@ -73,13 +73,41 @@ public struct CharacterTheme: Equatable {
     )
 }
 
+extension CharacterTheme {
+    /// The default pack's (cat) theme, compiled in — the exact `theme`
+    /// object from `Characters/cat/pack.json`.
+    ///
+    /// `pack.json` is the source of truth, but it now ships only inside the
+    /// macOS-only character-art bundle. iOS and the app extensions have no
+    /// packs to choose between and no manifest to read, and without this
+    /// they fell back to `.girl` — the pre-theming pink/cyan — so from 1.8.1
+    /// the iPhone stopped looking like the Mac. `DefaultPackThemeTests`
+    /// fails if this drifts from the manifest.
+    static let defaultPackThemeJSON = """
+    {
+      "accentPrimary":   { "light": "#1F6FD1", "dark": "#5CC8FF" },
+      "accentSecondary": { "light": "#0A7F9E", "dark": "#74E4FF" },
+      "done":            "#9AA0A6",
+      "backdropTop":     { "light": "#EEF2F6", "dark": "#0E1925" },
+      "backdropBottom":  { "light": "#F8FAFC", "dark": "#05080F" }
+    }
+    """
+
+    public static let defaultPack: CharacterTheme = {
+        let manifest = try? JSONDecoder().decode(ThemeManifest.self,
+                                                 from: Data(defaultPackThemeJSON.utf8))
+        return manifest?.resolved() ?? .girl
+    }()
+}
+
 public enum CyberPalette {
     // MARK: Active theme (set by CharacterPackStore on launch + pack switch)
 
-    /// The selected pack's theme. Defaults to girl so first launch / any
-    /// surface read before the store initializes looks correct. Mutated on
-    /// the main actor (UI) only.
-    public static var activeTheme: CharacterTheme = .girl
+    /// The selected pack's theme. Starts as the default pack's, which is
+    /// also what any process that never loads the pack store keeps — the
+    /// iOS widget and the share extensions. Mutated on the main actor (UI)
+    /// only.
+    public static var activeTheme: CharacterTheme = .defaultPack
 
     // MARK: Brand accents (now resolved from the active pack's theme)
 
@@ -99,21 +127,55 @@ public enum CyberPalette {
         dark:  Color(red: 0.20, green: 0.95, blue: 0.55)
     )
 
+    /// "Due today" on date chips. Was plain `.yellow`, which is 1.5:1 on a
+    /// white card — the label all but vanished in light mode. Deep amber in
+    /// light (5.2:1); dark keeps the system yellow it always had.
+    public static let todayAccent = Color(
+        light: Color(red: 0.63, green: 0.36, blue: 0.00),
+        dark:  .yellow
+    )
+
+    /// Critical events — the notch card's wash and edge, the events list's
+    /// stripe and badge. Fixed, not themed: critical was drawn in
+    /// `neonPink` back when that was always pink, and once packs recolored
+    /// `neonPink` it became cat's blue (the same as info) and clip's gold
+    /// (the same as a reminder's orange). These are the original pinks.
+    public static let alert = Color(
+        light: Color(red: 0.80, green: 0.10, blue: 0.55),
+        dark:  Color(red: 1.0,  green: 0.30, blue: 0.75)
+    )
+
+    /// "Overdue" on date chips. System red is 3.5:1 on white — deepened in
+    /// light (5.3:1); dark unchanged.
+    public static let overdueAccent = Color(
+        light: Color(red: 0.80, green: 0.18, blue: 0.15),
+        dark:  .red
+    )
+
     // MARK: Adaptive backdrop (themeable)
 
     public static var backdropTop: Color { activeTheme.backdropTop }
     public static var backdropBottom: Color { activeTheme.backdropBottom }
 
-    /// Surface used for cards / list rows. Glass-fill in dark, soft white in
-    /// light. Defined as a primary fill — the neon stroke goes on top.
+    /// Surface used for cards / list rows. Glass-fill in dark, near-solid
+    /// white in light. The light values used to be 0.85 → 0.65, which let
+    /// the tinted backdrop straight through: cards read as the page itself.
     public static let surfaceTop = Color(
-        light: Color.white.opacity(0.85),
+        light: Color.white.opacity(0.96),
         dark:  Color.black.opacity(0.55)
     )
 
     public static let surfaceBottom = Color(
-        light: Color.white.opacity(0.65),
+        light: Color.white.opacity(0.92),
         dark:  Color.black.opacity(0.30)
+    )
+
+    /// Row fill for grouped lists (Settings). Dark keeps the faint 5% lift
+    /// it always had; light gets white rows, the same as the light cards —
+    /// `primary.opacity(0.05)` there is a grey row on a grey page.
+    public static let listRowFill = Color(
+        light: Color.white,
+        dark:  Color.white.opacity(0.05)
     )
 
     // MARK: Composed gradients

@@ -101,7 +101,17 @@ Doris 的可视形象做成**可切换的「形象包」(CharacterPack)**。一�
 | `backdropBottom`  | 页面背景渐变**底**色 | 同上 |
 
 > 卡片玻璃面(`surfaceTop/Bottom`)目前仍是全局色,不随包变——保留通用毛玻璃质感。
+> 浅色模式下卡片不用玻璃,统一是带阴影的白卡(`LightCardSheet`)。
 > 想让某色也可换时告诉我,扩一行即可(`CharacterTheme` + `ThemeManifest` 各加一个字段)。
+
+**浅色值的要求**:`accentPrimary` / `accentSecondary` 会被当作小字颜色用在白卡片上,
+浅色值对白色的对比度要 **≥ 4.5:1**。深色模式那套霓虹亮色直接搬过来通常只有 2.5–3:1,
+读不清;同色相加深即可。`done` 的浅色值别和主色撞色,完成态要「退后」而不是「抢眼」。
+
+**默认包(`cat`)的配色在代码里还有一份**:`CharacterTheme.defaultPackThemeJSON`
+(`DorisUI/Theme/Theme.swift`)。iOS 和各扩展读不到 `pack.json`(形象素材包只打进 macOS),
+靠这份编译进去的副本显示默认主题。改 `cat/pack.json` 的 `theme` 时两处一起改,
+`DefaultPackThemeTests` 会在两者不一致时失败。
 
 **作用范围**:配色由 `CharacterPackStore` 在启动时和切包时写入 `CyberPalette.activeTheme`,
 全 App 205 处 `CyberPalette.X` 调用点不变就跟着换色。切包时观察 store 的界面立即变色,

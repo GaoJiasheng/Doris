@@ -299,8 +299,8 @@ struct AnchorView: View {
                         .strokeBorder(
                             LinearGradient(
                                 colors: [
-                                    CyberPalette.neonPink.opacity(isLight ? 0.95 : 0.85),
-                                    CyberPalette.neonPink.opacity(isLight ? 0.70 : 0.55),
+                                    CyberPalette.alert.opacity(isLight ? 0.95 : 0.85),
+                                    CyberPalette.alert.opacity(isLight ? 0.70 : 0.55),
                                     CyberPalette.neonCyan.opacity(isLight ? 0.50 : 0.35)
                                 ],
                                 startPoint: .topLeading, endPoint: .bottomTrailing

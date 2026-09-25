@@ -95,29 +95,35 @@ public struct EventsRowView: View {
 /// other surfaces (banner, anchor dropdown, widget) can reach for the
 /// same colors and stay visually consistent.
 ///
-/// Three distinct hues, each tuned to land cleanly on both the deep-
-/// purple dark backdrop and the cream light backdrop — i.e. the same
-/// RGB values are used regardless of theme. Critical keeps the brand
-/// pink (the popup's alarm color); reminder and info pick warm and
-/// cool accents *outside* the popup's strict pink+cyan vocabulary so
-/// the three levels are immediately distinguishable by hue.
+/// Three distinct hues, readable on both backdrops (each flips between a
+/// dark-mode and a light-mode value). None of them follows the character
+/// pack: packs recolor the brand accents, and a level has to look the same
+/// whichever pack is on or the three stop being tellable apart.
 ///
-///   - critical → `neonPink`  (alarm — same brand pink as popup chrome)
+///   - critical → `CyberPalette.alert` (alarm pink)
 ///   - reminder → `levelOrange` (warm "look at this" tone)
 ///   - info     → `levelSkyBlue` (cool "by the way" tone)
 public enum EventLevelStyle {
-    /// Warm orange used for `.reminder`. Bright enough to stand against
-    /// dark backdrops, saturated enough to read clearly against light.
-    public static let levelOrange = Color(red: 1.0, green: 0.62, blue: 0.18)
+    /// Warm orange used for `.reminder`. The bright dark-mode orange is
+    /// only 2.1:1 on a white page — the level badge's text washed out — so
+    /// light uses a burnt orange (4.8:1).
+    public static let levelOrange = Color(
+        light: Color(red: 0.70, green: 0.35, blue: 0.00),
+        dark:  Color(red: 1.0, green: 0.62, blue: 0.18)
+    )
 
     /// Soft sky blue used for `.info`. Distinctly different from the
     /// popup's `neonCyan` so it doesn't read as a dimmed brand accent;
-    /// instead it lands as its own "low-priority info" hue.
-    public static let levelSkyBlue = Color(red: 0.40, green: 0.72, blue: 1.0)
+    /// instead it lands as its own "low-priority info" hue. Deepened in
+    /// light for the same reason as the orange (2.1:1 → 4.8:1).
+    public static let levelSkyBlue = Color(
+        light: Color(red: 0.16, green: 0.45, blue: 0.75),
+        dark:  Color(red: 0.40, green: 0.72, blue: 1.0)
+    )
 
     public static func color(for level: EventLevel) -> Color {
         switch level {
-        case .critical: return CyberPalette.neonPink
+        case .critical: return CyberPalette.alert
         case .reminder: return levelOrange
         case .info:     return levelSkyBlue
         }

@@ -126,7 +126,6 @@ struct TodayScreen: View {
             }
             .scrollContentBackground(.hidden)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { ThemeToggleButton() }
                 ToolbarItem(placement: .principal) { navTitle }
@@ -148,7 +147,7 @@ struct TodayScreen: View {
         VStack(spacing: 2) {
             Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Text(L("TODAY", "今日"))
                 .font(.system(size: 16, weight: .bold, design: .monospaced))
                 .foregroundStyle(CyberPalette.neonCyan.opacity(0.85))

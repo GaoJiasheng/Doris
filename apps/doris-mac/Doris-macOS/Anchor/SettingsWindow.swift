@@ -412,8 +412,8 @@ private struct AppearanceSettingsView: View {
                 ThemeToggleButton()
             }
             Text(L(
-                "Dark = deep purple cyber backdrop. Light = soft cream with the same neon accents. Click the sun/moon button anywhere in the app for a one-click flip.",
-                "深色为赛博紫黑底,浅色为奶油色,两种都保留霓虹粉青配色。任何位置的太阳/月亮按钮都能一键切换。"
+                "Dark is the neon cyber look. Light is a bright version with white cards and deeper, readable accents. Colors follow the character you pick. Click the sun/moon button anywhere in the app for a one-click flip.",
+                "深色是霓虹赛博风格;浅色是明亮版本,白色卡片,强调色加深以保证清晰可读。配色随所选形象变化。任何位置的太阳/月亮按钮都能一键切换。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))

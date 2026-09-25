@@ -591,7 +591,7 @@ private struct ArchivedNotesSheet: View {
                                 .foregroundStyle(CyberPalette.neonCyan)
                                 .buttonStyle(.plain)
                             }
-                            .listRowBackground(Color.primary.opacity(0.04))
+                            .listRowBackground(Color(light: .white, dark: Color.white.opacity(0.04)))
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     // Soft-delete instead of ctx.delete so
@@ -617,7 +617,6 @@ private struct ArchivedNotesSheet: View {
             .background { CyberBackground().ignoresSafeArea() }
             .navigationTitle(L("Archived", "已归档"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(L("Done", "完成")) { dismiss() }
@@ -737,7 +736,8 @@ private struct NoteRow: View {
     private func dueDateChip(_ due: Date) -> some View {
         let cal = Calendar.current
         let startOfToday = cal.startOfDay(for: Date())
-        let color: Color = due < startOfToday ? .red : cal.isDateInToday(due) ? .yellow : CyberPalette.neonCyan
+        let color: Color = due < startOfToday ? CyberPalette.overdueAccent
+            : cal.isDateInToday(due) ? CyberPalette.todayAccent : CyberPalette.neonCyan
         return HStack(spacing: 3) {
             Image(systemName: "calendar")
                 .font(.system(size: 8))

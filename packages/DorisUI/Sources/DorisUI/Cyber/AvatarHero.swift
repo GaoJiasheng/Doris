@@ -514,15 +514,8 @@ public struct AvatarHero: View {
         )
     }
 
-    /// Slow neon-pink pulse drawn around the avatar while a `critical`
-    /// event is on screen. Lives as a sibling to the corner accents,
-    /// behind the weather overlay. Uses a `TimelineView` on a 6fps
-    /// tick so the pulse is cheap — it's just a sin wave on the
-    /// halo's opacity + scale, no per-pixel work.
-    ///
-    /// Color follows `EventLevelStyle.critical` (= `CyberPalette.neonPink`)
-    /// so the pulse stays on-brand with the rest of the cyber
-    /// vocabulary — system red would have stood out as foreign.
+    /// HUD brackets framing the avatar's four corners, in `neonCyan`
+    /// (see `HudBracket`). Static — they carry no event state.
     private var cornerAccents: some View {
         VStack {
             HStack {

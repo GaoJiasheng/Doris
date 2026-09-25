@@ -287,6 +287,23 @@ struct MainWindowView: View {
                 SyncNowToolbarButton(showsTime: false)
                 ThemeToggleButton()
 
+                // Settings used to be reachable only from the menu-bar
+                // avatar's menu and the desktop pet — nothing in the window
+                // you actually work in. Same circular chip as the theme
+                // toggle beside it.
+                Button {
+                    SettingsWindowController.shared.show()
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.primary.opacity(0.75))
+                        .padding(6)
+                        .background(Circle().fill(.primary.opacity(0.06)))
+                        .overlay(Circle().stroke(CyberPalette.neonCyan.opacity(0.30), lineWidth: 0.6))
+                }
+                .buttonStyle(.plain)
+                .help(L("Settings", "设置"))
+
                 // Custom window close button — top-RIGHT. The borderless
                 // window has no system traffic lights. A plain transparent
                 // xmark in `.primary` so it follows the light/dark theme with

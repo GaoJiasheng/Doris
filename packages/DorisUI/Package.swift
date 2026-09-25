@@ -42,6 +42,11 @@ let package = Package(
             ],
             path: "Sources/DorisUI",
             swiftSettings: prefixMapFlags
+        ),
+        .testTarget(
+            name: "DorisUITests",
+            dependencies: ["DorisUI"],
+            path: "Tests/DorisUITests"
         )
     ]
 )

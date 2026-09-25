@@ -76,7 +76,6 @@ struct EventsScreen: View {
             }
             .navigationTitle(L("Events", "事件"))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
