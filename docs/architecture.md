@@ -163,8 +163,9 @@ SwiftData store + CloudKit mirror metadata.
   other devices' uploads. Pre-1.0 users hit "I deleted these, they
   came back." The fix: bulk-delete paths now set `deleted = true` +
   stamp `deletedAt`; `SyncTimer.purgeTombstones` hard-deletes after
-  the soft-state has had time to propagate (24 h for trash,
-  30 days for archive). See `SyncTimer.swift` for the long write-up.
+  the soft-state has had time to propagate (24 h). Archived notes are
+  never purged — through 1.8.3 they were, 30 days after their last edit,
+  which wiped users' archives. See `SyncTimer.swift`.
 - **Production CloudKit env for both Mac DMG and iOS TestFlight**:
   Developer ID and Apple Distribution certs both default to
   Production. Means data syncs between platforms out of the box,

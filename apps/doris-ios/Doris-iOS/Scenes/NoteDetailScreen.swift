@@ -23,7 +23,7 @@ struct NoteDetailScreen: View {
     @ObservedObject private var lang = LanguageSettings.shared
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
-    @State private var confirmingDelete = false
+    @State private var confirmingArchive = false
     @State private var showingDatePicker = false
     @State private var showingMarkdownPreview = false
     /// In-flight debounced `updatedAt` stamp — see `scheduleTouch()`.
@@ -143,20 +143,25 @@ struct NoteDetailScreen: View {
                     }
                 }
             }
+            // Archive, not delete. This was a trash-can "Delete" that
+            // actually archived — harmless while archives expired after 30
+            // days, misleading once they're kept for good. Deleting for real
+            // is a swipe on the notes list.
             ToolbarItem(placement: .topBarTrailing) {
-                Button(role: .destructive) {
-                    confirmingDelete = true
+                Button {
+                    confirmingArchive = true
                 } label: {
-                    Image(systemName: "trash")
-                        .foregroundStyle(CyberPalette.neonPink.opacity(0.9))
+                    Image(systemName: "archivebox")
+                        .foregroundStyle(CyberPalette.neonCyan.opacity(0.9))
                 }
+                .accessibilityLabel(L("Archive", "归档"))
             }
         }
         .alert(
-            L("Delete this note?", "删除这条笔记?"),
-            isPresented: $confirmingDelete
+            L("Archive this note?", "归档这条笔记?"),
+            isPresented: $confirmingArchive
         ) {
-            Button(L("Delete", "删除"), role: .destructive) {
+            Button(L("Archive", "归档")) {
                 note.archive()
                 try? ctx.save()
                 onDelete()
@@ -164,8 +169,8 @@ struct NoteDetailScreen: View {
             }
             Button(L("Cancel", "取消"), role: .cancel) {}
         } message: {
-            Text(L("The note will be moved to Recently Deleted.",
-                   "笔记将移至最近删除。"))
+            Text(L("It moves to Archived and stays there until you delete it. You can restore it any time.",
+                   "笔记会移到「已归档」,一直保留,直到你手动删除,随时可以恢复。"))
         }
         .sheet(isPresented: $showingDatePicker) {
             dueDatePickerSheet

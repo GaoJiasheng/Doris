@@ -98,10 +98,9 @@ public final class Note {
         updatedAt = Date()
     }
 
-    /// Soft-delete: marks the note archived and stamps updatedAt. Use this
-    /// instead of `modelContext.delete(note)` so CloudKit propagates the
-    /// archived flag to other devices. SyncTimer auto-purges records that
-    /// have been archived for 30+ days via a hard delete.
+    /// Archive: take the note off the active lists and keep it, indefinitely.
+    /// Stamps updatedAt so the flag syncs. Not a delete — for that set
+    /// `deleted = true` (the trash, purged by SyncTimer after 24 hours).
     public func archive() {
         archived = true
         touch()

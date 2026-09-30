@@ -36,7 +36,7 @@ struct SettingsView: View {
                 tokenTab
                     .tabItem { Label(L("Tokens", "Token"), systemImage: "bolt.fill") }
                 recentlyDeletedTab
-                    .tabItem { Label(L("Recently Deleted", "最近删除"), systemImage: "trash") }
+                    .tabItem { Label(L("Archived", "已归档"), systemImage: "archivebox") }
                 sidebarTab
                     .tabItem { Label(L("Sidebar", "侧栏"), systemImage: "sidebar.right") }
                 shortcutTab
@@ -185,8 +185,9 @@ struct SettingsView: View {
         SyncSettingsTab()
     }
 
-    /// Recently Deleted tab — shows archived notes so the user can
-    /// restore or permanently delete them.
+    /// Archived tab — archived notes, kept indefinitely, which the user
+    /// can restore or permanently delete. (Once labelled "Recently
+    /// Deleted", from when archives expired after 30 days.)
     private var recentlyDeletedTab: some View {
         MacRecentlyDeletedTab()
     }
@@ -472,7 +473,7 @@ private struct SyncSettingsTab: View {
     }
 }
 
-// MARK: - Recently Deleted tab
+// MARK: - Archived tab
 
 @MainActor
 private struct MacRecentlyDeletedTab: View {
@@ -494,14 +495,14 @@ private struct MacRecentlyDeletedTab: View {
         VStack(alignment: .leading, spacing: 12) {
             if archived.isEmpty {
                 VStack(spacing: 8) {
-                    Image(systemName: "trash")
+                    Image(systemName: "archivebox")
                         .font(.system(size: 32))
                         .foregroundStyle(.secondary)
-                    Text(L("No recently deleted notes.", "暂无最近删除的笔记。"))
+                    Text(L("No archived notes.", "暂无已归档的笔记。"))
                         .font(.headline)
                         .foregroundStyle(.secondary)
-                    Text(L("Notes archived on this device or synced from iOS appear here.",
-                           "在本机归档或从 iOS 同步过来的笔记会出现在这里。"))
+                    Text(L("Notes archived on any of your devices appear here and are kept until you delete them.",
+                           "在任何设备上归档的笔记都会出现在这里,一直保留,直到你手动删除。"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -525,8 +526,8 @@ private struct MacRecentlyDeletedTab: View {
                         // + touch is a regular CloudKit update — every
                         // device sees "this is now in trash" with a
                         // monotonic updatedAt. `SyncTimer.purgeTombstones`
-                        // will hard-delete after 30 days once we know all
-                        // devices have caught up.
+                        // hard-deletes them 24 hours later, once every
+                        // device has caught up.
                         let now = Date()
                         for n in archived {
                             n.deleted = true

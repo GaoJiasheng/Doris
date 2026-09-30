@@ -88,10 +88,11 @@ markdown-body `- [x]` lines are the source of truth via
   hours via a periodic `CKQueryOperation`. Receivers do not delete;
   they only consume.
 - `SyncTimer.purgeTombstones` (runs on every 60 s poke) hard-deletes
-  notes with `archived && updatedAt < 30 days ago` OR
-  `deleted && updatedAt < 24h ago`. The two-cutoff scheme is the fix
-  for the CloudKit hard-delete race that bit us pre-1.0 — see
-  `SyncTimer.swift` doc-comments for the full rationale.
+  notes with `deleted && updatedAt < 24h ago` — the trash. Deleting via
+  a soft-delete that is purged later is the fix for the CloudKit
+  hard-delete race that bit us pre-1.0. Archived notes are kept
+  indefinitely; through 1.8.3 they were also purged, 30 days after
+  their last edit. See `SyncTimer.swift`.
 
 ## Development vs Production environments
 
