@@ -68,6 +68,7 @@ struct TasksWidget: Widget {
 enum TaskSection {
     case pinned     // 置顶 + 长期
     case due        // 日程 — due today, or overdue
+    case later      // 之后 — the next few days, only in space left over
 }
 
 struct TaskSnapshot: Identifiable {
@@ -87,6 +88,7 @@ struct TaskSnapshot: Identifiable {
         switch section {
         case .pinned: return longTerm ? CyberPalette.longTermViolet : CyberPalette.neonPink
         case .due:    return CyberPalette.neonCyan
+        case .later:  return CyberPalette.neonCyan.opacity(0.5)
         }
     }
 }
@@ -100,11 +102,16 @@ struct TasksEntry: TimelineEntry {
     /// Unfinished among those. The hero number: finished rows stay on the
     /// card, struck through, but they aren't "待办".
     let openCount: Int
-    /// Dated after today. Not listed; surfaced as "之后 N 项".
+    /// Unfinished tasks due in the next `laterHorizonDays` days, soonest
+    /// first. Listed only in space today's rows leave empty, below a
+    /// "之后" rule — today always comes first.
+    let later: [TaskSnapshot]
+    /// Every unfinished task dated after today, however far out. The
+    /// "之后还有 N 项" count is measured against this.
     let laterTotal: Int
 
     static func empty(_ date: Date = .now) -> TasksEntry {
-        TasksEntry(date: date, tasks: [], listedTotal: 0, openCount: 0, laterTotal: 0)
+        TasksEntry(date: date, tasks: [], listedTotal: 0, openCount: 0, later: [], laterTotal: 0)
     }
 }
 
@@ -116,6 +123,9 @@ private extension CyberPalette {
 // MARK: - Provider
 
 struct TasksProvider: TimelineProvider {
+    /// How far ahead the leftover-space "之后" section looks.
+    static let laterHorizonDays = 7
+
     func placeholder(in context: Context) -> TasksEntry {
         .empty()
     }
@@ -167,7 +177,14 @@ struct TasksProvider: TimelineProvider {
             .filter { !$0.pinned && $0.dueDate != nil && !$0.isPastAndCompleted(now: now) }
             .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
         let due = dated.filter { !$0.isDueAfterToday(now: now) }
-        let laterTotal = dated.count - due.count
+        // Later: unfinished only (a struck-through task next week is noise
+        // on a glance card), and only this coming week — further out it's
+        // just a count.
+        let upcoming = dated.filter { $0.isDueAfterToday(now: now) && !$0.isCompleted }
+        let cal = Calendar.current
+        let horizon = cal.date(byAdding: .day, value: Self.laterHorizonDays + 1,
+                               to: cal.startOfDay(for: now)) ?? now
+        let soon = upcoming.filter { ($0.dueDate ?? .distantFuture) < horizon }
 
         func snap(_ n: Note, _ section: TaskSection) -> TaskSnapshot {
             let p = n.checklistProgress
@@ -194,7 +211,8 @@ struct TasksProvider: TimelineProvider {
             tasks: Array(tasks),
             listedTotal: pinned.count + due.count,
             openCount: (pinned + due).filter { !$0.isCompleted }.count,
-            laterTotal: laterTotal
+            later: soon.prefix(8).map { snap($0, .later) },
+            laterTotal: upcoming.count
         )
     }
 }
@@ -219,16 +237,78 @@ struct TasksWidgetView: View {
 
     private var isAccessory: Bool { family == .accessoryRectangular }
 
-    // One fewer row than the original on small to buy breathing room for the
-    // hero line; medium/large unchanged.
-    private var visibleCount: Int {
-        switch family {
-        case .systemSmall:          return 3
-        case .systemMedium:         return 4
-        case .systemLarge:          return 8
-        case .accessoryRectangular: return 2
-        default:                    return 3
+    // MARK: Layout plan
+    //
+    // What fits is decided by height, not a fixed row count. The counts used
+    // to be 3 / 4 / 8, and the medium card couldn't hold four rows plus
+    // section captions and the footer: the last rows ran past its bottom
+    // edge and vanished without being counted in "+N 更多". Heights below
+    // are measured from the rendered card (rows include their hairline).
+
+    private struct Metrics {
+        let chrome: CGFloat        // vertical padding + hero line + rule + list top gap
+        let row: CGFloat
+        let caption: CGFloat       // a 置顶 / 日程 caption
+        let laterRule: CGFloat     // the 之后 rule, with its top gap
+        let laterRow: CGFloat      // upcoming rows are set tighter than today's
+        let nothingToday: CGFloat
+        let footer: CGFloat
+    }
+
+    private var metrics: Metrics {
+        family == .systemSmall
+            ? Metrics(chrome: 24 + 30 + 5, row: 27.6, caption: 0, laterRule: 0, laterRow: 0,
+                      nothingToday: 25, footer: 17)
+            : Metrics(chrome: 28 + 34.4 + 7, row: 29.6, caption: 14, laterRule: 15, laterRow: 23,
+                      nothingToday: 25, footer: 17)
+    }
+
+    private struct Plan {
+        var today: [TaskSnapshot] = []
+        var later: [TaskSnapshot] = []
+        var captions = false
+    }
+
+    /// Today first — pinned, then due / overdue — for as long as they fit.
+    /// Only when *all* of today fits does the rest go to the days ahead,
+    /// and only if at least two of those fit under the 之后 rule (a lone
+    /// row there reads as clutter). When that is short by the captions'
+    /// height, the captions give way: the rule already marks the boundary.
+    private func plan(height: CGFloat) -> Plan {
+        let m = metrics
+        // The footer is always budgeted; it may spill ~2pt into the bottom
+        // padding, which the eye can't tell from padding.
+        let full = height - m.chrome - m.footer + 2
+        func fillToday(captions: Bool) -> (rows: [TaskSnapshot], left: CGFloat, sections: Set<TaskSection>) {
+            var b = full, rows: [TaskSnapshot] = [], seen = Set<TaskSection>()
+            for t in entry.tasks {
+                let cost = m.row + (captions && !seen.contains(t.section) ? m.caption : 0)
+                guard cost <= b else { break }
+                b -= cost; seen.insert(t.section); rows.append(t)
+            }
+            return (rows, b, seen)
         }
+        // Captions are a nicety; another task row is worth more.
+        var fill = fillToday(captions: family != .systemSmall)
+        var p = Plan(captions: family != .systemSmall)
+        if p.captions {
+            let bare = fillToday(captions: false)
+            if bare.rows.count > fill.rows.count { fill = bare; p.captions = false }
+        }
+        p.today = fill.rows
+        var budget = fill.left
+        let sections = fill.sections
+        guard family == .systemMedium || family == .systemLarge,
+              p.today.count == entry.tasks.count, !entry.later.isEmpty else { return p }
+        if p.today.isEmpty { budget -= m.nothingToday }
+        func fits(_ b: CGFloat) -> Int { max(0, Int(((b - m.laterRule) / m.laterRow).rounded(.down))) }
+        var n = fits(budget)
+        if n < 2, p.captions, !sections.isEmpty {
+            let without = fits(budget + CGFloat(sections.count) * m.caption)
+            if without >= 2 { p.captions = false; n = without }
+        }
+        if n >= 2 { p.later = Array(entry.later.prefix(n)) }
+        return p
     }
 
     // Cached so we don't allocate a DateFormatter every render.
@@ -236,6 +316,12 @@ struct TasksWidgetView: View {
         let f = DateFormatter()
         f.locale = Locale(identifier: "zh_CN")
         f.dateFormat = "M月d日 EEE"
+        return f
+    }()
+    private static let laterDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "EEE M/d"
         return f
     }()
     private static let heroDateFormatterShort: DateFormatter = {
@@ -276,20 +362,28 @@ struct TasksWidgetView: View {
     private var content: some View {
         if isAccessory {
             accessoryView
-        } else if entry.tasks.isEmpty {
-            emptyView
         } else {
-            systemView
+            GeometryReader { geo in
+                let p = plan(height: geo.size.height)
+                if entry.tasks.isEmpty && p.later.isEmpty {
+                    emptyView
+                } else {
+                    systemView(p)
+                }
+            }
         }
     }
 
     // MARK: System (home-screen) layout
 
-    private var systemView: some View {
-        let visible = Array(entry.tasks.prefix(visibleCount))
+    private func systemView(_ p: Plan) -> some View {
+        let visible = p.today
         let pinnedRows = visible.filter { $0.section == .pinned }
         let dueRows = visible.filter { $0.section == .due }
-        let showCaptions = family != .systemSmall
+        let showCaptions = p.captions
+        // With nothing for today, a one-line note stands in for the list so
+        // the later rows can't be mistaken for today's.
+        let later = p.later
 
         return VStack(alignment: .leading, spacing: 0) {
             heroLine
@@ -309,10 +403,17 @@ struct TasksWidgetView: View {
                 } else {
                     rowStack(visible)
                 }
+                if visible.isEmpty {
+                    nothingTodayLine
+                }
+                if !later.isEmpty {
+                    laterRule.padding(.top, visible.isEmpty ? 2 : 4)
+                    rowStack(later)
+                }
             }
             .padding(.top, family == .systemSmall ? 5 : 7)
 
-            if let footer = footerText(shown: visible.count) {
+            if let footer = footerText(shown: visible.count, laterShown: later.count) {
                 Text(footer)
                     .font(.system(size: 10.5, weight: .medium, design: .rounded))
                     .foregroundStyle(.tertiary)
@@ -336,15 +437,41 @@ struct TasksWidgetView: View {
         }
     }
 
+    /// The boundary between today and the days ahead: a labelled hairline,
+    /// so the later rows can't be read as more of today.
+    private var laterRule: some View {
+        HStack(spacing: 6) {
+            Rectangle().fill(HierarchicalShapeStyle.primary.opacity(0.14)).frame(height: 0.5)
+            Text("之后")
+                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(.tertiary)
+                .fixedSize()
+            Rectangle().fill(HierarchicalShapeStyle.primary.opacity(0.14)).frame(height: 0.5)
+        }
+        .padding(.bottom, 1)
+    }
+
+    private var nothingTodayLine: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(CyberPalette.neonCyan.opacity(0.85))
+            Text("今天没有待办")
+                .font(.system(size: 12, weight: .regular, design: .rounded))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 5)
+    }
+
     /// One quiet trailing line for everything the card doesn't list:
-    /// today's overflow ("+2 更多") and the days ahead ("之后 3 项").
-    /// A widget can't expand in place, so the later count is where the
-    /// look-ahead ends here — tapping opens the app, which has it all.
-    private func footerText(shown: Int) -> String? {
+    /// today's overflow ("+2 更多") and whatever of the days ahead didn't
+    /// fit ("之后还有 3 项"). Tapping opens the app, which has it all.
+    private func footerText(shown: Int, laterShown: Int) -> String? {
         var parts: [String] = []
         let hidden = entry.listedTotal - shown
         if hidden > 0 { parts.append("+\(hidden) 更多") }
-        if entry.laterTotal > 0 { parts.append("之后 \(entry.laterTotal) 项") }
+        let laterLeft = entry.laterTotal - laterShown
+        if laterLeft > 0 { parts.append(laterShown > 0 ? "之后还有 \(laterLeft) 项" : "之后 \(laterLeft) 项") }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -403,7 +530,7 @@ struct TasksWidgetView: View {
             // Interactive checkbox — capability parity, behaviour unchanged.
             Button(intent: ToggleTaskIntent(noteID: t.id.uuidString)) {
                 Image(systemName: t.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 15, weight: .regular))
+                    .font(.system(size: t.section == .later ? 13 : 15, weight: .regular))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(t.isCompleted
                         ? AnyShapeStyle(CyberPalette.doneAccent)
@@ -419,18 +546,23 @@ struct TasksWidgetView: View {
                 .frame(width: 5, height: 5)
 
             Text(t.title)
-                .font(.system(size: 13, weight: .regular, design: .rounded))
+                .font(.system(size: t.section == .later ? 12 : 13, weight: .regular, design: .rounded))
                 .strikethrough(t.isCompleted, color: CyberPalette.doneAccent.opacity(0.8))
                 .foregroundStyle(t.isCompleted
                     ? AnyShapeStyle(HierarchicalShapeStyle.primary.opacity(0.4))
-                    : AnyShapeStyle(HierarchicalShapeStyle.primary))
+                    : t.section == .later
+                        // Upcoming rows step back so today's lead.
+                        ? AnyShapeStyle(HierarchicalShapeStyle.secondary)
+                        : AnyShapeStyle(HierarchicalShapeStyle.primary))
                 .lineLimit(1)
 
             Spacer(minLength: 4)
 
             trailingAccessory(t)
         }
-        .padding(.vertical, family == .systemSmall ? 5 : 6)
+        // Upcoming rows are set tighter: they're a glance ahead, and the
+        // medium card can only fit two of them this way.
+        .padding(.vertical, t.section == .later ? 3.5 : (family == .systemSmall ? 5 : 6))
     }
 
     /// Same rule as the macOS card: checklist progress when there is one,
@@ -458,9 +590,13 @@ struct TasksWidgetView: View {
                 progressRing(fraction: frac, tint: ringTint)
             }
             if showDate, let due = t.dueDate {
-                Text(due, format: .dateTime.month(.twoDigits).day(.twoDigits))
+                // Upcoming rows name the weekday ("周六 10/3") — within a
+                // week, the day is what you actually plan around.
+                Text(t.section == .later
+                     ? Self.laterDateFormatter.string(from: due)
+                     : due.formatted(.dateTime.month(.twoDigits).day(.twoDigits)))
                     .font(.system(size: 10, weight: .medium, design: .rounded).monospacedDigit())
-                    .foregroundStyle(t.overdue ? AnyShapeStyle(Color.red) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(t.overdue ? AnyShapeStyle(CyberPalette.overdueAccent) : AnyShapeStyle(.secondary))
             }
         }
     }
