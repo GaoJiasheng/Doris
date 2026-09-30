@@ -6,6 +6,36 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.8.4 — 2026-09-30
+
+Archived tasks are kept for good. Until now Doris deleted them a month
+after you last touched them, on every device.
+
+### Fixed
+
+- **Archived tasks are no longer deleted.** Every sync, each device
+  permanently removed archived tasks that hadn't been edited for 30 days —
+  a rule left over from when "archive" meant "recently deleted", which it
+  hasn't since 1.0. The deletions synced, so they were gone everywhere.
+  Archived tasks now stay until you delete them; only the trash is
+  emptied, 24 hours after something goes in it.
+
+- **The iPhone's "Delete" button on a task was really Archive.** It is now
+  labelled Archive, and says the task is kept and can be restored. To
+  delete, swipe the task in the list. On the Mac, the Settings tab that
+  lists archived tasks is called "Archived" instead of "Recently Deleted".
+
+### Changed
+
+- **The 今日 widget shows the week ahead when there's room.** On a light
+  day, medium and large widgets list the next seven days' tasks below a
+  "之后" divider, in smaller rows with the weekday. Today always comes
+  first — upcoming tasks only fill the space left over. The widget now
+  lays itself out by its actual height, so rows no longer get cut off at
+  the bottom of the medium size without being counted.
+
+---
+
 ## 1.8.3 — 2026-09-25
 
 Claude Code and Codex task-done notifications work again — they had been
