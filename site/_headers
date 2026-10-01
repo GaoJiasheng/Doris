@@ -20,3 +20,9 @@
 
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
+
+/changelog
+  Cache-Control: public, max-age=0, must-revalidate
+
+/changelog.html
+  Cache-Control: public, max-age=0, must-revalidate

@@ -238,6 +238,8 @@
     background:linear-gradient(160deg,rgba(26,15,46,.9),rgba(7,7,12,.95))}
   .dl .lede{margin:0 auto}
   .reqs{margin-top:26px;font-size:12.5px;color:var(--dim);display:flex;gap:22px;justify-content:center;flex-wrap:wrap}
+  .ver-link{color:var(--cyan)}
+  .ver-link:hover{text-decoration:underline}
 
   footer{border-top:1px solid var(--line);padding:36px 0;text-align:center;color:var(--dim);font-size:13px}
   footer a:hover{color:var(--cyan)}
@@ -263,6 +265,7 @@
       <a href="#cli"    data-zh="脚本" data-en="Scripting"></a>
       <a href="#pet"    data-zh="桌宠" data-en="Desktop pet"></a>
       <a href="#voice"  data-zh="语音" data-en="Voice"></a>
+      <a href="/changelog" data-zh="更新日志" data-en="Changelog"></a>
     </div>
     <button class="lang" id="lang" type="button">EN</button>
     <a href="#download" class="nav-cta" data-zh="下载" data-en="Download"></a>
@@ -489,10 +492,11 @@
       <a href="https://github.com/GaoJiasheng/Doris/releases" class="btn btn-2" data-zh="全部版本" data-en="All releases"></a>
     </div>
     <div class="reqs">
-      <!-- Bump this on every release. The download button points at
+      <!-- Bump this on every release, and add the release at the top of
+           RELEASES in changelog.html. The download button points at
            releases/latest, which resolves itself — but the version a visitor
            is about to get is otherwise invisible on this page. -->
-      <span data-zh="最新版本 1.9.0 · 2026-10-01" data-en="Latest 1.9.0 · 2026-10-01"></span>
+      <a href="/changelog" class="ver-link" data-zh="最新版本 1.9.0 · 2026-10-01 · 看看更新了什么 →" data-en="Latest 1.9.0 · 2026-10-01 · What's new →"></a>
       <span data-zh="macOS 14 Sonoma 或更高 · 已 Apple 公证" data-en="macOS 14 Sonoma or later · Apple-notarized"></span>
       <span data-zh="iOS / iPadOS 18 或更高" data-en="iOS / iPadOS 18 or later"></span>
       <span data-zh="Apple Silicon &amp; Intel" data-en="Apple Silicon &amp; Intel"></span>
@@ -503,7 +507,7 @@
 <footer>
   <div class="wrap">
     <a href="https://github.com/GaoJiasheng/Doris">GitHub</a> ·
-    <a href="https://github.com/GaoJiasheng/Doris/blob/main/CHANGELOG.md" data-zh="更新日志" data-en="Changelog"></a> ·
+    <a href="/changelog" data-zh="更新日志" data-en="Changelog"></a> ·
     <a href="https://github.com/GaoJiasheng/Doris/blob/main/LICENSE" data-zh="开源协议" data-en="License"></a> ·
     <a href="/privacy" data-zh="隐私政策" data-en="Privacy"></a>
     <div class="copy">© 2026 Gavin Gao · <span data-zh="基于 MIT 协议开源" data-en="Open source under the MIT License"></span></div>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>更新日志 — Doris</title>
+<meta name="description" content="Doris 的每一次更新:新功能、改进与修复。macOS 与 iPhone 同步发布。">
+<meta property="og:title" content="Doris 更新日志">
+<meta property="og:description" content="Doris 的每一次更新:新功能、改进与修复。">
+<link rel="icon" type="image/png" href="assets/app-icon.png">
+<link rel="apple-touch-icon" href="assets/app-icon.png">
+<style>
+  :root{
+    --pink:#FF4DBF; --cyan:#00D9FF; --green:#4ADE80; --violet:#7C3AED;
+    --bg:#050508;
+    --txt:#EDEAF5; --dim:#9A93B0; --line:rgba(255,255,255,.09);
+    --card:rgba(255,255,255,.035);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",system-ui,sans-serif;
+    --side:150px;          /* version column */
+    --gap:44px;            /* version column ↔ cards; the rail sits in the middle */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;line-height:1.65}
+  a{color:inherit;text-decoration:none}
+  button{font-family:inherit}
+
+  /* Same backdrop as the home page, quieter: this page is for reading. */
+  .aurora{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .aurora i{position:absolute;border-radius:50%;filter:blur(120px);opacity:.18;animation:drift 24s ease-in-out infinite}
+  .aurora i:nth-child(1){width:48vw;height:48vw;background:var(--pink);top:-18vw;left:-12vw}
+  .aurora i:nth-child(2){width:42vw;height:42vw;background:var(--cyan);top:30vh;right:-16vw;animation-delay:-8s}
+  .aurora i:nth-child(3){width:34vw;height:34vw;background:var(--violet);bottom:-14vw;left:20vw;animation-delay:-15s}
+  @keyframes drift{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(3vw,-4vh,0) scale(1.1)}}
+  .grid{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.35;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;
+    mask-image:radial-gradient(ellipse 90% 50% at 50% 0%,#000 30%,transparent 75%);
+    -webkit-mask-image:radial-gradient(ellipse 90% 50% at 50% 0%,#000 30%,transparent 75%)}
+  .wrap{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding:0 24px}
+
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    background:rgba(5,5,8,.72);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:1040px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:22px}
+  .brand{display:flex;align-items:center;gap:9px}
+  .brand img{width:24px;height:24px;border-radius:6px;display:block}
+  .brand span{font-weight:800;letter-spacing:.16em;font-size:15px;
+    background:linear-gradient(90deg,var(--pink),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .nav-links{display:flex;gap:20px;font-size:13.5px;color:var(--dim);margin-left:auto}
+  .nav-links a:hover{color:var(--txt)}
+  .lang{font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);color:var(--dim);
+    background:transparent;cursor:pointer}
+  .lang:hover{color:var(--cyan);border-color:rgba(0,217,255,.4)}
+  .nav-cta{font-size:13px;padding:7px 14px;border-radius:999px;border:1px solid rgba(0,217,255,.4);color:var(--cyan)}
+  .nav-cta:hover{background:rgba(0,217,255,.1)}
+  @media(max-width:640px){.nav-links{display:none}.nav-in{gap:12px}.lang{margin-left:auto}}
+
+  /* ---- hero ---- */
+  header.wrap{padding:84px 24px 40px;text-align:center}
+  h1{font-size:clamp(34px,6vw,58px);line-height:1.1;letter-spacing:-.02em;font-weight:800}
+  h1 .g{background:linear-gradient(100deg,var(--pink) 10%,var(--cyan) 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--dim);font-size:clamp(15px,2.1vw,17px);max-width:560px;margin:20px auto 0}
+  .stats{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:30px}
+  .stat{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:12px 18px;min-width:120px}
+  .stat b{display:block;font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .stat span{font-size:12px;color:var(--dim)}
+  .stat:nth-child(1) b{color:var(--pink)}
+  .stat:nth-child(2) b{color:var(--cyan)}
+  .stat:nth-child(3) b{color:var(--green)}
+
+  /* Filter: sticks under the nav so it's reachable from deep in the list. */
+  .bar{position:sticky;top:57px;z-index:40;display:flex;justify-content:center;padding:14px 0 12px;pointer-events:none}
+  .bar .seg{pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+  .seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;border:1px solid var(--line);
+    background:rgba(14,12,22,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .seg button{border:0;background:transparent;color:var(--dim);font-size:13px;padding:7px 15px;border-radius:999px;
+    cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.2s}
+  .seg button:hover{color:var(--txt)}
+  .seg button[aria-pressed="true"]{background:rgba(255,255,255,.09);color:var(--txt)}
+  .seg i{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .seg [data-f="new"] i{background:var(--green)}
+  .seg [data-f="improved"] i{background:var(--cyan)}
+  .seg [data-f="fixed"] i{background:var(--pink)}
+
+  /* ---- timeline ---- */
+  main.wrap{padding-bottom:40px}
+  .tl{list-style:none;position:relative;margin-top:18px}
+  /* The rail runs down the gutter between the version column and the cards,
+     fading out at the bottom like the history it draws. */
+  .tl::before{content:"";position:absolute;top:10px;bottom:0;width:2px;border-radius:2px;
+    left:calc(var(--side) + var(--gap) / 2 - 1px);
+    background:linear-gradient(180deg,var(--pink),var(--cyan) 28%,var(--violet) 70%,rgba(124,58,237,0));opacity:.55}
+  .rel{display:grid;grid-template-columns:var(--side) 1fr;column-gap:var(--gap);padding-bottom:30px;position:relative;
+    scroll-margin-top:118px}
+  .rel[hidden]{display:none}
+  .side{position:sticky;top:124px;align-self:start;text-align:right;padding-top:20px}
+  .ver{font-family:var(--mono);font-weight:700;font-size:19px;letter-spacing:-.01em;display:inline-block}
+  .ver:hover{color:var(--cyan)}
+  .rel.major .ver{font-size:24px}
+  .rel.latest .ver{background:linear-gradient(100deg,var(--pink),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .date{display:block;color:var(--dim);font-size:12.5px;font-family:var(--mono);margin-top:3px}
+  .node{position:absolute;top:28px;left:calc(var(--side) + var(--gap) / 2 - 6px);width:12px;height:12px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--cyan);box-shadow:0 0 12px rgba(0,217,255,.45);z-index:2}
+  .rel.major .node{border-color:var(--pink);box-shadow:0 0 14px rgba(255,77,191,.5)}
+  .rel.latest .node{background:linear-gradient(135deg,var(--pink),var(--cyan));border-color:transparent}
+  .rel.latest .node::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(255,77,191,.6);
+    animation:ping 2.4s cubic-bezier(.2,.7,.3,1) infinite}
+  @keyframes ping{0%{transform:scale(.6);opacity:1}100%{transform:scale(2.1);opacity:0}}
+
+  .card{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:24px 26px 22px;
+    transition:border-color .25s,background .25s}
+  .card:hover{border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.05)}
+  .rel.latest .card{border:1px solid transparent;
+    background:linear-gradient(160deg,rgba(26,15,46,.96),rgba(9,8,15,.97)) padding-box,
+               linear-gradient(120deg,rgba(255,77,191,.75),rgba(0,217,255,.6) 60%,rgba(124,58,237,.5)) border-box;
+    box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 70px rgba(255,77,191,.1)}
+  .head{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .head h2{font-size:clamp(18px,2.4vw,21px);line-height:1.4;font-weight:700;letter-spacing:-.01em;flex:1;min-width:0}
+  .rel.latest .head h2{font-size:clamp(20px,2.8vw,25px)}
+  .badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;margin-top:3px;
+    background:linear-gradient(100deg,var(--pink),#C026D3);color:#fff;box-shadow:0 4px 16px rgba(255,77,191,.35)}
+
+  .grp{margin-top:18px}
+  .grp-h{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.08em;
+    padding:3px 10px 3px 8px;border-radius:999px}
+  .grp-h i{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .grp ul{list-style:none;margin-top:10px;display:grid;gap:4px}
+  .grp li{padding:6px 0 6px 15px;border-left:2px solid;font-size:14.5px;color:var(--dim)}
+  .grp li b{color:var(--txt);font-weight:600}
+  .grp.new .grp-h{color:var(--green);background:rgba(74,222,128,.1)}
+  .grp.new li{border-color:rgba(74,222,128,.28)}
+  .grp.improved .grp-h{color:var(--cyan);background:rgba(0,217,255,.1)}
+  .grp.improved li{border-color:rgba(0,217,255,.28)}
+  .grp.fixed .grp-h{color:var(--pink);background:rgba(255,77,191,.1)}
+  .grp.fixed li{border-color:rgba(255,77,191,.28)}
+  .grp[hidden]{display:none}
+
+  .foot{margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:10px;
+    flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--dim)}
+  .foot a.gh:hover{color:var(--cyan)}
+  .btn{padding:10px 18px;border-radius:11px;font-weight:600;font-size:13.5px;transition:.2s;display:inline-flex;align-items:center;gap:8px}
+  .btn-1{background:linear-gradient(100deg,var(--pink),#C026D3);color:#fff;box-shadow:0 8px 26px rgba(255,77,191,.3)}
+  .btn-1:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(255,77,191,.42)}
+  .btn-2{border:1px solid var(--line);background:var(--card);color:var(--txt)}
+  .btn-2:hover{border-color:rgba(0,217,255,.45);color:var(--cyan)}
+  .foot .gh{margin-left:auto}
+
+  .more{display:flex;justify-content:center;padding:6px 0 30px;padding-left:calc(var(--side) + var(--gap))}
+  .more button{border:1px dashed rgba(255,255,255,.2);background:transparent;color:var(--dim);font-size:13.5px;
+    padding:11px 22px;border-radius:12px;cursor:pointer;transition:.2s}
+  .more button:hover{color:var(--cyan);border-color:rgba(0,217,255,.45);border-style:solid}
+  .empty{text-align:center;color:var(--dim);padding:40px 0}
+
+  footer{position:relative;z-index:1;border-top:1px solid var(--line);padding:34px 0;text-align:center;color:var(--dim);font-size:13px}
+  footer a:hover{color:var(--cyan)}
+  .copy{margin-top:10px;font-size:12px;opacity:.75}
+
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s cubic-bezier(.2,.8,.3,1),transform .6s cubic-bezier(.2,.8,.3,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* Narrow screens: one column, the rail moves to the left edge and the
+     version sits above its card. */
+  @media(max-width:760px){
+    :root{--gap:0px}
+    header.wrap{padding:56px 16px 26px}
+    .wrap{padding:0 16px}
+    .bar{top:53px}
+    .seg button{padding:7px 11px;font-size:12.5px}
+    .tl::before{left:5px}
+    .rel{grid-template-columns:1fr;padding-left:28px;padding-bottom:26px}
+    .side{position:static;text-align:left;padding:0 0 10px;display:flex;align-items:baseline;gap:10px}
+    .date{margin-top:0}
+    .node{left:0;top:7px}
+    .card{padding:20px 18px 18px}
+    .more{padding-left:28px}
+    .foot .gh{margin-left:0}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div class="aurora"><i></i><i></i><i></i></div>
+<div class="grid"></div>
+
+<nav>
+  <div class="nav-in">
+    <a href="/" class="brand"><img src="assets/app-icon.png" alt=""><span>DORIS</span></a>
+    <div class="nav-links">
+      <a href="/" data-zh="首页" data-en="Home"></a>
+      <a href="https://github.com/GaoJiasheng/Doris/releases" data-zh="全部下载" data-en="All downloads"></a>
+    </div>
+    <button class="lang" id="lang" type="button">EN</button>
+    <a href="/#download" class="nav-cta" data-zh="下载" data-en="Download"></a>
+  </div>
+</nav>
+
+<header class="wrap">
+  <h1><span data-zh="每一次更新," data-en="Every update,"></span><br><span class="g" data-zh="都写在这里。" data-en="written down."></span></h1>
+  <p class="sub" data-zh="新功能、改进和修复。macOS 与 iPhone 同步发布,数据始终在你自己的 iCloud 里。"
+     data-en="New features, improvements and fixes. macOS and iPhone ship together, and your data stays in your own iCloud."></p>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div class="bar">
+  <div class="seg" role="group" id="seg">
+    <button type="button" data-f="all" aria-pressed="true" data-zh="全部" data-en="All"></button>
+    <button type="button" data-f="new" aria-pressed="false"><i></i><span data-zh="新功能" data-en="New"></span></button>
+    <button type="button" data-f="improved" aria-pressed="false"><i></i><span data-zh="改进" data-en="Improved"></span></button>
+    <button type="button" data-f="fixed" aria-pressed="false"><i></i><span data-zh="修复" data-en="Fixed"></span></button>
+  </div>
+</div>
+
+<main class="wrap">
+  <ol class="tl" id="tl"></ol>
+  <div class="more" id="more-wrap"><button type="button" id="more"></button></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="/" data-zh="首页" data-en="Home"></a> ·
+    <a href="https://github.com/GaoJiasheng/Doris">GitHub</a> ·
+    <a href="https://github.com/GaoJiasheng/Doris/blob/main/CHANGELOG.md" data-zh="完整技术日志" data-en="Full technical log"></a> ·
+    <a href="/privacy" data-zh="隐私政策" data-en="Privacy"></a>
+    <div class="copy">© 2026 Gavin Gao · <span data-zh="基于 MIT 协议开源" data-en="Open source under the MIT License"></span></div>
+  </div>
+</footer>
+
+<script>
+  // ---------------------------------------------------------------------
+  // Releases, newest first. Add each new version at the TOP — the page,
+  // the stats and the "latest" styling all follow from this list.
+  //
+  // Each item is [title, detail]. Keep it to what a user notices; the
+  // technical detail lives in CHANGELOG.md, linked from the footer.
+  // `gh: true` for versions with a GitHub release (1.8.0 onward).
+  // ---------------------------------------------------------------------
+  const RELEASES = [
+    { v: "1.9.0", date: "2026-10-01", gh: true,
+      zh: { title: "笔记里可以放图片了",
+        new: [
+          ["正文里插图片。", "Mac 上直接粘贴、从访达或浏览器拖进来,或点笔记上方的图片按钮;iPhone 上用工具栏的相册按钮,或者直接粘贴。每张图单独占一行,夹在文字之间,随笔记一起同步。"],
+          ["四种尺寸,点一下就换。", "点图片可以选小 / 中 / 大 / 全宽,也可以查看大图或删除。iPhone 上的大图支持双指缩放、双击放大,还能分享或存到相册。"],
+          ["清单里也能插图。", "图片作为单独一行,放在它所说明的条目下面;在条目里输入时粘贴图片,图片就插在这一条下方。"] ],
+        improved: [
+          ["图片自动压缩。", "最长边存到 2048 像素,没有透明背景的存成 JPEG,截图和照片不会拖慢同步。列表和搜索里显示为「[图片]」。"],
+          ["小组件更舒展。", "「今日」小组件的「之后」分隔线上下留出了更舒服的间距。"] ] },
+      en: { title: "Pictures in your notes",
+        new: [
+          ["Images in the note body.", "On the Mac, paste, drag one in from Finder or a browser, or use the image button above the note; on iPhone, the photo button or paste. Each image sits on its own line between your text and syncs with the note."],
+          ["Four sizes, one click.", "Click or tap an image for small, medium, large or full width, to view it full size, or to delete it. On iPhone the full-size view pinches, double-tap zooms, and shares or saves."],
+          ["Checklists too.", "An image is its own row under the item it illustrates; paste one while typing an item and it lands right below it."] ],
+        improved: [
+          ["Light on sync.", "Images are stored at up to 2048 px, as JPEG unless they're transparent. Lists and search show “[Image]” in their place."],
+          ["A roomier widget.", "The 今日 widget gives its “later” divider more breathing room."] ] } },
+
+    { v: "1.8.4", date: "2026-09-30", gh: true,
+      zh: { title: "归档永久保留",
+        fixed: [
+          ["归档的任务不再被自动删除。", "此前每台设备会悄悄删除 30 天没改动的归档任务,还会同步到所有设备。现在归档一直保留,只有废纸篓会在 24 小时后清空。"],
+          ["iPhone 上的「删除」改名为「归档」。", "它一直是归档,现在名实相符;要删除,在列表里左滑。"] ],
+        improved: [
+          ["「今日」小组件显示未来一周。", "今天的事不多时,剩余空间会在「之后」分隔线下列出未来 7 天的任务,标出星期几。"] ] },
+      en: { title: "Archives are kept for good",
+        fixed: [
+          ["Archived tasks are no longer deleted.", "Every device was quietly deleting archived tasks untouched for 30 days, and the deletions synced everywhere. Archives now stay until you delete them; only the trash empties, after 24 hours."],
+          ["iPhone's “Delete” is now called Archive.", "That's what it always did. To delete, swipe the task in the list."] ],
+        improved: [
+          ["The 今日 widget shows the week ahead.", "On a light day, the space below a “later” divider lists the next seven days, with weekdays."] ] } },
+
+    { v: "1.8.3", date: "2026-09-25", gh: true,
+      zh: { title: "Agent 通知恢复,浅色主题重做",
+        fixed: [
+          ["Claude Code / Codex 的完成通知又能收到了。", "App 移动或重装后,Hook 调用的路径失效,通知一直在悄悄失败。现在 Doris 每次启动都会修好 Hook,设置里有问题也会标出来,一键修复。"],
+          ["从 App 里注册 Codex 真正生效。", "macOS 不允许运行沙盒 App 写出的脚本,现在改成指向 Doris 命令行的链接。"],
+          ["iPhone 恢复默认主题配色,小组件也一致了。", ""],
+          ["Mac 上用拼音输入时,↓ 键回到候选词。", "以前在清单里按 ↓ 会跳到下一条,还会丢掉正在输入的字。"] ],
+        improved: [
+          ["三套浅色主题重做。", "卡片是带柔和阴影的白纸,强调色加深更易读,「今天到期」改用琥珀色,浅色下去掉了扫描线和浓重的光晕。"],
+          ["「今日」桌面卡片和小组件只显示今天。", "今天到期和逾期的在前,之后的折叠成一行;卡片的选项收进了右键菜单。"],
+          ["Mac 主窗口加了设置按钮。", ""] ] },
+      en: { title: "Agent alerts are back; light themes rebuilt",
+        fixed: [
+          ["Claude Code and Codex alerts arrive again.", "Moving or reinstalling the app broke the path the hooks called, and alerts failed silently. Doris now repairs its hooks at every launch, and Settings flags a broken one with a Repair button."],
+          ["Registering Codex from the app works.", "macOS won't run a script written by a sandboxed app; the hook is now a link to the Doris CLI."],
+          ["The iPhone gets its default theme back, and the widget matches.", ""],
+          ["Pinyin on the Mac: ↓ goes to the candidates.", "In a checklist it used to jump to the next item and drop what you were typing."] ],
+        improved: [
+          ["All three light themes, rebuilt.", "White cards with a soft shadow, deeper accents you can read, amber for “due today”, and no scanlines or heavy halos in light mode."],
+          ["The 今日 card and widget show today.", "Due-today and overdue first; anything later folds into one row. The card's options moved to a right-click menu."],
+          ["A settings button in the Mac main window.", ""] ] } },
+
+    { v: "1.8.2", date: "2026-08-22", gh: true,
+      zh: { title: "iPhone 版从 528 MB 瘦到 6 MB",
+        improved: [
+          ["iPhone / iPad 版只有约 6 MB。", "桌宠的近 3000 帧动画只属于 Mac,之前却被一起打包进了 iPhone 版和小组件。Mac 版不受影响。"] ],
+        fixed: [
+          ["拖动置顶卡片松手后,不再留下闪烁的空位。", ""] ] },
+      en: { title: "The iPhone app drops from 528 MB to 6 MB",
+        improved: [
+          ["The iPhone and iPad app is about 6 MB.", "Nearly 3,000 frames of desktop-pet animation are Mac-only, but were being packed into the iPhone app and its widget. The Mac app is unchanged."] ],
+        fixed: [
+          ["Dropping a dragged pinned card no longer leaves a blinking gap.", ""] ] } },
+
+    { v: "1.8.1", date: "2026-08-21", gh: true,
+      zh: { title: "同步与编辑的小修",
+        fixed: [
+          ["设置里会显示当前连接的 iCloud 数据库。", "不是正式库时标成橙色,不会再出现一台设备悄悄同步到别处的情况。"],
+          ["置顶卡片拖到空白处松手,不再留下 20 秒的空洞。", ""],
+          ["新子任务的光标从一开始就在正确的位置。", ""] ] },
+      en: { title: "Small fixes to sync and editing",
+        fixed: [
+          ["Settings names the iCloud database you're on.", "In orange when it isn't the live one, so a device can't quietly sync somewhere else."],
+          ["Dropping a pinned card in empty space no longer leaves a 20-second hole.", ""],
+          ["The caret in a new sub-task starts in the right place.", ""] ] } },
+
+    { v: "1.8.0", date: "2026-08-04", gh: true,
+      zh: { title: "官网上线",
+        new: [
+          ["每个任务行都有专注按钮。", "15 / 25 / 45 分钟一点即开;专注中它变成停止按钮,也提醒你正在做哪一件。"],
+          ["双击任务(或 ⌘↩)直接打开。", ""] ],
+        improved: [
+          ["Mac 任务行更大、更好点。", "标题从 11pt 加到 14pt,文字上下的留白也能点进去编辑。"],
+          ["重做截止日期选择器。", "先给今天 / 明天 / 周末 / 下周快捷项,再是一个看得清的日历。"] ],
+        fixed: [
+          ["iPhone 上拼音输入不再中途变成字母。", ""],
+          ["在弹窗里选的截止日期也会按时提醒。", ""] ] },
+      en: { title: "The website goes live",
+        new: [
+          ["A focus button on every task row.", "15 / 25 / 45 minutes in one click; while focusing it becomes a stop button and marks the task you're on."],
+          ["Double-click a task, or press ⌘↩, to open it.", ""] ],
+        improved: [
+          ["Bigger, easier task rows on the Mac.", "Titles go from 11 to 14 pt, and the space around the text is clickable too."],
+          ["A rebuilt due-date picker.", "Today / tomorrow / weekend / next week first, then a calendar you can actually read."] ],
+        fixed: [
+          ["Pinyin on iPhone no longer collapses into raw letters mid-word.", ""],
+          ["Due dates picked in the popover schedule their reminder.", ""] ] } },
+
+    { v: "1.7.1", date: "2026-07-28",
+      zh: { title: "长按卡片不再让它消失",
+        fixed: [ ["长按置顶卡片后松手,它不会再变成一个空的虚线框。", ""] ] },
+      en: { title: "A long-press no longer makes a card vanish",
+        fixed: [ ["Long-pressing a pinned card no longer leaves an empty dashed outline.", ""] ] } },
+
+    { v: "1.7.0", date: "2026-07-28",
+      zh: { title: "Token 统计支持 LM Studio",
+        new: [ ["统计本机 LM Studio 的用量。", "包括聊天窗口,以及通过它本地服务器发起的每一次调用。费用记为 0,看的是用量。服务器日志需要把 File Logging Mode 设为 full,没开时 Doris 会提示。"] ],
+        fixed: [ ["新版本加入的统计来源会自动启用。", "以前升级后看不到新来源的数据,也没有任何提示。"] ] },
+      en: { title: "Token stats count LM Studio",
+        new: [ ["Usage from your local LM Studio.", "Its chat window and every request served by its local server. Cost is 0 — the point is volume. Server logs need File Logging Mode set to full, and Doris tells you if it isn't."] ],
+        fixed: [ ["Sources added in a new version switch themselves on.", "Before, an upgrade could show no data from a new source, with nothing to say why."] ] } },
+
+    { v: "1.6.2", date: "2026-07-27",
+      zh: { title: "iPhone 终于能收到其他设备的修改",
+        fixed: [
+          ["iPhone 收不到 Mac 上的改动。", "这条入向同步从来没有真正工作过,现在修好了。有 Mac 和 iPhone 的话,这是最重要的一次更新。"],
+          ["「同步成功」不再虚报。", "以前只要本地保存成功就显示成功;现在没真正同步时会明确报错。"],
+          ["iCloud 同步默认开启。", "新安装以前默认是关的。已经手动设置过的不受影响。"] ] },
+      en: { title: "iPhone finally receives changes from other devices",
+        fixed: [
+          ["iPhone never received changes made on the Mac.", "That inbound path never actually worked; now it does. If you use both, this is the update that matters."],
+          ["“Sync succeeded” no longer claims what didn't happen.", "It used to mean only that the local save worked; now a sync that isn't really running says so."],
+          ["iCloud sync is on by default.", "Fresh installs used to start with it off. Choices you've already made are kept."] ] } },
+
+    { v: "1.6.0", date: "2026-07-26",
+      zh: { title: "专注计时器",
+        new: [
+          ["给任意任务或子任务开一个番茄钟。", "15 / 25 / 45 分钟。它只回答「我此刻在做什么」,不记统计。"],
+          ["Mac 刘海里的倒计时环。", "悬停看任务名,点一下跳到那条任务,右键调时长、暂停或停止。"],
+          ["桌宠身上浮着任务名和倒计时。", ""],
+          ["iPhone 上的全屏表盘。", "关掉后计时继续,一个小胶囊带你回来。"],
+          ["结束时可以再续 5 / 15 / 25 分钟、退出,或直接完成任务。", ""] ],
+        fixed: [ ["iPhone 不再显示废纸篓里的笔记。", ""] ] },
+      en: { title: "A focus timer",
+        new: [
+          ["A pomodoro on any task or sub-task.", "15 / 25 / 45 minutes. It answers “what am I on right now” — no stats, no history."],
+          ["A countdown ring in the Mac's notch.", "Hover for the task, click to jump to it, right-click for duration, pause or stop."],
+          ["The desktop pet carries the task name and countdown.", ""],
+          ["A full-screen dial on iPhone.", "Close it and the clock keeps running; a small chip brings you back."],
+          ["When time's up: another 5 / 15 / 25 minutes, stop, or mark the task done.", ""] ],
+        fixed: [ ["iPhone no longer shows notes from the trash.", ""] ] } },
+
+    { v: "1.5.1", date: "2026-07-14",
+      zh: { title: "CPU 占用大幅下降",
+        fixed: [
+          ["CPU 和能耗大幅下降。", "头像和背景在空闲、隐藏时也在逐帧重绘,会占满一个核心;现在它们会暂停。"],
+          ["iPhone 清单的按键和 Mac 一致。", "回车新增一条,空行按退格删除并回到上一条。"] ] },
+      en: { title: "Far less CPU",
+        fixed: [
+          ["A big drop in CPU and energy use.", "The avatar and backdrop redrew every frame even when idle or hidden, pinning a core; now they pause."],
+          ["iPhone checklist keys match the Mac.", "Return adds an item; Backspace on an empty one removes it and goes back up."] ] } },
+
+    { v: "1.5.0", date: "2026-07-02",
+      zh: { title: "桌面面板可以直接编辑",
+        new: [ ["点桌面面板里的任务就地编辑。", "还可以调背景透明度,选择是否总在最前。"] ],
+        fixed: [
+          ["App 重启或更新后,桌面面板不再消失。", ""],
+          ["Codex 长会话的 Token 不再少算。", ""],
+          ["不再反复弹出「Doris 想访问其他 App 的数据」。", ""] ] },
+      en: { title: "An editable desktop panel",
+        new: [ ["Edit tasks right in the desktop panel.", "Plus a background opacity slider and an always-on-top switch."] ],
+        fixed: [
+          ["The desktop panel no longer disappears after a relaunch or update.", ""],
+          ["Long Codex sessions no longer under-count tokens.", ""],
+          ["No more recurring “Doris wants to access data from other apps” prompt.", ""] ] } },
+
+    { v: "1.4.0", date: "2026-06-22",
+      zh: { title: "可以换角色了",
+        new: [ ["三套角色包。", "赛博猫(默认)、赛博·女孩、回形针,各有七种情绪动画、刘海标志、App 图标和一整套配色,在设置 → 外观里切换。"] ],
+        improved: [
+          ["「今日」的 Token 用量改成无边框标题,右侧显示当地天气。", ""],
+          ["主窗口分栏可以拖动调整宽度。", ""],
+          ["去掉了不可靠的订阅额度估算。", "Token 用量和费用统计不变。"] ] },
+      en: { title: "Swappable characters",
+        new: [ ["Three character packs.", "Cyber Cat (the default), Cyber Girl and Clip — each with seven animated moods, a notch mark, an app icon and a full colour theme. Switch in Settings → Appearance."] ],
+        improved: [
+          ["Today's token glance becomes a borderless headline, with the local weather beside it.", ""],
+          ["The main window's split is draggable.", ""],
+          ["The unreliable subscription-quota estimate is gone.", "Token usage and cost tracking are unchanged."] ] } },
+
+    { v: "1.3.0", date: "2026-06-21",
+      zh: { title: "Token 用量统计",
+        new: [ ["看清你烧了多少 Token。", "读取 Claude Code、Codex 的本地日志,按今天 / 7 天 / 30 天 / 全部统计用量和费用,还有每日趋势。"] ],
+        improved: [
+          ["统一的无边框主窗口。", "主窗口和刘海下拉面板合成同一个界面,各自记住大小。"],
+          ["长标题自动换行,不再截断。", ""] ],
+        fixed: [ ["macOS 26 上主窗口顶部的标签又能点了。", ""] ] },
+      en: { title: "Token usage",
+        new: [ ["See exactly what you burned.", "Reads Claude Code's and Codex's local logs: usage and cost for today, 7 days, 30 days and all time, with a daily trend."] ],
+        improved: [
+          ["One borderless main window.", "The main window and the notch dropdown are now the same surface, each remembering its size."],
+          ["Long titles wrap instead of being cut off.", ""] ],
+        fixed: [ ["The main window's header tabs are clickable again on macOS 26.", ""] ] } },
+
+    { v: "1.2.2", date: "2026-06-20",
+      zh: { title: "小组件刷新更及时",
+        fixed: [ ["在 App 里改完,iPhone 小组件更快更新。", ""] ] },
+      en: { title: "Fresher widgets",
+        fixed: [ ["The iPhone widget updates sooner after you edit in the app.", ""] ] } },
+
+    { v: "1.2.1", date: "2026-06-13",
+      zh: { title: "小组件不再过期",
+        fixed: [ ["iPhone 小组件同步后不再停留在旧内容。", "手动同步或下拉刷新会立刻刷新小组件。"] ] },
+      en: { title: "Widgets that keep up",
+        fixed: [ ["The iPhone widget no longer goes stale after a sync.", "Sync Now and pull-to-refresh update it immediately."] ] } },
+
+    { v: "1.2.0", date: "2026-06-11",
+      zh: { title: "Doris 有了性格",
+        new: [
+          ["她会对你的工作做出反应。", "完成任务时庆祝,每天第一次打开时打招呼,Agent 通知来时警觉起来。可以在设置里调成安静 / 标准 / 活泼。"],
+          ["截止日提醒。", "有截止日期的笔记会在当天 9:00 提醒你。"],
+          ["Mac 任务列表里用 ↑ ↓ 在行间移动。", ""] ],
+        improved: [
+          ["头像背景跟着白天 / 夜间变化。", ""],
+          ["浅色模式更清晰。", ""] ],
+        fixed: [ ["Mac 上按回车不会再多建一行。", ""] ] },
+      en: { title: "Doris gets a personality",
+        new: [
+          ["She reacts to your work.", "Celebrates when you finish a task, greets you on the first open of the day, perks up when an agent alert lands. Quiet, standard or lively in Settings."],
+          ["Due-date reminders.", "A note with a due date reminds you at 9:00 that day."],
+          ["Move between Mac task rows with ↑ and ↓.", ""] ],
+        improved: [
+          ["The avatar's backdrop follows day and night.", ""],
+          ["Clearer light mode.", ""] ],
+        fixed: [ ["Return on the Mac no longer creates a duplicate row.", ""] ] } },
+
+    { v: "1.1.2", date: "2026-06-08",
+      zh: { title: "置顶卡片实时拖动排序",
+        new: [ ["拖动置顶卡片时,其他卡片实时让位。", "松手后顺序保存,并同步到其他设备。"] ],
+        improved: [
+          ["重新设计的 iPhone 任务小组件。", ""],
+          ["Mac 任务与清单编辑。", "回车在下方新增一行,空行按退格删除并回到上一行。"] ],
+        fixed: [ ["iPhone 小组件不再卡在旧数据上。", ""] ] },
+      en: { title: "Live drag-to-reorder",
+        new: [ ["Pinned cards make way as you drag.", "The order is saved on release and syncs to your other devices."] ],
+        improved: [
+          ["A redesigned iPhone Tasks widget.", ""],
+          ["Task and checklist editing on the Mac.", "Return adds a row below; Backspace on an empty row removes it and goes back up."] ],
+        fixed: [ ["The iPhone widget no longer gets stuck on old data.", ""] ] } },
+
+    { v: "1.1.0", date: "2026-06-03",
+      zh: { title: "任务上桌面",
+        new: [
+          ["Mac 桌面便签。", "右键任意笔记 → 贴到桌面,浮出一个可编辑的小窗。"],
+          ["Mac 常驻桌面面板。", "置顶、长期、日程一目了然,点一下就完成。"],
+          ["iPhone 任务小组件。", "主屏幕和锁屏都能放,点一下就完成。"],
+          ["「长期」分组。", "和置顶并列,放那些一直要做的事。"],
+          ["置顶卡片拖动排序,顺序跨设备同步。", ""] ],
+        improved: [
+          ["清单编辑更顺手。", "长条目自动换行,回车新增时光标已经在里面;勾完最后一项,整条笔记就完成。"],
+          ["通知横幅带上 Claude / Codex 的图标,停留更久。", ""] ],
+        fixed: [ ["一键注册的 Hook 终于写到了 Claude Code / Codex 真正读取的位置。", ""] ] },
+      en: { title: "Tasks on your desktop",
+        new: [
+          ["Desktop stickies on the Mac.", "Right-click any note → Stick to desktop for an editable mini-window."],
+          ["An always-on desktop panel on the Mac.", "Pinned, long-term and scheduled at a glance, done in one click."],
+          ["An iPhone Tasks widget.", "Home and lock screen, tap to complete."],
+          ["A Long-term group.", "Next to Pinned, for the things you keep coming back to."],
+          ["Drag pinned cards to reorder; the order syncs.", ""] ],
+        improved: [
+          ["Smoother checklists.", "Long items wrap, Return puts you straight into the new item, and ticking the last one completes the note."],
+          ["Alert banners carry the Claude / Codex icon and stay up longer.", ""] ],
+        fixed: [ ["One-click hooks are written where Claude Code and Codex actually read them.", ""] ] } },
+
+    { v: "1.0.0", date: "2026-05-31",
+      zh: { title: "第一个正式版",
+        new: [
+          ["今日与日历视图。", "Mac 主窗口、刘海下拉面板和 iPhone 用同一套界面。"],
+          ["一键接入 Claude Code 和 Codex。", "Codex 的桌面版和命令行都支持。"],
+          ["内置 doris 命令行。", "首次启动引导你把它加进 PATH,下载包里附带 PDF 手册。"] ],
+        improved: [
+          ["通知横幅改版。", "更紧凑,点击直接打开来源 App。"],
+          ["完整的中英文界面。", ""] ],
+        fixed: [ ["删除操作能在设备之间正确同步。", ""] ] },
+      en: { title: "The first stable release",
+        new: [
+          ["Today and calendar views.", "One shared design across the Mac main window, the notch dropdown and iPhone."],
+          ["One-click Claude Code and Codex integration.", "Codex works from both its desktop app and its CLI."],
+          ["The doris CLI, built in.", "First launch helps you put it on your PATH; a PDF manual ships in the download."] ],
+        improved: [
+          ["Reworked alert banners.", "Tighter, and a click opens the app that sent them."],
+          ["Full English and Chinese.", ""] ],
+        fixed: [ ["Deletions converge correctly across devices.", ""] ] } },
+
+    { v: "0.2.0", date: "2026-05-21",
+      zh: { title: "第一个签名、公证的版本",
+        new: [
+          ["应用集成。", "Claude Code 的完成通知交给 Doris,而不是淹没在系统通知中心里。"],
+          ["doris://notify 链接。", "快捷指令和书签也能触发横幅。"],
+          ["任务的截止日期标签。", "今天 / 明天 / 周几,按紧急程度着色。"],
+          ["Mac 上的「今日」页。", ""] ] },
+      en: { title: "The first signed and notarized build",
+        new: [
+          ["App integrations.", "Claude Code's completion alerts go to Doris instead of drowning in Notification Center."],
+          ["doris://notify links.", "Shortcuts and bookmarks can raise a banner."],
+          ["Due-date chips on tasks.", "Today / tomorrow / weekday, coloured by urgency."],
+          ["A Today page on the Mac.", ""] ] } },
+
+    { v: "0.1.0", date: "",
+      zh: { title: "地基",
+        new: [ ["一切的开始。", "数据库、刘海与下拉面板、命令行、iCloud 同步、iPhone App、分享扩展和小组件。"] ] },
+      en: { title: "The foundation",
+        new: [ ["Where it all started.", "The data store, the notch and dropdown, the CLI, iCloud sync, the iPhone app, the share extension and widgets."] ] } },
+  ];
+
+  const SHOWN = 8;                      // releases visible before "show earlier"
+  const TYPES = ["new", "improved", "fixed"];
+  const UI = {
+    zh: { new: "新功能", improved: "改进", fixed: "修复", latest: "最新", gh: "GitHub 发布页 ↗",
+          more: n => `展开更早的 ${n} 个版本 ↓`, less: "收起较早的版本 ↑", empty: "没有符合条件的更新。",
+          dmg: "↓ 下载 macOS 版", store: "App Store 下载 iOS 版", early: "早期预览",
+          stats: [["个版本", ""], ["最近更新", ""], ["开始于", ""]] },
+    en: { new: "NEW", improved: "IMPROVED", fixed: "FIXED", latest: "Latest", gh: "GitHub release ↗",
+          more: n => `Show ${n} earlier releases ↓`, less: "Hide earlier releases ↑", empty: "Nothing matches this filter.",
+          dmg: "↓ Download for macOS", store: "Get it on the App Store", early: "Early preview",
+          stats: [["releases", ""], ["last update", ""], ["since", ""]] },
+  };
+
+  const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const anchor = v => "v" + v.replace(/\./g, "-");
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const pad = n => String(n).padStart(2, "0");
+  const fmtDate = (d, lang) => {
+    if (!d) return UI[lang].early;
+    const [y, m, day] = d.split("-").map(Number);
+    return lang === "zh" ? `${y}.${pad(m)}.${pad(day)}` : `${day} ${MONTHS[m - 1]} ${y}`;
+  };
+  const fmtMonth = (d, lang) => {
+    const [y, m] = d.split("-").map(Number);
+    return lang === "zh" ? `${y}.${pad(m)}` : `${MONTHS[m - 1]} ${y}`;
+  };
+
+  let lang = "zh", filter = "all", expanded = false;
+
+  function renderStats() {
+    const dated = RELEASES.filter(r => r.date);
+    const t = UI[lang].stats;
+    const items = [
+      [String(RELEASES.length), t[0][0]],
+      [RELEASES[0].v, t[1][0]],
+      [fmtMonth(dated[dated.length - 1].date, lang), t[2][0]],
+    ];
+    document.getElementById("stats").innerHTML =
+      items.map(([b, s]) => `<div class="stat"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join("");
+  }
+
+  function renderRelease(r, i) {
+    const c = r[lang], u = UI[lang];
+    const major = /\.0$/.test(r.v);
+    const groups = TYPES.filter(t => c[t] && c[t].length).map(t => `
+      <div class="grp ${t}" data-type="${t}">
+        <span class="grp-h"><i></i>${u[t]}</span>
+        <ul>${c[t].map(([h, d]) => `<li><b>${esc(h)}</b>${d ? " " + esc(d) : ""}</li>`).join("")}</ul>
+      </div>`).join("");
+    let foot = "";
+    if (i === 0) {
+      foot = `<div class="foot">
+        <a class="btn btn-1" href="https://github.com/GaoJiasheng/Doris/releases/latest/download/Doris.dmg">${u.dmg}</a>
+        <a class="btn btn-2" href="https://apps.apple.com/app/id6771714230">${u.store}</a>
+        ${r.gh ? `<a class="gh" href="https://github.com/GaoJiasheng/Doris/releases/tag/v${r.v}">${u.gh}</a>` : ""}
+      </div>`;
+    } else if (r.gh) {
+      foot = `<div class="foot"><a class="gh" href="https://github.com/GaoJiasheng/Doris/releases/tag/v${r.v}">${u.gh}</a></div>`;
+    }
+    const cls = ["rel", major ? "major" : "", i === 0 ? "latest" : "", i >= SHOWN ? "old" : ""].join(" ");
+    return `<li class="${cls}" id="${anchor(r.v)}">
+      <div class="side"><a class="ver" href="#${anchor(r.v)}">${r.v}</a><time class="date"${r.date ? ` datetime="${r.date}"` : ""}>${fmtDate(r.date, lang)}</time></div>
+      <span class="node" aria-hidden="true"></span>
+      <article class="card reveal">
+        <div class="head"><h2>${esc(c.title)}</h2>${i === 0 ? `<span class="badge">${u.latest}</span>` : ""}</div>
+        ${groups}${foot}
+      </article>
+    </li>`;
+  }
+
+  function render() {
+    document.getElementById("tl").innerHTML = RELEASES.map(renderRelease).join("");
+    renderStats();
+    applyView();
+    observe();
+  }
+
+  // Filtering and collapsing only toggle `hidden`, so they never re-render.
+  function applyView() {
+    let visible = 0;
+    document.querySelectorAll("#tl .rel").forEach(rel => {
+      let any = false;
+      rel.querySelectorAll(".grp").forEach(g => {
+        const show = filter === "all" || g.dataset.type === filter;
+        g.hidden = !show;
+        any = any || show;
+      });
+      // A filter searches the whole history, so it ignores the collapse.
+      const collapsed = rel.classList.contains("old") && !expanded && filter === "all";
+      rel.hidden = !any || collapsed;
+      if (!rel.hidden) visible++;
+    });
+    const older = RELEASES.length - SHOWN;
+    const wrap = document.getElementById("more-wrap"), more = document.getElementById("more");
+    wrap.hidden = filter !== "all" || older <= 0;
+    more.textContent = expanded ? UI[lang].less : UI[lang].more(older);
+    let empty = document.getElementById("empty");
+    if (!visible && !empty) {
+      empty = document.createElement("p");
+      empty.id = "empty"; empty.className = "empty";
+      document.getElementById("tl").after(empty);
+    }
+    if (empty) { empty.textContent = UI[lang].empty; empty.hidden = visible > 0; }
+  }
+
+  let io;
+  function observe() {
+    if (io) io.disconnect();
+    if (!("IntersectionObserver" in window)) {
+      document.querySelectorAll(".reveal").forEach(el => el.classList.add("in"));
+      return;
+    }
+    io = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+    }), { threshold: .08 });
+    document.querySelectorAll(".reveal:not(.in)").forEach(el => io.observe(el));
+  }
+
+  // Bilingual, sharing the home page's saved choice.
+  const nodes = document.querySelectorAll("[data-zh][data-en]");
+  const btn = document.getElementById("lang");
+  function apply(l) {
+    lang = l;
+    nodes.forEach(n => { n.innerHTML = n.dataset[l]; });
+    document.documentElement.lang = l === "zh" ? "zh-CN" : "en";
+    document.title = l === "zh" ? "更新日志 — Doris" : "Changelog — Doris";
+    btn.textContent = l === "zh" ? "EN" : "中文";
+    try { localStorage.setItem("doris-lang", l); } catch (e) {}
+    render();
+  }
+  let saved;
+  try { saved = localStorage.getItem("doris-lang"); } catch (e) {}
+  if (!saved) saved = (navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en";
+  btn.addEventListener("click", () => apply(lang === "zh" ? "en" : "zh"));
+
+  document.getElementById("seg").addEventListener("click", e => {
+    const b = e.target.closest("button[data-f]");
+    if (!b) return;
+    filter = b.dataset.f;
+    document.querySelectorAll("#seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    applyView();
+    observe();
+  });
+  document.getElementById("more").addEventListener("click", () => {
+    expanded = !expanded;
+    applyView();
+    observe();
+    if (!expanded) document.getElementById(anchor(RELEASES[SHOWN - 1].v)).scrollIntoView({ block: "start" });
+  });
+
+  apply(saved);
+
+  // A link straight to an older version (#v1-2-0) opens the collapsed part.
+  function openHash() {
+    const el = location.hash && document.getElementById(location.hash.slice(1));
+    if (el && el.classList.contains("old") && !expanded) { expanded = true; applyView(); observe(); }
+    if (el) el.scrollIntoView({ block: "start" });
+  }
+  window.addEventListener("hashchange", openHash);
+  if (location.hash) requestAnimationFrame(openHash);
+</script>
+</body>
+</html>
