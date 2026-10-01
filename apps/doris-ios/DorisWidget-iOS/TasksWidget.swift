@@ -267,6 +267,12 @@ struct TasksWidgetView: View {
         var today: [TaskSnapshot] = []
         var later: [TaskSnapshot] = []
         var captions = false
+        /// Extra space around the 之后 rule, taken from whatever height is
+        /// left once everything is placed. Set tight, the two sections ran
+        /// together on the large card while its bottom third sat empty; on
+        /// medium there's nothing spare, so it stays tight there.
+        var gapAboveRule: CGFloat = 0
+        var gapBelowRule: CGFloat = 0
     }
 
     /// Today first — pinned, then due / overdue — for as long as they fit.
@@ -304,10 +310,16 @@ struct TasksWidgetView: View {
         func fits(_ b: CGFloat) -> Int { max(0, Int(((b - m.laterRule) / m.laterRow).rounded(.down))) }
         var n = fits(budget)
         if n < 2, p.captions, !sections.isEmpty {
-            let without = fits(budget + CGFloat(sections.count) * m.caption)
-            if without >= 2 { p.captions = false; n = without }
+            let freed = CGFloat(sections.count) * m.caption
+            let without = fits(budget + freed)
+            if without >= 2 { p.captions = false; n = without; budget += freed }
         }
-        if n >= 2 { p.later = Array(entry.later.prefix(n)) }
+        if n >= 2 {
+            p.later = Array(entry.later.prefix(n))
+            let spare = budget - m.laterRule - CGFloat(p.later.count) * m.laterRow
+            p.gapAboveRule = min(12, max(0, spare))
+            p.gapBelowRule = min(4, max(0, spare - p.gapAboveRule))
+        }
         return p
     }
 
@@ -407,7 +419,9 @@ struct TasksWidgetView: View {
                     nothingTodayLine
                 }
                 if !later.isEmpty {
-                    laterRule.padding(.top, visible.isEmpty ? 2 : 4)
+                    laterRule
+                        .padding(.top, (visible.isEmpty ? 2 : 4) + p.gapAboveRule)
+                        .padding(.bottom, p.gapBelowRule)
                     rowStack(later)
                 }
             }
