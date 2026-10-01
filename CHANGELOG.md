@@ -6,6 +6,40 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.9.0 — 2026-10-01
+
+Pictures in notes. Put an image anywhere in a note's text — a screenshot,
+a photo, a diagram — and write around it.
+
+### Added
+
+- **Images in the note body.** On the Mac, paste an image (⌘V), drag one
+  in from Finder or a browser, or use the new image button above the
+  note. On iPhone, tap the photo button in a note's toolbar, or paste.
+  Each image sits on its own line between your text, and syncs to your
+  other devices with the note.
+- **Four sizes.** Click (or tap) an image to make it small, medium,
+  large or full width, view it full size, or delete it. Full size opens
+  in Preview on the Mac; on iPhone you can pinch, double-tap to zoom and
+  share or save it.
+- **Checklists too.** In a checklist an image is its own row under the
+  item it illustrates. Paste one while typing an item and it goes right
+  below it.
+
+### Changed
+
+- Images are stored at up to 2048 px on the long side, as JPEG unless
+  they have transparency, so a full-resolution screenshot or photo
+  doesn't weigh down sync. Lists and search show 「[图片]」 in place of
+  an image.
+- The 今日 widget leaves more room around the "之后" divider when
+  there's space for it.
+
+Update every device to see images everywhere: 1.8.x shows an image as a
+line of text (`![](doris-image:…)`) and keeps it intact.
+
+---
+
 ## 1.8.4 — 2026-09-30
 
 Archived tasks are kept for good. Until now Doris deleted them a month
