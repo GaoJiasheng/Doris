@@ -46,16 +46,15 @@ struct StickyNoteView: View {
 
             Divider().overlay(Color.primary.opacity(0.08))
 
-            ScrollView {
-                if note.isChecklist {
+            if note.isChecklist {
+                ScrollView {
                     ChecklistEditorView(note: note)
-                } else {
-                    TextEditor(text: $note.bodyMarkdown)
-                        .scrollContentBackground(.hidden)
-                        .font(.system(size: 12))
-                        .frame(minHeight: 60)
-                        .onChange(of: note.bodyMarkdown) { _, _ in note.touch() }
                 }
+            } else {
+                // Scrolls itself; images show in place.
+                NoteBodyEditor(note: note, fontSize: 12, inset: .zero)
+                    .frame(minHeight: 60)
+                    .onChange(of: note.bodyMarkdown) { _, _ in note.touch() }
             }
         }
         .padding(10)

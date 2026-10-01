@@ -18,9 +18,13 @@ public struct NoteEditorView: View {
             if note.isChecklist {
                 ChecklistEditorView(note: note)
             } else {
+                #if os(macOS)
+                NoteBodyEditor(note: note, inset: .zero)
+                #else
                 TextEditor(text: $note.bodyMarkdown)
                     .font(.body)
                     .scrollContentBackground(.hidden)
+                #endif
             }
             HStack {
                 Toggle(L("Checklist", "清单"), isOn: $note.isChecklist)

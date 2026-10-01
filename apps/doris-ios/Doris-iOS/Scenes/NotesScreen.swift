@@ -57,7 +57,7 @@ struct NotesScreen: View {
         let q = searchText.lowercased()
         return sortedNotes.filter {
             $0.title.lowercased().contains(q) ||
-            $0.bodyMarkdown.lowercased().contains(q)
+            NoteImageMarkup.displayText($0.bodyMarkdown, placeholder: "").lowercased().contains(q)
         }
     }
 
@@ -689,7 +689,7 @@ private struct NoteRow: View {
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.primary.opacity(0.55))
                     } else if !note.bodyMarkdown.isEmpty {
-                        Text(note.bodyMarkdown)
+                        Text(NoteImageMarkup.displayText(note.bodyMarkdown, placeholder: L("[Image]", "[图片]")))
                             .font(.caption)
                             .foregroundStyle(.primary.opacity(0.55))
                             .lineLimit(2)

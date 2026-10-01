@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 import DorisCore
 import DorisUI
 
@@ -28,6 +29,7 @@ struct NoteDetailScreen: View {
     @State private var showingMarkdownPreview = false
     /// In-flight debounced `updatedAt` stamp — see `scheduleTouch()`.
     @State private var touchTask: Task<Void, Never>?
+    @State private var pickedPhotos: [PhotosPickerItem] = []
 
     var onDelete: () -> Void
 
@@ -84,11 +86,8 @@ struct NoteDetailScreen: View {
                                 .stroke(.primary.opacity(0.07), lineWidth: 0.5)
                         )
                 } else {
-                    TextEditor(text: $note.bodyMarkdown)
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 320)
+                    // Text with images in place; grows with its content.
+                    NoteBodyEditor(note: note, minHeight: 320)
                         .padding(10)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -129,6 +128,15 @@ struct NoteDetailScreen: View {
                 .accessibilityLabel(note.done
                                     ? L("Mark not done", "标为未完成")
                                     : L("Mark as done", "标为已完成"))
+            }
+            // Photos into the body: at the cursor in a text note, at the end
+            // of a checklist.
+            ToolbarItem(placement: .topBarTrailing) {
+                PhotosPicker(selection: $pickedPhotos, maxSelectionCount: 9, matching: .images) {
+                    Image(systemName: "photo.badge.plus")
+                        .foregroundStyle(.primary.opacity(0.6))
+                }
+                .accessibilityLabel(L("Insert Image", "插入图片"))
             }
             ToolbarItem(placement: .topBarTrailing) {
                 // Markdown preview toggle (only for non-checklist notes)
@@ -175,6 +183,12 @@ struct NoteDetailScreen: View {
         .sheet(isPresented: $showingDatePicker) {
             dueDatePickerSheet
         }
+        .onChange(of: pickedPhotos) { _, items in
+            guard !items.isEmpty else { return }
+            pickedPhotos = []
+            showingMarkdownPreview = false   // the editor takes the insert
+            Task { await insertPhotos(items) }
+        }
         // Text edits stamp `updatedAt` on a DEBOUNCE, not per keystroke.
         //
         // Per-keystroke was breaking Pinyin (and any marked-text IME) input:
@@ -191,6 +205,19 @@ struct NoteDetailScreen: View {
         // Typing may end without the view going away (tab away, background);
         // flush so `updatedAt` can't lag behind the text.
         .onDisappear { flushTouch() }
+    }
+
+    /// Loads the picked photos (in picking order) and adds them — at the
+    /// cursor in a text note, see `NoteImageInsertion`.
+    private func insertPhotos(_ items: [PhotosPickerItem]) async {
+        var datas: [Data] = []
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self) { datas.append(data) }
+        }
+        guard !datas.isEmpty else { return }
+        // A moment for the editor to be back on screen if the preview was up.
+        try? await Task.sleep(for: .milliseconds(50))
+        NoteImageInsertion.insert(datas, into: note, context: ctx)
     }
 
     /// Coalesces a burst of typing into a single `updatedAt` stamp, applied

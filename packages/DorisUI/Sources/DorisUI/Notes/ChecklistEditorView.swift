@@ -21,8 +21,11 @@ import UIKit
 ///   - `foo`        → "loose" line: rendered with a dotted-circle "no
 ///                    checkbox" indicator. Tap the indicator to promote
 ///                    it to a real (unchecked) task.
+///   - `![](doris-image:…)` → an image row (a loose line that is exactly
+///                    an image reference — see `NoteImageMarkup`).
 public struct ChecklistEditorView: View {
     @Bindable public var note: Note
+    @Environment(\.modelContext) private var ctx
     @ObservedObject private var lang = LanguageSettings.shared
     @Environment(\.colorScheme) private var colorScheme
 
@@ -78,6 +81,20 @@ public struct ChecklistEditorView: View {
 
     @ViewBuilder
     private func row(at idx: Int, line: Line) -> some View {
+        if let ref = line.image {
+            // Lined up with the item text (checkbox 18 + spacing 8).
+            NoteImageView(ref: ref,
+                          onResize: { resizeImage(at: idx, to: $0) },
+                          onDelete: { removeLine(at: idx) })
+                .padding(.leading, 26)
+                .padding(.vertical, 2)
+        } else {
+            itemRow(at: idx, line: line)
+        }
+    }
+
+    @ViewBuilder
+    private func itemRow(at idx: Int, line: Line) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             // Checkbox / promote button
             Button {
@@ -112,8 +129,9 @@ public struct ChecklistEditorView: View {
                     guard idx > 0, idx < arr.count, arr[idx].text.isEmpty else { return }
                     backspaceMergeIntoPrevious(at: idx)
                 },
-                onMoveUp:   { moveFocus(to: idx - 1) },
-                onMoveDown: { moveFocus(to: idx + 1) }
+                onMoveUp:   { moveFocus(from: idx, by: -1) },
+                onMoveDown: { moveFocus(from: idx, by: 1) },
+                onPasteImages: { insertImages($0, at: idx) }
             )
             // Width-constrain so it wraps to the available space (reporting
             // its multi-line height) rather than growing horizontally.
@@ -138,7 +156,8 @@ public struct ChecklistEditorView: View {
                     let arr = lines
                     guard idx > 0, idx < arr.count, arr[idx].text.isEmpty else { return }
                     backspaceMergeIntoPrevious(at: idx)
-                }
+                },
+                onPasteImages: { insertImages($0, at: idx) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
             // Publish a REAL first-text-baseline to the enclosing
@@ -233,15 +252,28 @@ public struct ChecklistEditorView: View {
     // MARK: - Editing
 
     #if os(macOS)
-    /// Move keyboard focus to an adjacent checklist item (↑/↓). Bounds-checked
-    /// and deferred a runloop — setting focus synchronously from inside the
-    /// field editor's key handling doesn't reliably move the first responder
-    /// (same reason insertLine / backspaceMergeIntoPrevious defer).
-    private func moveFocus(to index: Int) {
-        guard lines.indices.contains(index) else { return }
-        DispatchQueue.main.async { focusedLine = index }
+    /// Move keyboard focus to the next text item up or down (↑/↓), stepping
+    /// over image rows. Deferred a runloop — setting focus synchronously
+    /// from inside the field editor's key handling doesn't reliably move the
+    /// first responder (same reason insertLine / backspaceMergeIntoPrevious
+    /// defer).
+    private func moveFocus(from idx: Int, by step: Int) {
+        guard let target = textLine(from: idx + step, by: step) else { return }
+        DispatchQueue.main.async { focusedLine = target }
     }
     #endif
+
+    /// The first row at or beyond `start` (walking by `step`) that has a
+    /// text field — image rows can't take the caret.
+    private func textLine(from start: Int, by step: Int) -> Int? {
+        let arr = lines
+        var i = start
+        while arr.indices.contains(i) {
+            if arr[i].image == nil { return i }
+            i += step
+        }
+        return nil
+    }
 
     private func textBinding(at idx: Int) -> Binding<String> {
         Binding(
@@ -303,7 +335,43 @@ public struct ChecklistEditorView: View {
         arr.remove(at: idx)
         writeBack(arr)
         syncNoteDone(from: arr)
-        DispatchQueue.main.async { focusedLine = idx - 1 }
+        let target = textLine(from: idx - 1, by: -1)
+        DispatchQueue.main.async { focusedLine = target }
+    }
+
+    /// Images pasted into item `idx` become image rows: above the item when it's still empty, so the
+    /// caret's blank row stays below them; otherwise right after it.
+    private func insertImages(_ datas: [Data], at idx: Int?) {
+        let refs = datas.compactMap { NoteImageStore.add(imageData: $0, to: note, in: ctx) }
+        guard !refs.isEmpty else { return }
+        var arr = lines
+        let rows = refs.map { Line(checked: nil, text: NoteImageMarkup.line($0)) }
+        let caretRow: Int?
+        if let idx, arr.indices.contains(idx) {
+            if arr[idx].text.isEmpty {
+                arr.insert(contentsOf: rows, at: idx)
+                caretRow = idx + rows.count
+            } else {
+                arr.insert(contentsOf: rows, at: idx + 1)
+                caretRow = idx
+            }
+        } else if let last = arr.last, last.text.isEmpty {
+            arr.insert(contentsOf: rows, at: arr.count - 1)
+            caretRow = nil
+        } else {
+            arr.append(contentsOf: rows)
+            caretRow = nil
+        }
+        writeBack(arr)
+        if let caretRow { DispatchQueue.main.async { focusedLine = caretRow } }
+    }
+
+    private func resizeImage(at idx: Int, to size: NoteImageSize) {
+        var arr = lines
+        guard arr.indices.contains(idx), var ref = arr[idx].image else { return }
+        ref.size = size
+        arr[idx].text = NoteImageMarkup.line(ref)
+        writeBack(arr)
     }
 
     private func writeBack(_ arr: [Line]) {
@@ -501,6 +569,8 @@ struct ChecklistItemField: NSViewRepresentable {
     var onDeleteEmpty: () -> Void
     var onMoveUp: () -> Void = {}
     var onMoveDown: () -> Void = {}
+    /// ⌘V with only an image on the pasteboard.
+    var onPasteImages: ([Data]) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -597,9 +667,18 @@ struct ChecklistItemField: NSViewRepresentable {
             arrowMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self, weak field] event in
                 guard let self, let field,
                       let editor = field.currentEditor(),
-                      field.window?.firstResponder === editor,
-                      event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
+                      field.window?.firstResponder === editor
                 else { return event }
+                let mods = event.modifierFlags.intersection([.command, .control, .option, .shift])
+                // ⌘V with just an image: it becomes an image row. (A field
+                // editor can't hold an image; text pastes as usual.)
+                if mods == .command, event.charactersIgnoringModifiers?.lowercased() == "v" {
+                    let images = NoteBodyNSTextView.pastedImages(from: .general)
+                    guard !images.isEmpty else { return event }
+                    self.parent.onPasteImages(images)
+                    return nil
+                }
+                guard mods.isEmpty else { return event }
                 // Hands the arrows back to the input method while it is
                 // composing. A local monitor runs BEFORE the event reaches
                 // the responder chain and `interpretKeyEvents:`, so without
@@ -657,12 +736,26 @@ func dorisFocusTextViewToEnd(_ tv: UITextView, tries: Int = 6) {
 /// fire for a backspace when there's nothing left to delete.
 final class BackspaceReportingTextView: UITextView {
     var onBackspaceWhenEmpty: () -> Void = {}
+    /// Paste with only an image on the pasteboard — it becomes an image row.
+    var onPasteImages: ([Data]) -> Void = { _ in }
+
     override func deleteBackward() {
         if text.isEmpty {
             onBackspaceWhenEmpty()
             return
         }
         super.deleteBackward()
+    }
+
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        if action == #selector(paste(_:)), UIPasteboard.general.hasImages { return true }
+        return super.canPerformAction(action, withSender: sender)
+    }
+
+    override func paste(_ sender: Any?) {
+        let images = NoteImagePasteboard.pastedImages(from: .general)
+        if !images.isEmpty { onPasteImages(images); return }
+        super.paste(sender)
     }
 }
 
@@ -681,6 +774,7 @@ struct ChecklistItemFieldIOS: UIViewRepresentable {
     var onFocusChange: (Bool) -> Void
     var onSubmit: () -> Void
     var onDeleteEmpty: () -> Void
+    var onPasteImages: ([Data]) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -697,6 +791,7 @@ struct ChecklistItemFieldIOS: UIViewRepresentable {
         tv.smartDashesType = .no
         tv.smartQuotesType = .no
         tv.onBackspaceWhenEmpty = { [weak c = context.coordinator] in c?.parent.onDeleteEmpty() }
+        tv.onPasteImages = { [weak c = context.coordinator] in c?.parent.onPasteImages($0) }
         // Hug content vertically so the row is exactly as tall as its text.
         tv.setContentHuggingPriority(.required, for: .vertical)
         tv.setContentCompressionResistancePriority(.required, for: .vertical)
@@ -786,6 +881,9 @@ struct ChecklistItemFieldIOS: UIViewRepresentable {
 private struct Line {
     var checked: Bool?  // nil = loose text (no checkbox prefix)
     var text: String
+
+    /// A loose line that is exactly an image reference is an image row.
+    var image: NoteImageRef? { checked == nil ? NoteImageMarkup.parse(line: text) : nil }
 
     static func parseAll(_ body: String) -> [Line] {
         // Empty body still gives one empty editable row so the user has

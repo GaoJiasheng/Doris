@@ -82,6 +82,13 @@ The CloudKit dashboard shows them under `CD_<ClassName>` record types.
 markdown-body `- [x]` lines are the source of truth via
 `Note.checklistProgress`).
 
+`Attachment` gained three fields in 1.9.0, for images placed in a note's
+body: `data` (bytes, `@Attribute(.externalStorage)` — CloudKit keeps it
+as an asset, `CD_data_ckAsset`, or inline as `CD_data` when small),
+`pixelWidth` and `pixelHeight` (`Int`, 0 for attachments that aren't body
+images). The body refers to an image by its attachment id, one per line:
+`![](doris-image:<UUID>?w=s|m|l|f)` — see `NoteImageMarkup`.
+
 ## Cleanup
 
 - The originating device sweeps `CK_OutboxItem` records older than 24
@@ -93,6 +100,11 @@ markdown-body `- [x]` lines are the source of truth via
   hard-delete race that bit us pre-1.0. Archived notes are kept
   indefinitely; through 1.8.3 they were also purged, 30 days after
   their last edit. See `SyncTimer.swift`.
+- `NoteImageStore.purgeOrphans` (hourly, from `SyncTimer`) deletes body
+  images no note references any more, a week after they were added —
+  the grace covers undo, and a body edit that syncs after its image.
+  A purged note's images that another note still shows (copied across)
+  are detached first instead of cascading away with it.
 
 ## Development vs Production environments
 
@@ -127,3 +139,26 @@ ANSCKEVENT table inside the local SwiftData store).
 
 Deploy any time you add a `@Model` type or a property. Doing it from
 the dashboard takes ~10 seconds.
+
+Every build is pinned to Production (`icloud-container-environment` in
+the entitlements), so nothing creates new fields in Development on its
+own any more. Push them there first, from a Debug build re-signed for
+Development:
+
+```bash
+xcodebuild -project Doris.xcodeproj -scheme Doris-macOS -configuration Debug \
+  -destination "generic/platform=macOS" -derivedDataPath /tmp/dd-schema \
+  -allowProvisioningUpdates build
+APP=/tmp/dd-schema/Build/Products/Debug/Doris.app
+codesign -d --entitlements :- "$APP" > /tmp/ent.plist
+/usr/libexec/PlistBuddy -c "Set :com.apple.developer.icloud-container-environment Development" /tmp/ent.plist
+codesign --force --sign "Apple Development" --entitlements /tmp/ent.plist \
+  --options runtime --preserve-metadata=identifier,flags "$APP"
+"$APP/Contents/MacOS/Doris" --init-cloudkit-schema
+```
+
+`--init-cloudkit-schema` (Debug builds only, `CloudKitSchemaInitializer`)
+runs `initializeCloudKitSchema` on a throwaway store and exits before the
+app starts; it refuses to run unless the signature says Development.
+Then deploy from the dashboard as above — **before** releasing a build
+that writes the new fields.

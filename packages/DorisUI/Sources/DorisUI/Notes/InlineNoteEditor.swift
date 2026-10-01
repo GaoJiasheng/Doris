@@ -1,6 +1,10 @@
 import SwiftUI
 import SwiftData
 import DorisCore
+import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+#endif
 
 /// In-place note editor — drops into whatever container the host
 /// provides (a column in the main window's split view, the dropdown
@@ -71,12 +75,18 @@ public struct InlineNoteEditor: View {
                     }
                     .scrollContentBackground(.hidden)
                 } else {
+                    #if os(macOS)
+                    NoteBodyEditor(note: note, inset: CGSize(width: 0, height: 2))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                    #else
                     TextEditor(text: $note.bodyMarkdown)
                         .font(.body)
                         .foregroundStyle(.primary)
                         .scrollContentBackground(.hidden)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
+                    #endif
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -128,6 +138,24 @@ public struct InlineNoteEditor: View {
             .help(L("Back to list", "返回列表"))
 
             Spacer(minLength: 0)
+
+            #if os(macOS)
+            // Insert images — pasting or dragging one in works too; this is
+            // the discoverable way.
+            Button {
+                pickImages()
+            } label: {
+                Image(systemName: "photo.badge.plus")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.primary.opacity(0.75))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Color.primary.opacity(0.06)))
+                    .overlay(Capsule().stroke(Color.primary.opacity(0.15), lineWidth: 0.6))
+            }
+            .buttonStyle(.plain)
+            .help(L("Insert images (or paste / drag them in)", "插入图片(也可以直接粘贴或拖进来)"))
+            #endif
 
             // Prominent Complete button — the attribute row below has
             // a Done toggle too, but it's one of four small chips that
@@ -296,7 +324,7 @@ public struct InlineNoteEditor: View {
     }
 
     /// Prepend `- [ ] ` to every non-empty body line that isn't already
-    /// a checkbox. Called when the user flips the checklist toggle ON
+    /// a checkbox (or an image). Called when the user flips the checklist toggle ON
     /// so their existing lines visually become tasks. Idempotent — a
     /// line that already starts with `- [ ]` or `- [x]` is left alone.
     private func convertBodyToChecklistMarkers() {
@@ -308,11 +336,27 @@ public struct InlineNoteEditor: View {
                 if trimmed.hasPrefix("- [ ]") || trimmed.hasPrefix("- [x]") || trimmed.hasPrefix("- [X]") {
                     return line
                 }
+                // Images stay images (an image row in the checklist).
+                if NoteImageMarkup.parse(line: line) != nil { return line }
                 return "- [ ] " + line
             }
             .joined(separator: "\n")
         note.bodyMarkdown = converted
     }
+
+    #if os(macOS)
+    private func pickImages() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.prompt = L("Insert", "插入")
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK else { return }
+        let datas = panel.urls.compactMap { try? Data(contentsOf: $0) }
+        NoteImageInsertion.insert(datas, into: note, context: ctx)
+    }
+    #endif
 
     /// Tooltip — full date for both create and update, since the small
     /// "X 分钟前" caption alone is fuzzy when comparing several notes.

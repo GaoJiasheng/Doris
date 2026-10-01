@@ -83,12 +83,14 @@ public actor SyncTimer {
                 // Still try to purge tombstones — they don't depend on the
                 // dirty write that just failed.
                 Self.purgeTombstones(context: context)
+                Self.purgeOrphanImagesIfDue(context: context)
                 return Self.localized(
                     en: "Local save failed: \(msg)",
                     zh: "本地保存失败:\(msg)"
                 )
             }
             Self.purgeTombstones(context: context)
+            Self.purgeOrphanImagesIfDue(context: context)
             return nil
         }
         if let saveError {
@@ -237,6 +239,17 @@ public actor SyncTimer {
         return mode == "en" ? en : zh
     }
 
+    /// Images whose line was removed from every note body. Hourly, not every
+    /// poke: it reads every note's body to find what's still referenced.
+    @MainActor private static var lastImageSweep = Date.distantPast
+
+    @MainActor
+    private static func purgeOrphanImagesIfDue(context: ModelContext, now: Date = Date()) {
+        guard now.timeIntervalSince(lastImageSweep) > 3600 else { return }
+        lastImageSweep = now
+        NoteImageStore.purgeOrphans(context: context, now: now)
+    }
+
     /// Hard-deletes notes that were put in the trash (`deleted = true`) more
     /// than 24 hours ago — long enough that every active device has pulled
     /// the soft-delete on a sync cycle and won't resurrect the record via a
@@ -256,6 +269,7 @@ public actor SyncTimer {
             predicate: #Predicate<Note> { $0.deleted && $0.updatedAt < trashCutoff }
         ))) ?? []
         guard !stale.isEmpty else { return }
+        NoteImageStore.detachSharedImages(from: stale, context: context)
         for note in stale {
             context.delete(note)
         }
