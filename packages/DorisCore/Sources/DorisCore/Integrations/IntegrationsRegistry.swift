@@ -35,6 +35,12 @@ public final class IntegrationsRegistry: ObservableObject {
 
     public let providers: [any IntegrationProvider]
 
+    /// Agents Doris registers itself with as an MCP server (Settings →
+    /// Agents). Same status / register / unregister plumbing as the hooks.
+    public let mcpProviders: [any IntegrationProvider]
+
+    private var allProviders: [any IntegrationProvider] { providers + mcpProviders }
+
     /// Status keyed by provider.id. Defaults to `.notApplicable` until
     /// the first `refresh()` lands real values — that way the UI can
     /// render placeholders immediately without flashing "not registered".
@@ -44,11 +50,13 @@ public final class IntegrationsRegistry: ObservableObject {
     /// spinner on the section.
     @Published public private(set) var isRefreshing: Bool = false
 
-    private init(providers: [any IntegrationProvider] = dorisDefaultIntegrationProviders) {
+    private init(providers: [any IntegrationProvider] = dorisDefaultIntegrationProviders,
+                 mcpProviders: [any IntegrationProvider] = dorisMCPIntegrationProviders) {
         self.providers = providers
+        self.mcpProviders = mcpProviders
         // Seed: providers with .notApplicable supportTier should stay
         // .notApplicable; full/manual providers stay unknown until refresh.
-        for p in providers {
+        for p in providers + mcpProviders {
             statuses[p.id] = .notApplicable
         }
     }
@@ -62,7 +70,7 @@ public final class IntegrationsRegistry: ObservableObject {
         // tiny filesystem read; parallelism is essentially free and
         // keeps the panel snappy if any one provider stalls.
         let pairs: [(String, IntegrationStatus)] = await withTaskGroup(of: (String, IntegrationStatus).self) { group in
-            for provider in providers {
+            for provider in allProviders {
                 group.addTask { (provider.id, await provider.currentStatus()) }
             }
             var collected: [(String, IntegrationStatus)] = []
@@ -89,6 +97,11 @@ public final class IntegrationsRegistry: ObservableObject {
     public func unregister(_ provider: any IntegrationProvider) async throws {
         try await provider.unregister()
         await refresh()
+    }
+
+    /// Apply the "usage hint" setting to every registered agent.
+    public func syncAgentHints() {
+        for case let p as any AgentMCPIntegration in mcpProviders { p.syncHint() }
     }
 }
 

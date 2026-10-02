@@ -46,3 +46,37 @@ public enum IPCWriter {
         DarwinNotify.post(DorisIdentifiers.darwinKickName)
     }
 }
+
+/// Answers to requests that expect one. The app writes a response file
+/// named after the request id; the CLI waiting on it reads and removes it.
+public enum IPCResponseStore {
+    public static func write(_ response: IPCResponse) throws {
+        let dir = try IPCDirectory.responsesDir()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let data = try IPCEncoding.encoder.encode(response)
+        // Atomic, so the reader never sees half a file.
+        try data.write(to: try IPCDirectory.responseURL(for: response.requestID), options: .atomic)
+    }
+
+    /// The response for `id` if it has arrived — consumed, so it's read once.
+    public static func take(_ id: UUID) -> IPCResponse? {
+        guard let url = try? IPCDirectory.responseURL(for: id),
+              let data = try? Data(contentsOf: url) else { return nil }
+        try? FileManager.default.removeItem(at: url)
+        return try? IPCEncoding.decoder.decode(IPCResponse.self, from: data)
+    }
+
+    /// Responses nobody collected (the CLI gave up waiting) — cleared after
+    /// a while so the directory doesn't grow.
+    public static func pruneStale(olderThan age: TimeInterval = 600, now: Date = Date()) {
+        guard let dir = try? IPCDirectory.responsesDir(),
+              let files = try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+        for url in files {
+            let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+            if let modified, now.timeIntervalSince(modified) > age {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+    }
+}

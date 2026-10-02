@@ -31,6 +31,9 @@
              silently returns zero samples in the sandboxed build while working
              fine in an unsandboxed dev run. -->
         <string>/.lmstudio/</string>
+        <!-- Claude Code keeps user-scope MCP servers in this one file, not
+             under ~/.claude/; Settings → Agents registers Doris there. -->
+        <string>/.claude.json</string>
     </array>
     <key>com.apple.security.network.client</key>
     <true/>

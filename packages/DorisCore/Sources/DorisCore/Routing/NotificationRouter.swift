@@ -56,6 +56,15 @@ public final class NotificationRouter {
     private weak var presenter: NotificationPresenter?
     private weak var outbox: OutboxPublishing?
 
+    /// Called after an agent changes tasks, so the app can do what its own
+    /// editors do on the same change (due-date reminders live in DorisUI).
+    public var onAgentChanges: (([AgentChange]) -> Void)?
+
+    private lazy var agentRunner = AgentToolRunner(context: modelContainer.mainContext)
+    private lazy var agentAnnouncer = AgentActivityAnnouncer { [weak self] message in
+        self?.presenter?.presentBanner(message)
+    }
+
     public init(modelContainer: ModelContainer, dedup: DedupCache = DedupCache()) {
         self.modelContainer = modelContainer
         self.dedup = dedup
@@ -84,8 +93,31 @@ public final class NotificationRouter {
             await mutateMessage(id) { $0.state = .dismissed }
         case .eventsDone(let id):
             await mutateMessage(id) { $0.state = .actioned }
+        case .agentCall(let payload):
+            handleAgentCall(payload, requestID: request.id)
         case .eventsList, .sync, .ping:
             break
+        }
+    }
+
+    /// Run an agent's tool call on the main context — the one the UI reads,
+    /// so the change shows at once — and answer the waiting `doris mcp`.
+    private func handleAgentCall(_ payload: IPCAgentCallPayload, requestID: UUID) {
+        let outcome = agentRunner.run(tool: payload.tool, arguments: payload.arguments)
+        Self.respond(to: requestID, with: outcome.result)
+        guard !outcome.changes.isEmpty else { return }
+        onAgentChanges?(outcome.changes)
+        agentAnnouncer.record(outcome.changes, by: AgentClient(payload.client))
+    }
+
+    static func respond(to requestID: UUID, with result: IPCAgentResult) {
+        let data = try? IPCEncoding.encoder.encode(result)
+        let response = IPCResponse(requestID: requestID, ok: !result.isError,
+                                   error: result.isError ? result.text : nil, data: data)
+        do {
+            try IPCResponseStore.write(response)
+        } catch {
+            DorisLog.ipc.error("could not write agent response: \(String(describing: error), privacy: .public)")
         }
     }
 

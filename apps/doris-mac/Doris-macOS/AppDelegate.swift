@@ -81,6 +81,17 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
 
             // Route banner/fix through the anchor (replaces DynamicNotchKit).
             router.setPresenter(anchor)
+            // An agent's change gets the same follow-up as an edit by hand:
+            // its due-date reminder is (re)scheduled or cleared.
+            router.onAgentChanges = { changes in
+                for c in changes {
+                    if let due = c.dueDate, c.kind != .archived {
+                        DueDateNotifier.schedule(noteID: c.noteID, title: c.title, dueDate: due, done: c.done)
+                    } else {
+                        DueDateNotifier.cancel(noteID: c.noteID)
+                    }
+                }
+            }
 
             let drainer = IPCRequestDrainer(router: router, secret: secret)
             self.drainer = drainer

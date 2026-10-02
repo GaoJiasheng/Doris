@@ -6,9 +6,10 @@ struct Doris: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "doris",
         abstract: "Push notifications, notes, and events commands to your doris helper.",
-        version: "1.2.2",
+        version: DorisVersion.current,
         subcommands: [
             NotifyCommand.self,
+            MCPCommand.self,
             PushCommand.self,
             NoteCommand.self,
             EventsCommand.self,

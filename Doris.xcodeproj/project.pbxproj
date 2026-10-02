@@ -14,6 +14,8 @@
 		063391B1AD51BEFF94090ED9 /* DorisWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 235E4E6BF62F710B10B2A744 /* DorisWidgetBundle.swift */; };
 		0E47D461AC54CAD4B526B172 /* DynamicNotchKit in Frameworks */ = {isa = PBXBuildFile; productRef = 338965571C4ABCBED67F1739 /* DynamicNotchKit */; };
 		1091A906EDA57747B270B8ED /* NoteCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3C831EF6888C420AAC24118 /* NoteCommand.swift */; };
+		1238958AA115261514DC36DC /* MCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65E36665827D1B37F2CEFBF7 /* MCPServer.swift */; };
+		13D8C3A74990605CE3A56C81 /* MCPCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E5D2EBBB31D5DD78CE2E48E /* MCPCommand.swift */; };
 		14161D6853103C65305E90E2 /* doris-avatar-trimmed.png in Resources */ = {isa = PBXBuildFile; fileRef = F13C5714B3654AB630384690 /* doris-avatar-trimmed.png */; };
 		180488C61B221EA02CF48147 /* EventsCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 147B7EB6818D5936164B4976 /* EventsCommand.swift */; };
 		187793297F238EBEDE789CF3 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AA392218328D9FF434AF27 /* ShareViewController.swift */; };
@@ -47,6 +49,7 @@
 		585D3E3760BE6A4849A2A6D3 /* NotesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EBAD6C975AC7AE7F032E9F4 /* NotesScreen.swift */; };
 		59310758E0D2AC22BD34CFE0 /* DesktopPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C4DE902F3C872A2FDCE137D /* DesktopPanelController.swift */; };
 		5C3EF76E0DD7FB08F51AC55C /* AnchorAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68DA5B4E4262C02B2CEA72DF /* AnchorAvatarView.swift */; };
+		5FB1F7866F86A3E86471F164 /* MCPCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533CCB069B22D182E88811A3 /* MCPCatalog.swift */; };
 		6058073F1675ED142AFD6CB8 /* FixNotchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5943A6757B5692B643221E /* FixNotchView.swift */; };
 		60B07988B1B44CDEA7BF386A /* AuthCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA9B7F3E7B56E2FE2927C83 /* AuthCommand.swift */; };
 		60F8A5E4F93A9559EE50D3E0 /* VoiceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 731C0A7D3A8391C199356BFB /* VoiceSettings.swift */; };
@@ -117,6 +120,7 @@
 		F44F0262B381BA936FD37F16 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0457AEB878C7FB706DFC7635 /* SettingsScreen.swift */; };
 		F548C0123D3DCE76BD293315 /* NoteDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7263649E21CCBD2C930F4317 /* NoteDetailScreen.swift */; };
 		F87B15508619139626BAB672 /* AvatarSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADB4F422ACCEE7D5C7972E5 /* AvatarSettings.swift */; };
+		F8F3925D2ED5E04D45429A5B /* AgentBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8480064332E58BEA39EB96D /* AgentBridge.swift */; };
 		FCE5B30D06A345D7F7F149AD /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC6D9364F0DDD9193D0C20C8 /* MainWindowView.swift */; };
 		FCF68FD5D0FF4E8842C08219 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E06A5801ADADFF5C8CC26B70 /* Assets.xcassets */; };
 		FEB790F013AFD62DCF2ADAD3 /* HoverTipWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3AC4D770F0C00CC464920C /* HoverTipWindow.swift */; };
@@ -169,6 +173,7 @@
 		0239401BE0698A4354F48B33 /* MenuBarAvatarWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarAvatarWindow.swift; sourceTree = "<group>"; };
 		0457AEB878C7FB706DFC7635 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
 		0C7BCF47ED89E667C0D0787C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		0E5D2EBBB31D5DD78CE2E48E /* MCPCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPCommand.swift; sourceTree = "<group>"; };
 		0EA6D6367889FF95F93F720F /* PushCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushCommand.swift; sourceTree = "<group>"; };
 		10C3EAA2191386EDE59801BF /* ClickActionRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickActionRouter.swift; sourceTree = "<group>"; };
 		134450CC7DB637AE54E6BF54 /* TokenCollectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenCollectionService.swift; sourceTree = "<group>"; };
@@ -197,6 +202,7 @@
 		50476AECFF2B8FC223258807 /* DorisMacChrome */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisMacChrome; path = packages/DorisMacChrome; sourceTree = SOURCE_ROOT; };
 		510D9BD53CA0BA1508E78DE2 /* StickyWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyWindowManager.swift; sourceTree = "<group>"; };
 		5207402EE925DF6E240B5132 /* ExitCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExitCodes.swift; sourceTree = "<group>"; };
+		533CCB069B22D182E88811A3 /* MCPCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPCatalog.swift; sourceTree = "<group>"; };
 		5616260E3BE68E019F297D88 /* DesktopPetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPetController.swift; sourceTree = "<group>"; };
 		57AA392218328D9FF434AF27 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		5860F89D0929C6440DEA0036 /* PushNotificationIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationIntent.swift; sourceTree = "<group>"; };
@@ -205,6 +211,7 @@
 		5FFE8BFB4CAA1D8CE956C57D /* IPCFSEventReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IPCFSEventReader.swift; sourceTree = "<group>"; };
 		64155F5EDC6DD796F45AED03 /* Doris.sdef */ = {isa = PBXFileReference; path = Doris.sdef; sourceTree = "<group>"; };
 		650013FBBD000D878E29B94F /* DorisCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisCore; path = packages/DorisCore; sourceTree = SOURCE_ROOT; };
+		65E36665827D1B37F2CEFBF7 /* MCPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServer.swift; sourceTree = "<group>"; };
 		68A7DF1DA0D5BE2ACB2B2F1D /* DailyRitual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyRitual.swift; sourceTree = "<group>"; };
 		68DA5B4E4262C02B2CEA72DF /* AnchorAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorAvatarView.swift; sourceTree = "<group>"; };
 		69D39344FFE8CEDB3EBCAF47 /* Doris-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Doris-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -265,6 +272,7 @@
 		E1F47770B8A6CBC64EF5B974 /* FocusPipWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusPipWindow.swift; sourceTree = "<group>"; };
 		E2C43AC1A96796BEB25788BA /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		E3C831EF6888C420AAC24118 /* NoteCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteCommand.swift; sourceTree = "<group>"; };
+		E8480064332E58BEA39EB96D /* AgentBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentBridge.swift; sourceTree = "<group>"; };
 		E94332B9CD417EEC812A1F43 /* EventsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsScreen.swift; sourceTree = "<group>"; };
 		EB0CC25ABC1FEFF7EB8E7F34 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		EB5AC31A5A3E443FAE68C56F /* DorisIntents.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DorisIntents.entitlements; sourceTree = "<group>"; };
@@ -367,6 +375,7 @@
 			isa = PBXGroup;
 			children = (
 				576ED61A0F502180747E32AA /* Commands */,
+				BB9D6340B1AEC96B43F85DF5 /* MCP */,
 				C7F9B158C3215455D8685992 /* Support */,
 				D6B5396492AF76E484A7B09C /* Doris.swift */,
 			);
@@ -514,6 +523,7 @@
 				49787817ECF3EE4EB1D6E5CC /* DevicesCommand.swift */,
 				147B7EB6818D5936164B4976 /* EventsCommand.swift */,
 				976C40714C85BEA58C0D7646 /* InstallCommand.swift */,
+				0E5D2EBBB31D5DD78CE2E48E /* MCPCommand.swift */,
 				E3C831EF6888C420AAC24118 /* NoteCommand.swift */,
 				4ABABD988A1B81A6F7DC411C /* NotifyCommand.swift */,
 				0EA6D6367889FF95F93F720F /* PushCommand.swift */,
@@ -644,6 +654,16 @@
 				4739E02B1BDFA6BEFF3F866E /* ShareViewController.swift */,
 			);
 			path = "DorisShareExtension-macOS";
+			sourceTree = "<group>";
+		};
+		BB9D6340B1AEC96B43F85DF5 /* MCP */ = {
+			isa = PBXGroup;
+			children = (
+				E8480064332E58BEA39EB96D /* AgentBridge.swift */,
+				533CCB069B22D182E88811A3 /* MCPCatalog.swift */,
+				65E36665827D1B37F2CEFBF7 /* MCPServer.swift */,
+			);
+			path = MCP;
 			sourceTree = "<group>";
 		};
 		C08DA6F065567CC41EB41838 /* Debug */ = {
@@ -1146,6 +1166,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F8F3925D2ED5E04D45429A5B /* AgentBridge.swift in Sources */,
 				1CC29031E4B7CA20AACF625F /* AppLauncher.swift in Sources */,
 				60B07988B1B44CDEA7BF386A /* AuthCommand.swift in Sources */,
 				B4B7BF05CFDA63AECD501876 /* CodexNotifyDispatch.swift in Sources */,
@@ -1154,6 +1175,9 @@
 				180488C61B221EA02CF48147 /* EventsCommand.swift in Sources */,
 				F04BF14CC0F8DBF4C69B7139 /* ExitCodes.swift in Sources */,
 				D86784F76ED3B75C8F690BEF /* InstallCommand.swift in Sources */,
+				5FB1F7866F86A3E86471F164 /* MCPCatalog.swift in Sources */,
+				13D8C3A74990605CE3A56C81 /* MCPCommand.swift in Sources */,
+				1238958AA115261514DC36DC /* MCPServer.swift in Sources */,
 				1091A906EDA57747B270B8ED /* NoteCommand.swift in Sources */,
 				4A037FCF6BFB858B23D9A235 /* NotifyCommand.swift in Sources */,
 				ECE71D8218A7B7F75330A156 /* PushCommand.swift in Sources */,

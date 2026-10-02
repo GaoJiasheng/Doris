@@ -35,6 +35,7 @@ public final class IPCRequestDrainer {
         for url in sorted {
             await processOne(url, processedDir: processed)
         }
+        IPCResponseStore.pruneStale()
     }
 
     private func processOne(_ url: URL, processedDir: URL) async {
@@ -46,12 +47,24 @@ public final class IPCRequestDrainer {
                     try DorisHMAC.verify(request, with: secret)
                 } catch {
                     DorisLog.ipc.error("HMAC verification failed for \(url.lastPathComponent, privacy: .public)")
+                    if case .agentCall = request.payload {
+                        // Answer, so the agent hears why instead of timing out.
+                        NotificationRouter.respond(to: request.id, with: IPCAgentResult(
+                            text: "Doris refused this request: its signature didn't check out. Restart Doris and try again.",
+                            isError: true))
+                    }
                     try? moveToProcessed(url, into: processedDir, suffix: ".rejected")
                     return
                 }
             }
             await router.handle(request)
-            try? moveToProcessed(url, into: processedDir, suffix: ".ok")
+            if case .agentCall = request.payload {
+                // Agent calls carry the user's task text, and the response
+                // is their record — don't keep a copy lying around.
+                try? FileManager.default.removeItem(at: url)
+            } else {
+                try? moveToProcessed(url, into: processedDir, suffix: ".ok")
+            }
         } catch {
             DorisLog.ipc.error("failed to process \(url.lastPathComponent, privacy: .public): \(String(describing: error), privacy: .public)")
             try? moveToProcessed(url, into: processedDir, suffix: ".error")

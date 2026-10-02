@@ -80,6 +80,16 @@ public enum IPCDirectory {
         try ipcRoot().appendingPathComponent("processed", isDirectory: true)
     }
 
+    /// Answers to requests that expect one (`agentCall`), one file per
+    /// request id, written by the app and consumed by the CLI.
+    public static func responsesDir() throws -> URL {
+        try ipcRoot().appendingPathComponent("responses", isDirectory: true)
+    }
+
+    public static func responseURL(for id: UUID) throws -> URL {
+        try responsesDir().appendingPathComponent("\(id.uuidString).json")
+    }
+
     public static func attachmentsDir() throws -> URL {
         try containerURL().appendingPathComponent("Attachments", isDirectory: true)
     }
@@ -100,7 +110,7 @@ public enum IPCDirectory {
     public static func ensureIPCDirectories() throws {
         let fm = FileManager.default
         let ipc = try ipcRoot()
-        for sub in ["inbox", "outbox", "processed"] {
+        for sub in ["inbox", "outbox", "processed", "responses"] {
             try fm.createDirectory(at: ipc.appendingPathComponent(sub, isDirectory: true), withIntermediateDirectories: true)
         }
     }

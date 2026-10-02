@@ -8,6 +8,9 @@ public enum IPCRequestKind: String, Codable, Sendable {
     case eventsDone
     case sync
     case ping
+    /// A tool call from an agent through `doris mcp`; answered with an
+    /// `IPCResponse` in `IPCDirectory.responsesDir()`.
+    case agentCall
 }
 
 public struct IPCRequest: Codable, Sendable {
@@ -34,10 +37,11 @@ public enum IPCPayload: Codable, Sendable {
     case eventsDone(messageID: UUID)
     case sync
     case ping
+    case agentCall(IPCAgentCallPayload)
 
     private enum CodingKeys: String, CodingKey { case kind, body }
     private enum K: String, Codable {
-        case notify, noteAdd, eventsList, eventsDismiss, eventsDone, sync, ping
+        case notify, noteAdd, eventsList, eventsDismiss, eventsDone, sync, ping, agentCall
     }
     private struct IDBox: Codable { let id: UUID }
 
@@ -59,6 +63,8 @@ public enum IPCPayload: Codable, Sendable {
             self = .sync
         case .ping:
             self = .ping
+        case .agentCall:
+            self = .agentCall(try c.decode(IPCAgentCallPayload.self, forKey: .body))
         }
     }
 
@@ -84,7 +90,40 @@ public enum IPCPayload: Codable, Sendable {
             try c.encode(K.sync, forKey: .kind)
         case .ping:
             try c.encode(K.ping, forKey: .kind)
+        case .agentCall(let p):
+            try c.encode(K.agentCall, forKey: .kind)
+            try c.encode(p, forKey: .body)
         }
+    }
+}
+
+/// One MCP tool call, relayed by `doris mcp` to the app, which owns the
+/// store. The arguments travel as the JSON text the agent sent, so the
+/// wire format doesn't change when a tool gains a parameter.
+public struct IPCAgentCallPayload: Codable, Sendable {
+    /// The MCP client's `clientInfo.name` ("claude-code", "codex-mcp-client", …).
+    public var client: String
+    public var tool: String
+    /// A JSON object.
+    public var arguments: String
+
+    public init(client: String, tool: String, arguments: String) {
+        self.client = client
+        self.tool = tool
+        self.arguments = arguments
+    }
+}
+
+/// What a tool call produced: text for the agent to read, and whether it's
+/// an error the agent should correct (bad id, bad date, writes turned off).
+/// Carried in `IPCResponse.data`.
+public struct IPCAgentResult: Codable, Sendable {
+    public var text: String
+    public var isError: Bool
+
+    public init(text: String, isError: Bool = false) {
+        self.text = text
+        self.isError = isError
     }
 }
 

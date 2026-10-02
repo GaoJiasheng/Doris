@@ -1,5 +1,5 @@
 % Doris CLI Manual
-% Version 1.2.2
+% Version 1.10.0
 % Generated from `docs/cli-manual.md`
 
 # Doris CLI 使用手册
@@ -267,6 +267,43 @@ doris note add --title "Sparkle integration" \
 
 ---
 
+## `doris mcp`
+
+Serves Doris to AI agents over the Model Context Protocol (stdio). An
+agent that has Doris connected can list, read, create, update, tick off,
+complete and archive the user's tasks — "add a to-do for tomorrow",
+"what's left today", or ticking steps off a checklist as it works.
+Nothing can be deleted: the strongest action is archive, which the user
+can undo. Every change shows as a banner in the notch.
+
+The easy way to connect it: Doris → Settings → Agents (MCP) → Connect,
+for Claude Code (`~/.claude.json`) and Codex (`~/.codex/config.toml`).
+By hand it's the same entry those tools' own commands write:
+
+```bash
+claude mcp add -s user doris -- ~/.doris/bin/doris mcp
+codex mcp add doris -- ~/.doris/bin/doris mcp
+```
+
+For any other client (Claude Desktop, Cursor, LM Studio…), print the
+JSON it takes and paste it into its MCP settings:
+
+```bash
+doris mcp --config
+```
+
+Tools: `list_tasks`, `get_task`, `create_task`, `update_task`,
+`check_item`, `complete_task`, `archive_task`. Prompts (slash commands
+in Claude Code): `today`, `plan`, `wrapup`. In Settings you can make
+agents read-only, and optionally add a short note to `CLAUDE.md` /
+`AGENTS.md` telling agents to use Doris for to-dos.
+
+Calls are carried to the running app (which owns the store), and the
+app answers through `~/.doris/ipc/responses/`. If Doris isn't running,
+`doris mcp` opens it first.
+
+---
+
 ## `doris note ls / show / edit / rm`
 
 Stubbed in v1.0.0 — round-trip read responses from the running app
@@ -426,6 +463,7 @@ the file timestamp: maybe a different tool also rewrote it.
 
 | Version | Notable changes |
 |---------|-----------------|
+| 1.10.0  | `doris mcp`: Doris as an MCP server for AI agents (Claude Code, Codex, Claude Desktop, Cursor…) — list, read, create, update, tick off, complete and archive tasks; one-click setup in Settings → Agents (MCP). The IPC channel gains responses (`~/.doris/ipc/responses/`). `--version` reports the app's version. |
 | 1.2.2   | iOS widget refreshes closer to real-time: the app front-loads a (debounced) reload the instant data is saved while still foreground, instead of only at background-time (which iOS defers most). Internal groundwork for swappable character packs (dormant — no user-facing change yet). CLI surface unchanged. |
 | 1.2.1   | Bug fix: iOS home-screen widget no longer goes stale after an in-app sync — reloads are now gated to real widget-visible data changes (so WidgetKit's reload budget isn't burned on no-op sync ticks), the sync path saves the live context, and manual "Sync Now" / pull-to-refresh forces an immediate widget reload. CLI surface unchanged. |
 | 1.2.0   | The avatar reacts to your work (celebrates task completion, daily greeting ritual, alerted on agent banners) gated by a new Avatar activity setting (安静/标准/活泼); due-date reminders via local notifications at 09:00; arrow-key (↑/↓) row navigation in the macOS task list; desktop panel can open the main window; day/night avatar backdrop tracking the light/dark theme; light-mode contrast pass + glow scarcity; settings decluttered; macOS Enter duplicate-row fix. CLI surface unchanged. |
@@ -437,4 +475,4 @@ the file timestamp: maybe a different tool also rewrote it.
 
 ---
 
-*Last updated: built into release 1.2.2.*
+*Last updated: built into release 1.10.0.*

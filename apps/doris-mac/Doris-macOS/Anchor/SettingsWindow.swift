@@ -134,6 +134,11 @@ private struct AppearanceSettingsView: View {
     /// re-poll the registry so the row flips out of .missingCLI
     /// automatically once the symlink is in place.
     @State private var showInstallWizard = false
+    @AppStorage(AgentSettings.allowWritesKey) private var agentAllowWrites = true
+    @AppStorage(AgentSettings.writeHintsKey) private var agentWriteHints = false
+    @State private var copiedAgentConfig = false
+    /// A register / unregister that failed, shown instead of failing silently.
+    @State private var integrationError: String?
 
     var body: some View {
         ScrollView {
@@ -153,6 +158,8 @@ private struct AppearanceSettingsView: View {
                 Divider().overlay(Color.primary.opacity(0.08))
                 integrationsSection
                 Divider().overlay(Color.primary.opacity(0.08))
+                agentsSection
+                Divider().overlay(Color.primary.opacity(0.08))
                 voiceSection
                 Divider().overlay(Color.primary.opacity(0.08))
                 syncSection
@@ -169,6 +176,12 @@ private struct AppearanceSettingsView: View {
         // the user sees fresh "已注册" / "未注册" pills (e.g. after
         // editing ~/.claude/settings.json by hand outside Doris).
         .task { await integrations.refresh() }
+        .alert(L("Couldn't change the integration", "没能完成接入设置"),
+               isPresented: Binding(get: { integrationError != nil }, set: { if !$0 { integrationError = nil } })) {
+            Button(L("OK", "好")) { integrationError = nil }
+        } message: {
+            Text(integrationError ?? "")
+        }
         .sheet(isPresented: $showInstallWizard) {
             InstallCLIWizardView {
                 showInstallWizard = false
@@ -257,6 +270,85 @@ private struct AppearanceSettingsView: View {
         }
     }
 
+    // MARK: - Agents (MCP)
+
+    /// "Agent 接入" — register Doris as an MCP server with the agents on
+    /// this Mac, and decide what they may do.
+    private var agentsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L("Agents (MCP)", "Agent 接入(MCP)"))
+                .font(.headline)
+                .foregroundStyle(.primary)
+            Text(L(
+                "Let AI agents on this Mac read and update your tasks — \"add a to-do\", \"what's left today\", ticking off steps as they work. Nothing can be deleted, and every change shows in the notch.",
+                "让这台 Mac 上的 AI agent 读写你的任务:「记一个待办」「今天还剩什么」,边干活边勾掉步骤。不能删除任何东西,每次改动都会在刘海提示。"
+            ))
+            .font(.caption)
+            .foregroundStyle(.primary.opacity(0.6))
+            .fixedSize(horizontal: false, vertical: true)
+
+            VStack(spacing: 8) {
+                ForEach(integrations.mcpProviders, id: \.id) { provider in
+                    integrationRow(provider)
+                }
+            }
+
+            settingSwitch(L("Agents can change tasks", "允许 agent 修改任务"),
+                          caption: L("Off: agents can only read your tasks.", "关闭后 agent 只能查看,不能新建或修改。"),
+                          isOn: $agentAllowWrites)
+            settingSwitch(L("Tell agents when to use Doris", "写入使用提示"),
+                          caption: L("Adds a short, marked section to CLAUDE.md / AGENTS.md so agents think of Doris when you say \"remind me…\". Removed when you turn this off.",
+                                     "在 CLAUDE.md / AGENTS.md 里加一小段带标记的说明,让 agent 听到「记一下」时想到 Doris。关闭即移除。"),
+                          isOn: $agentWriteHints)
+                .onChange(of: agentWriteHints) { _, _ in integrations.syncAgentHints() }
+
+            HStack(spacing: 8) {
+                Button(L("Copy config for other apps", "复制配置(其他客户端)")) {
+                    copyAgentConfig()
+                }
+                .controlSize(.small)
+                if copiedAgentConfig {
+                    Text(L("Copied", "已复制"))
+                        .font(.caption)
+                        .foregroundStyle(CyberPalette.neonCyan)
+                }
+            }
+            Text(L("Claude Desktop, Cursor, LM Studio and others: paste it into their MCP settings.",
+                   "Claude Desktop、Cursor、LM Studio 等:粘贴到它们的 MCP 设置里。"))
+                .font(.caption)
+                .foregroundStyle(.primary.opacity(0.5))
+        }
+    }
+
+    private func settingSwitch(_ title: String, caption: String, isOn: Binding<Bool>) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).foregroundStyle(.primary)
+                Text(caption)
+                    .font(.caption)
+                    .foregroundStyle(.primary.opacity(0.55))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+        }
+    }
+
+    private func copyAgentConfig() {
+        let config: [String: Any] = ["mcpServers": ["doris": ["command": DorisCLILink.path, "args": ["mcp"]]]]
+        guard let data = try? JSONSerialization.data(withJSONObject: config, options: [.prettyPrinted, .withoutEscapingSlashes]) else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(String(decoding: data, as: UTF8.self), forType: .string)
+        copiedAgentConfig = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copiedAgentConfig = false }
+    }
+
+    private func isAgentRow(_ provider: any IntegrationProvider) -> Bool {
+        provider.id.hasSuffix("-mcp")
+    }
+
     @ViewBuilder
     private func integrationRow(_ provider: any IntegrationProvider) -> some View {
         let status = integrations.statuses[provider.id] ?? .notApplicable
@@ -303,6 +395,9 @@ private struct AppearanceSettingsView: View {
             return L("Doris CLI not installed — finish the install wizard first.",
                      "Doris CLI 还没装,请先完成安装向导。")
         case .brokenHook(let path):
+            if isAgentRow(provider) {
+                return L("It points at a doris that's gone (\(path)).", "指向的 doris 已不存在(\(path))。")
+            }
             return L("The hook can't run doris (\(path)) — notifications aren't arriving.",
                      "钩子无法运行 doris(\(path)),通知收不到。")
         default:
@@ -317,6 +412,12 @@ private struct AppearanceSettingsView: View {
         case "codex":
             return L("Auto-wire Codex's notify hook in ~/.codex/config.toml.",
                      "自动接入 ~/.codex/config.toml 的 notify 钩子。")
+        case "claude-code-mcp":
+            return L("Adds Doris to ~/.claude.json. Reopen running Claude Code sessions to use it.",
+                     "写入 ~/.claude.json。正在运行的 Claude Code 会话重开后生效。")
+        case "codex-mcp":
+            return L("Adds Doris to ~/.codex/config.toml. New Codex sessions can use it.",
+                     "写入 ~/.codex/config.toml。新开的 Codex 会话即可使用。")
         default:
             return provider.summary
         }
@@ -329,9 +430,13 @@ private struct AppearanceSettingsView: View {
             switch status {
             case .registered:
                 HStack(spacing: 6) {
-                    statusBadge(L("Registered", "已注册"), tint: CyberPalette.neonCyan)
-                    Button(L("Unregister", "解除")) {
-                        Task { try? await integrations.unregister(provider) }
+                    statusBadge(isAgentRow(provider) ? L("Connected", "已接入") : L("Registered", "已注册"),
+                                tint: CyberPalette.neonCyan)
+                    Button(isAgentRow(provider) ? L("Disconnect", "断开") : L("Unregister", "解除")) {
+                        Task {
+                            do { try await integrations.unregister(provider) }
+                            catch { integrationError = error.localizedDescription }
+                        }
                     }
                     .buttonStyle(.borderless)
                     .controlSize(.small)
@@ -349,8 +454,11 @@ private struct AppearanceSettingsView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
             case .notRegistered, .notApplicable:
-                Button(L("Register", "注册")) {
-                    Task { try? await integrations.register(provider) }
+                Button(isAgentRow(provider) ? L("Connect", "接入") : L("Register", "注册")) {
+                    Task {
+                        do { try await integrations.register(provider) }
+                        catch { integrationError = error.localizedDescription }
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)

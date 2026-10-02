@@ -17,9 +17,13 @@ enum ClickActionRouter {
             // OpenConfiguration fixes that.
             openExternalURL(url)
         case .openNote(let id):
-            if let url = URL(string: "doris://note/\(id.uuidString)") {
-                NSWorkspace.shared.open(url)
-            }
+            // Open the main window on that note. Posted now (an open window
+            // picks it up) and again a beat later (a window still mounting
+            // isn't listening yet) — selecting the same note twice is a no-op.
+            MainWindowController.shared.show()
+            let post = { NotificationCenter.default.post(name: .dorisOpenNote, object: id) }
+            post()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: post)
         case .runIntent(let name):
             if let url = URL(string: "doris://intent/\(name)") {
                 NSWorkspace.shared.open(url)

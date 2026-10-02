@@ -96,7 +96,7 @@ public enum IntegrationSelfRepair {
     /// that `hookNeedsRepair()`. Returns the ids of the integrations that
     /// were rewritten.
     @discardableResult
-    public static func run(providers: [any IntegrationProvider] = dorisDefaultIntegrationProviders) async -> [String] {
+    public static func run(providers: [any IntegrationProvider] = dorisDefaultIntegrationProviders + dorisMCPIntegrationProviders) async -> [String] {
         guard DorisCLILink.refresh() else {
             log("stable CLI link unavailable; leaving hooks as they are")
             return []
