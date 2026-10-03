@@ -127,21 +127,16 @@ public final class Note {
         return total > 0 ? (done, total) : nil
     }
 
-    /// Folds note-level done state and "every checklist item ticked"
-    /// into a single bool that the UI can key its completed-state
-    /// visuals & "hide past-done from calendar" filters off. Earlier
-    /// implementations in TodayComponents.swift / NoteRow / etc. read
-    /// `checklistItems` directly — that's the legacy relationship and
-    /// is never written, so the all-items-done branch silently never
-    /// fired. Centralising here so the bug is fixed for every caller
-    /// at once.
-    public var isCompleted: Bool {
-        if done { return true }
-        if let p = checklistProgress, p.total > 0, p.done == p.total {
-            return true
-        }
-        return false
-    }
+    /// Whether the task is done — the one flag every surface keys its
+    /// completed look and "hide past-done" filters off.
+    ///
+    /// Sub-items and the task are separate states. Ticking the last item is
+    /// an *action* that also marks the task done (the checklist editor, the
+    /// focus timer and agents all do it), but the task's state is `done`
+    /// alone. This used to also count "every item ticked" as done, which made
+    /// a fully-ticked checklist impossible to reopen: the Done toggle went
+    /// off while every card kept showing it completed.
+    public var isCompleted: Bool { done }
 
     /// True when the note has a due date that's strictly before today
     /// (start-of-day in the user's calendar) AND it isn't completed.

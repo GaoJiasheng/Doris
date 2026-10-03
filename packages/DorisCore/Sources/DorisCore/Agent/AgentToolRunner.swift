@@ -272,11 +272,7 @@ public final class AgentToolRunner {
         note.completedAt = done ? now : nil
         note.touch()
         try context.save()
-        var out: [String: Any] = ["today": todayLine(now), "task": full(note, now: now)]
-        if !done, note.isCompleted {
-            out["note"] = "All of its checklist items are still ticked, so Doris still shows it as done. Untick one with check_item."
-        }
-        var outcome = reply(out)
+        var outcome = reply(["today": todayLine(now), "task": full(note, now: now)])
         outcome.changes = [change(done ? .completed : .reopened, note)]
         return outcome
     }

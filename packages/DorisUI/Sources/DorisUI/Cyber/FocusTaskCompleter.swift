@@ -21,6 +21,12 @@ public enum FocusTaskCompleter {
 
         if let sub = session.subtaskText, !sub.isEmpty {
             note.bodyMarkdown = tickChecklistLine(note.bodyMarkdown, matching: sub)
+            // Same rule as the checklist editor: the last item ticked
+            // completes the task.
+            if let p = note.checklistProgress, p.done == p.total, !note.done {
+                note.done = true
+                note.completedAt = Date()
+            }
         } else {
             note.done = true
             note.completedAt = Date()
