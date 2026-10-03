@@ -262,6 +262,7 @@
       <a href="#tasks"  data-zh="任务与专注" data-en="Tasks &amp; Focus"></a>
       <a href="#tokens" data-zh="Token 统计" data-en="Tokens"></a>
       <a href="#agent"  data-zh="Agent 通知" data-en="Agent alerts"></a>
+      <a href="#mcp"    data-zh="Agent 管任务" data-en="Agents"></a>
       <a href="#cli"    data-zh="脚本" data-en="Scripting"></a>
       <a href="#pet"    data-zh="桌宠" data-en="Desktop pet"></a>
       <a href="#voice"  data-zh="语音" data-en="Voice"></a>
@@ -366,6 +367,41 @@
     <div class="card reveal"><h3><span class="ico">📥</span><span data-zh="事件收件箱" data-en="Events inbox"></span></h3>
       <p data-zh="每条通知都进「事件」列表存档,随 iCloud 同步到 iPhone —— 回头能查今天哪些任务什么时候完成的。"
          data-en="Every alert is archived in the Events list and syncs to iPhone over iCloud, so you can look back at what finished and when."></p></div>
+  </div>
+</section>
+
+<!-- 3b · agents read and write tasks (MCP) -->
+<section id="mcp" class="wrap">
+  <div class="split">
+    <div class="term reveal">
+      <div class="term-bar">
+        <i class="tl" style="background:#FF5F57"></i><i class="tl" style="background:#FEBC2E"></i><i class="tl" style="background:#28C840"></i>
+        <span style="font-size:11.5px;color:var(--dim);margin-left:8px">Claude Code · doris</span>
+      </div>
+      <div class="term-body">
+<div><span class="pr">&gt;</span> <span data-zh="帮我记一下:明天给 Alex 回合同邮件" data-en="Remind me to reply to Alex about the contract tomorrow"></span></div>
+<div class="out">⏺ doris · create_task</div>
+<div class="ok" data-zh="✓ 已建好「回 Alex 合同邮件」· 明天到期" data-en="✓ Added “Reply to Alex about the contract” · due tomorrow"></div>
+<div style="height:10px"></div>
+<div><span class="pr">&gt;</span> <span data-zh="深蹲做完了,帮我勾上" data-en="Done with the squats — tick them off"></span></div>
+<div class="out">⏺ doris · check_item</div>
+<div class="ok" data-zh="✓ 健身房:练腿 2/3,还剩「拉伸」" data-en="✓ Gym: legs 2/3 — stretching left"></div>
+<div style="height:10px"></div>
+<div><span class="pr">&gt;</span> <span class="cur"></span></div>
+      </div>
+    </div>
+    <div class="reveal">
+      <h2 data-zh="让 agent 帮你管任务" data-en="Let your agent manage your tasks"></h2>
+      <p class="lede"
+         data-zh="Doris 自带一个本地 MCP 服务。接上 Claude Code 或 Codex,直接对它说「记一下」「今天还剩什么」「把这件事拆成步骤」—— 它会查、会建、会勾,改动当场出现在刘海和手机上。"
+         data-en="Doris ships a local MCP server. Connect Claude Code or Codex and just say “remind me…”, “what’s left today” or “break this into steps” — it looks things up, adds tasks and ticks them off, and the change shows in the notch and on your phone at once."></p>
+      <ul class="feat">
+        <li data-zh="✦ 设置里一键接入 Claude Code、Codex;Claude Desktop、Cursor 等可复制配置" data-en="✦ One-click setup for Claude Code and Codex; a config to copy for Claude Desktop, Cursor and others"></li>
+        <li data-zh="✦ 不能删除,只能归档 —— agent 做的每件事都能撤回" data-en="✦ No delete, only archive — anything an agent does can be undone"></li>
+        <li data-zh="✦ 每次改动刘海都会提示,也可以设成只读" data-en="✦ Every change shows in the notch, and agents can be made read-only"></li>
+        <li data-zh="✦ 只在你的 Mac 上运行,任务数据不经过任何第三方" data-en="✦ Runs on your Mac only — your tasks never pass through a third party"></li>
+      </ul>
+    </div>
   </div>
 </section>
 
@@ -496,7 +532,7 @@
            RELEASES in changelog.html. The download button points at
            releases/latest, which resolves itself — but the version a visitor
            is about to get is otherwise invisible on this page. -->
-      <a href="/changelog" class="ver-link" data-zh="最新版本 1.9.0 · 2026-10-01 · 看看更新了什么 →" data-en="Latest 1.9.0 · 2026-10-01 · What's new →"></a>
+      <a href="/changelog" class="ver-link" data-zh="macOS 最新版本 1.10.0 · 2026-10-03 · 看看更新了什么 →" data-en="Latest for macOS 1.10.0 · 2026-10-03 · What's new →"></a>
       <span data-zh="macOS 14 Sonoma 或更高 · 已 Apple 公证" data-en="macOS 14 Sonoma or later · Apple-notarized"></span>
       <span data-zh="iOS / iPadOS 18 或更高" data-en="iOS / iPadOS 18 or later"></span>
       <span data-zh="Apple Silicon &amp; Intel" data-en="Apple Silicon &amp; Intel"></span>

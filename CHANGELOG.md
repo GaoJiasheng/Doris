@@ -6,6 +6,43 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.10.0 — 2026-10-03 (macOS only)
+
+AI agents on your Mac can work with your tasks. Ask Claude Code or Codex
+to "add a to-do for tomorrow", "what's left today", or to break a task
+into steps — and watch them tick the steps off as they go.
+
+The iPhone app is unchanged and stays at 1.9.0; its next release takes
+the same version number as the Mac.
+
+### Added
+
+- **Doris as an MCP server.** `doris mcp` lets agents list, read,
+  create and update your tasks, tick off checklist items, complete and
+  archive tasks. Nothing can be deleted — archive is the strongest
+  action, and you can undo it. Changes sync to your iPhone like any edit.
+- **One-click setup** in Settings → Agents (MCP) for Claude Code and
+  Codex, plus a config to copy for other local clients (Claude Desktop,
+  Cursor, LM Studio). ChatGPT itself can't connect: it only reaches MCP
+  servers on the internet, not on your Mac.
+- **You see what agents do.** Every change shows as a banner in the
+  notch ("Codex 更新了「…」"); click it to open the task.
+- **Control.** A switch makes agents read-only. An optional, clearly
+  marked note in CLAUDE.md / AGENTS.md tells agents to use Doris for
+  to-dos.
+- **Built for agents to learn quickly:** short instructions, tool
+  descriptions that carry the rules, today's date in every answer,
+  errors that say how to fix the call, and three ready-made prompts
+  (`today`, `plan`, `wrapup`).
+
+### Fixed
+
+- Clicking a banner that points at a task now opens it in the main
+  window.
+- `doris --version` reports the app's version.
+
+---
+
 ## 1.9.0 — 2026-10-01
 
 Pictures in notes. Put an image anywhere in a note's text — a screenshot,

@@ -238,6 +238,26 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.10.0", date: "2026-10-03", gh: true,
+      zh: { title: "让 agent 帮你管任务(仅 macOS)",
+        new: [
+          ["Doris 成了一个本地 MCP 服务。", "接上 Claude Code 或 Codex,直接说「记一下明天回 Alex 的邮件」「今天还剩什么」「把这个任务拆成步骤」,它会查、会建、会勾,改动同步到 iPhone。"],
+          ["设置里一键接入。", "「设置 → Agent 接入」给 Claude Code、Codex 点一下就好;Claude Desktop、Cursor、LM Studio 可以复制配置。ChatGPT 只能连公网上的 MCP,连不了你 Mac 上的 Doris。"],
+          ["agent 做的事你都看得到。", "每次改动刘海都会弹一条提示,点一下打开那条任务。不能删除,只能归档,随时撤回;也可以设成只读。"] ],
+        fixed: [
+          ["点横幅能直接打开对应的任务了。", ""] ],
+        improved: [
+          ["iPhone 版这次没有变化,停在 1.9.0。", "下一次 iPhone 更新会直接用和 Mac 一样的版本号。"] ] },
+      en: { title: "Let your agent manage your tasks (macOS only)",
+        new: [
+          ["Doris is a local MCP server.", "Connect Claude Code or Codex and say \"remind me to reply to Alex tomorrow\", \"what's left today\" or \"break this task into steps\" — it looks things up, adds and ticks off tasks, and it all syncs to your iPhone."],
+          ["One-click setup.", "Settings → Agents connects Claude Code and Codex; copy a config for Claude Desktop, Cursor or LM Studio. ChatGPT only reaches MCP servers on the internet, so it can't use the one on your Mac."],
+          ["You see what agents do.", "Every change shows in the notch; click to open the task. No delete — only archive, which you can undo — and agents can be made read-only."] ],
+        fixed: [
+          ["Clicking a banner about a task opens that task.", ""] ],
+        improved: [
+          ["The iPhone app is unchanged and stays at 1.9.0.", "Its next update takes the same version number as the Mac."] ] } },
+
     { v: "1.9.0", date: "2026-10-01", gh: true,
       zh: { title: "笔记里可以放图片了",
         new: [
