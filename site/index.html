@@ -10,8 +10,16 @@
 <!-- The real app icon, not the notch mark: the notch art is a bare head on
      transparency, meant to sit on a black tab, and it reads as a smudge on a
      browser tab's light chrome. -->
-<link rel="icon" type="image/png" href="assets/app-icon.png">
-<link rel="apple-touch-icon" href="assets/app-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Doris">
+<meta property="og:url" content="https://doris.gavin.pub/">
+<meta property="og:image" content="https://doris.gavin.pub/assets/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://doris.gavin.pub/assets/og-card.png">
+<link rel="icon" type="image/png" href="/assets/app-icon.png">
+<link rel="apple-touch-icon" href="/assets/app-icon.png">
 <style>
   :root{
     --pink:#FF4DBF; --cyan:#00D9FF; --green:#4ADE80; --violet:#7C3AED;
@@ -257,7 +265,7 @@
 
 <nav>
   <div class="nav-in">
-    <a href="#" class="brand"><img src="assets/app-icon.png" alt=""><span>DORIS</span></a>
+    <a href="#" class="brand"><img src="/assets/app-icon.png" alt=""><span>DORIS</span></a>
     <div class="nav-links">
       <a href="#tasks"  data-zh="任务与专注" data-en="Tasks &amp; Focus"></a>
       <a href="#tokens" data-zh="Token 统计" data-en="Tokens"></a>
@@ -288,7 +296,7 @@
     <div class="macbar">
       <div class="menubar"><span>&#63743;</span><span>Finder</span><span>File</span><span>Edit</span></div>
       <div class="notch"></div>
-      <div class="tab l"><img class="cat" src="assets/notch-cat.png" alt="Doris" width="20" height="20"></div>
+      <div class="tab l"><img class="cat" src="/assets/notch-cat.png" alt="Doris" width="20" height="20"></div>
       <div class="tab r"><svg class="ring" viewBox="0 0 20 20"><circle class="bg" cx="10" cy="10" r="8"></circle><circle class="fg" cx="10" cy="10" r="8"></circle></svg></div>
       <div class="banner">
         <div class="dot">C</div>
@@ -343,7 +351,7 @@
          squeezing it into half the row would make the per-model figures —
          the most convincing part — unreadable. -->
     <figure class="shot reveal">
-      <img src="assets/shot-tokens.webp" alt="Doris — Token 用量" loading="lazy"
+      <img src="/assets/shot-tokens.webp" alt="Doris — Token 用量" loading="lazy"
            onerror="this.closest('figure').remove()">
     </figure>
   </div>
@@ -447,16 +455,16 @@
         <li data-zh="✦ 可换角色包,配色随之整体切换" data-en="✦ Swappable character packs re-tint the whole app"></li>
       </ul>
       <div class="packs">
-        <figure><img src="assets/pack-cat.png"  alt="Cat pack"><figcaption data-zh="猫" data-en="Cat"></figcaption></figure>
-        <figure><img src="assets/pack-clip.png" alt="Clip pack"><figcaption data-zh="回形针" data-en="Clip"></figcaption></figure>
-        <figure><img src="assets/pack-girl.png" alt="Girl pack"><figcaption data-zh="少女" data-en="Girl"></figcaption></figure>
+        <figure><img src="/assets/pack-cat.png"  alt="Cat pack"><figcaption data-zh="猫" data-en="Cat"></figcaption></figure>
+        <figure><img src="/assets/pack-clip.png" alt="Clip pack"><figcaption data-zh="回形针" data-en="Clip"></figcaption></figure>
+        <figure><img src="/assets/pack-girl.png" alt="Girl pack"><figcaption data-zh="少女" data-en="Girl"></figcaption></figure>
       </div>
     </div>
     <div class="reveal">
       <div class="pet-stage">
         <div class="pet-bar"></div>
         <div class="pet-notch"></div>
-        <img class="pet" src="assets/pack-cat.png" alt="Doris desktop pet">
+        <img class="pet" src="/assets/pack-cat.png" alt="Doris desktop pet">
         <div class="pet-hint" data-zh="按住拖动 →" data-en="Press and drag →"></div>
       </div>
     </div>
@@ -510,7 +518,7 @@
      full height. Cropping in CSS keeps the source file untouched. -->
 <section id="shot" class="wrap">
   <figure class="shot shot-crop reveal">
-    <img src="assets/shot-today.webp" alt="Doris — 今日" loading="lazy"
+    <img src="/assets/shot-today.webp" alt="Doris — 今日" loading="lazy"
          onerror="this.closest('section').remove()">
   </figure>
 </section>
