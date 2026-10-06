@@ -90,6 +90,9 @@
     box-shadow:0 30px 80px rgba(0,0,0,.6)}
   .menubar{height:30px;background:rgba(0,0,0,.55);display:flex;align-items:center;padding:0 14px;gap:16px;
     font-size:11px;color:#8b849e;border-bottom:1px solid rgba(255,255,255,.05)}
+  /* Narrow screens: the notch tabs reach into the menu bar, so keep only
+     the Apple mark — the cat would otherwise sit on top of "Finder". */
+  @media(max-width:640px){.menubar span:not(:first-child){display:none}}
   .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:180px;height:30px;background:#000;border-radius:0 0 14px 14px;z-index:3}
   .tab{position:absolute;top:0;height:30px;background:#000;z-index:3;display:flex;align-items:center;justify-content:center}
   .tab.l{right:calc(50% + 90px);width:44px;border-radius:0 0 0 12px}
