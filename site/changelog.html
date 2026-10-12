@@ -246,6 +246,24 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.11.0", date: "2026-10-12", gh: true,
+      zh: { title: "小组件和桌面卡片上的快捷按钮",
+        new: [
+          ["iPhone 大号小组件底部多了「添加 · 专注 · 拍照」。", "添加:一行输入,默认今天到期;专注:先选任务和时长(15 / 25 / 45 分钟),直接进入表盘;拍照:拍完就是一条任务,照片在正文里。"],
+          ["Mac 桌面小卡片也能直接添加和专注。", "点「添加任务」在卡片里打字回车就加进今天;「专注」选任务和时长;专注时卡片上显示倒计时和「停止」。"] ],
+        fixed: [
+          ["重开的任务不会再「反弹」成已完成。", "以前子任务全勾上就一律算完成,取消完成后卡片仍显示已完成。现在任务完不完成只看它自己的完成标记;勾完最后一个子任务仍会顺手标为完成。"] ],
+        improved: [
+          ["iPhone 版从 1.9.0 直接升到 1.11.0,和 Mac 版本号对齐。", ""] ] },
+      en: { title: "Quick actions on the widget and the desktop card",
+        new: [
+          ["The large iPhone widget gets Add · Focus · Photo.", "Add is one line, due today by default; Focus picks a task and length (15 / 25 / 45 min) and goes straight to the dial; Photo turns a snapshot into a task with the photo in its body."],
+          ["Add and focus from the Mac's desktop card.", "Type into the card and press Enter to add to today; pick a task and length to focus; the card shows the countdown and Stop while it runs."] ],
+        fixed: [
+          ["A reopened task stays open.", "A checklist with every item ticked used to count as done regardless, so reopening it didn't stick on the cards. Now a task is done only when it's marked done; ticking the last item still marks it done for you."] ],
+        improved: [
+          ["The iPhone app jumps from 1.9.0 to 1.11.0 to match the Mac.", ""] ] } },
+
     { v: "1.10.0", date: "2026-10-03", gh: true,
       zh: { title: "让 agent 帮你管任务(仅 macOS)",
         new: [

@@ -6,6 +6,35 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.11.0 — 2026-10-12
+
+Quick actions where you look first — the big iPhone widget and the Mac's
+desktop card — and a fix for tasks that wouldn't stay reopened. The
+iPhone app jumps from 1.9.0 to 1.11.0 to match the Mac.
+
+### Added
+
+- **Buttons on the large iPhone widget: 添加 · 专注 · 拍照.** Add opens a
+  one-line sheet (due today by default). Focus opens a picker — today's
+  tasks first, 15 / 25 / 45 minutes, or a focus on nothing in
+  particular — and goes straight to the dial. Photo opens the camera
+  and turns the shot into a task with the photo in its body. The list
+  makes room for the bar, so no row gets cut off.
+- **Add and focus from the Mac's desktop card.** 添加任务 opens a field
+  right in the card: type, Enter, and it's on today's list (the field
+  stays open for the next one). 专注 is a menu of today's tasks and
+  lengths. While a focus runs, the card shows its countdown and Stop.
+
+### Fixed
+
+- **A reopened task stays open.** A checklist with every item ticked
+  counted as done no matter what, so marking it not done changed the
+  editor but every card still showed it completed. A task is now done
+  only when it's marked done; ticking the last item still marks it done
+  for you, and the focus timer now does that too.
+
+---
+
 ## 1.10.0 — 2026-10-03 (macOS only)
 
 AI agents on your Mac can work with your tasks. Ask Claude Code or Codex
