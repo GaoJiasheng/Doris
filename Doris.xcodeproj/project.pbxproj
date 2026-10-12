@@ -62,6 +62,7 @@
 		7040B677FFD658642BA65190 /* DorisCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2C48574E347B4EE76D140986 /* DorisCore */; };
 		70E79B824FCB7230A27D4D1B /* PushNotificationIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5860F89D0929C6440DEA0036 /* PushNotificationIntent.swift */; };
 		7201E0279A2B47B9AC9B2E53 /* SnapPreviewWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0CD86FBE958FBDC8D1F6B9F /* SnapPreviewWindow.swift */; };
+		750F55852A45365547C92B0C /* QuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE46446FD1995C4BBCA167EC /* QuickActions.swift */; };
 		75A567DCBBD5A17176094D43 /* DorisScriptCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B6A23241EBA8A24694833B /* DorisScriptCommands.swift */; };
 		762208DDC9AAE1996EF6F987 /* ClickActionRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10C3EAA2191386EDE59801BF /* ClickActionRouter.swift */; };
 		7650F868B576783BBDB02F79 /* IPCFSEventReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFE8BFB4CAA1D8CE956C57D /* IPCFSEventReader.swift */; };
@@ -277,6 +278,7 @@
 		EB0CC25ABC1FEFF7EB8E7F34 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		EB5AC31A5A3E443FAE68C56F /* DorisIntents.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DorisIntents.entitlements; sourceTree = "<group>"; };
 		ED774E489BE2AD3814737812 /* AnchorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorState.swift; sourceTree = "<group>"; };
+		EE46446FD1995C4BBCA167EC /* QuickActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActions.swift; sourceTree = "<group>"; };
 		F13C5714B3654AB630384690 /* doris-avatar-trimmed.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "doris-avatar-trimmed.png"; sourceTree = "<group>"; };
 		F2A0CEF0A5026DBA42892F9F /* DorisUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisUI; path = packages/DorisUI; sourceTree = SOURCE_ROOT; };
 		F2BFA485D644A4DFA0211250 /* DorisCharacters */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DorisCharacters; path = packages/DorisCharacters; sourceTree = SOURCE_ROOT; };
@@ -390,6 +392,7 @@
 				502F4E727D682E231B292DEB /* NoteDetailHost.swift */,
 				7263649E21CCBD2C930F4317 /* NoteDetailScreen.swift */,
 				3EBAD6C975AC7AE7F032E9F4 /* NotesScreen.swift */,
+				EE46446FD1995C4BBCA167EC /* QuickActions.swift */,
 				3C0A5F483ACA3F72ED343586 /* RootTabView.swift */,
 				0457AEB878C7FB706DFC7635 /* SettingsScreen.swift */,
 				7D8B8DA6961CB3BF53478514 /* TodayScreen.swift */,
@@ -1098,6 +1101,7 @@
 				DD044553771393AF73EE8613 /* NoteDetailHost.swift in Sources */,
 				F548C0123D3DCE76BD293315 /* NoteDetailScreen.swift in Sources */,
 				585D3E3760BE6A4849A2A6D3 /* NotesScreen.swift in Sources */,
+				750F55852A45365547C92B0C /* QuickActions.swift in Sources */,
 				513597108B56CFB5759C787A /* RootTabView.swift in Sources */,
 				F44F0262B381BA936FD37F16 /* SettingsScreen.swift in Sources */,
 				DEDAD6EE1603ABB0F65DE5FA /* TodayScreen.swift in Sources */,

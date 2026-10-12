@@ -23,6 +23,11 @@ struct DesktopPanelView: View {
     @ObservedObject private var theme = ThemeSettings.shared
     @ObservedObject private var lang = LanguageSettings.shared
     @ObservedObject private var panelSettings = DesktopPanelSettings.shared
+    @ObservedObject private var focus = FocusTimer.shared
+    /// The quick-add field at the bottom is open.
+    @State private var adding = false
+    @State private var newTitle = ""
+    @FocusState private var newTitleFocused: Bool
     /// Start of the current day. Every date bucket below reads it, so
     /// bumping it at midnight (see `.onReceive` on the body) re-sorts a
     /// card left open overnight — nothing else would trigger a redraw.
@@ -140,6 +145,8 @@ struct DesktopPanelView: View {
                     }
                 }
             }
+            Spacer(minLength: 0)
+            quickBar
         }
         .padding(12)
         // Window options live here so the card itself stays a plain list.
@@ -178,6 +185,134 @@ struct DesktopPanelView: View {
                     .background(Capsule().fill(CyberPalette.neonCyan.opacity(0.16)))
             }
         }
+    }
+
+    // MARK: Quick actions
+
+    /// Add a task without opening the main window, or start a focus —
+    /// the two things worth doing straight from the desktop. While a focus
+    /// runs, the bar shows its countdown instead.
+    @ViewBuilder
+    private var quickBar: some View {
+        VStack(spacing: 0) {
+            Divider().overlay(Color.primary.opacity(0.08)).padding(.bottom, 7)
+            if adding {
+                addField
+            } else if let s = focus.session, s.isActive {
+                focusStatus(s)
+            } else {
+                HStack(spacing: 8) {
+                    quickButton(L("Add task", "添加任务"), icon: "plus.circle.fill", tint: CyberPalette.neonCyan) {
+                        adding = true
+                        DispatchQueue.main.async { newTitleFocused = true }
+                    }
+                    Menu {
+                        focusMenu
+                    } label: {
+                        quickLabel(L("Focus", "专注"), icon: "timer", tint: CyberPalette.neonPink)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+    }
+
+    private var addField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "plus.circle.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(CyberPalette.neonCyan)
+            TextField(L("New task for today…", "添加今日任务…"), text: $newTitle)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .focused($newTitleFocused)
+                .onSubmit(addTask)
+                .onExitCommand { closeAdd() }
+            Button(L("Cancel", "取消"), action: closeAdd)
+                .buttonStyle(.plain)
+                .font(.system(size: 11))
+                .foregroundStyle(.primary.opacity(0.5))
+        }
+        .padding(.vertical, 2)
+    }
+
+    /// Enter adds it, due today, and keeps the field open for the next one.
+    private func addTask() {
+        let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { closeAdd(); return }
+        let note = Note(title: title, dueDate: Calendar.current.startOfDay(for: Date()))
+        ctx.insert(note)
+        try? ctx.save()
+        newTitle = ""
+    }
+
+    private func closeAdd() {
+        adding = false
+        newTitle = ""
+    }
+
+    /// Today's open tasks first, then a focus on nothing in particular.
+    @ViewBuilder
+    private var focusMenu: some View {
+        let candidates = (regularPinned + dueNotes + longTermNotes).filter { !$0.isCompleted }
+        ForEach(candidates.prefix(10)) { note in
+            Menu(note.title.isEmpty ? L("Untitled", "无标题") : note.title) {
+                durationButtons(noteID: note.id, title: note.title)
+            }
+        }
+        if !candidates.isEmpty { Divider() }
+        Menu(L("Just focus", "自由专注")) {
+            durationButtons(noteID: nil, title: L("Focus", "专注"))
+        }
+    }
+
+    @ViewBuilder
+    private func durationButtons(noteID: UUID?, title: String) -> some View {
+        ForEach([15, 25, 45], id: \.self) { m in
+            Button(L("\(m) min", "\(m) 分钟")) {
+                focus.start(noteID: noteID, title: title, subtask: nil, minutes: m)
+            }
+        }
+    }
+
+    private func focusStatus(_ s: FocusTimer.Session) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: s.isPaused ? "pause.circle.fill" : "timer")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(CyberPalette.neonPink)
+            Text(s.displayTitle)
+                .font(.system(size: 11.5, weight: .semibold))
+                .lineLimit(1)
+            Spacer(minLength: 4)
+            Text(String(format: "%d:%02d", focus.remaining / 60, focus.remaining % 60))
+                .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                .foregroundStyle(CyberPalette.neonPink)
+            Button(L("Stop", "停止")) { focus.stop() }
+                .buttonStyle(.plain)
+                .font(.system(size: 11))
+                .foregroundStyle(.primary.opacity(0.55))
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func quickButton(_ title: String, icon: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) { quickLabel(title, icon: icon, tint: tint) }
+            .buttonStyle(.plain)
+    }
+
+    private func quickLabel(_ title: String, icon: String, tint: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint)
+            Text(title).font(.system(size: 11.5, weight: .semibold))
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(tint.opacity(0.12)))
+        .overlay(Capsule().stroke(tint.opacity(0.3), lineWidth: 0.6))
+        .contentShape(Capsule())
     }
 
     // MARK: Right-click menu

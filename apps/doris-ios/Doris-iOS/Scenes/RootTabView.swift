@@ -16,6 +16,24 @@ struct RootTabView: View {
     /// starts; the dial's ✕ lowers it WITHOUT stopping the clock, and the
     /// return chip raises it again.
     @State private var showingFocus = false
+    /// A sheet opened from the large widget's buttons (see `QuickAction`).
+    @State private var quickSheet: QuickSheet?
+    @State private var showingCamera = false
+
+    /// What the sheet shows. The photo rides in the item itself: a sheet's
+    /// content can read a stale copy of separate state, and showed the add
+    /// sheet without the photo just taken.
+    enum QuickSheet: Identifiable {
+        case add(photo: Data?)
+        case focus
+
+        var id: String {
+            switch self {
+            case .add(let photo): return photo == nil ? "add" : "photo-\(photo!.count)"
+            case .focus: return "focus"
+            }
+        }
+    }
 
     enum Tab: Hashable { case today, notes, events, settings }
 
@@ -29,6 +47,32 @@ struct RootTabView: View {
             .onChange(of: focus.session?.startedAt) { _, started in
                 if started != nil { showingFocus = true }
             }
+            .onOpenURL { url in
+                guard let action = QuickAction(url: url) else { return }
+                showingFocus = false
+                switch action {
+                case .photo: showingCamera = true
+                case .add: quickSheet = .add(photo: nil)
+                case .focus: quickSheet = .focus
+                }
+            }
+    }
+
+    @ViewBuilder
+    private func quickSheetView(_ sheet: QuickSheet) -> some View {
+        switch sheet {
+        case .add(let photo):
+            QuickAddSheet(photo: photo)
+        case .focus:
+            FocusPickerSheet { noteID, title, minutes in
+                quickSheet = nil
+                // Once the sheet is down: starting raises the full-screen
+                // dial, which can't present over a sheet on its way out.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                    FocusTimer.shared.start(noteID: noteID, title: title, subtask: nil, minutes: minutes)
+                }
+            }
+        }
     }
 
     /// The "back to the focus dial" chip.
@@ -85,5 +129,14 @@ struct RootTabView: View {
             focusChip.padding(.bottom, 104)
         }
         .animation(.smooth(duration: 0.25), value: focus.session != nil)
+        .sheet(item: $quickSheet) { quickSheetView($0) }
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraPicker { data in
+                showingCamera = false
+                guard let data else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { quickSheet = .add(photo: data) }
+            }
+            .ignoresSafeArea()
+        }
     }
 }

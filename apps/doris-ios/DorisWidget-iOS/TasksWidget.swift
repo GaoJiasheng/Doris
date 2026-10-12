@@ -253,6 +253,8 @@ struct TasksWidgetView: View {
         let laterRow: CGFloat      // upcoming rows are set tighter than today's
         let nothingToday: CGFloat
         let footer: CGFloat
+        /// The large card's quick-action buttons, with the gap above them.
+        var actionBar: CGFloat = 0
     }
 
     private var metrics: Metrics {
@@ -260,7 +262,8 @@ struct TasksWidgetView: View {
             ? Metrics(chrome: 24 + 30 + 5, row: 27.6, caption: 0, laterRule: 0, laterRow: 0,
                       nothingToday: 25, footer: 17)
             : Metrics(chrome: 28 + 34.4 + 7, row: 29.6, caption: 14, laterRule: 15, laterRow: 23,
-                      nothingToday: 25, footer: 17)
+                      nothingToday: 25, footer: 17,
+                      actionBar: family == .systemLarge ? Self.actionBarHeight + 8 : 0)
     }
 
     private struct Plan {
@@ -284,7 +287,7 @@ struct TasksWidgetView: View {
         let m = metrics
         // The footer is always budgeted; it may spill ~2pt into the bottom
         // padding, which the eye can't tell from padding.
-        let full = height - m.chrome - m.footer + 2
+        let full = height - m.chrome - m.footer + 2 - m.actionBar
         func fillToday(captions: Bool) -> (rows: [TaskSnapshot], left: CGFloat, sections: Set<TaskSection>) {
             var b = full, rows: [TaskSnapshot] = [], seen = Set<TaskSection>()
             for t in entry.tasks {
@@ -435,9 +438,41 @@ struct TasksWidgetView: View {
                     .padding(.top, 4)
             }
             Spacer(minLength: 0)
+            if family == .systemLarge {
+                actionBar.padding(.top, 8)
+            }
         }
         .padding(.horizontal, family == .systemSmall ? 13 : 15)
         .padding(.vertical, family == .systemSmall ? 12 : 14)
+    }
+
+    // MARK: Quick actions (large only)
+
+    static let actionBarHeight: CGFloat = 32
+
+    /// Add a task, pick a focus, or snap a photo into a task — each opens
+    /// the app straight into it (`doris://quick/…`). A widget can't take
+    /// text or show a picker, so these are links, not in-place intents.
+    private var actionBar: some View {
+        HStack(spacing: 8) {
+            actionLink("添加", icon: "plus", url: "doris://quick/add", tint: CyberPalette.neonCyan)
+            actionLink("专注", icon: "timer", url: "doris://quick/focus", tint: CyberPalette.neonPink)
+            actionLink("拍照", icon: "camera.fill", url: "doris://quick/photo",
+                       tint: Color(red: 0.62, green: 0.51, blue: 1.0))
+        }
+        .frame(height: Self.actionBarHeight)
+    }
+
+    private func actionLink(_ title: String, icon: String, url: String, tint: Color) -> some View {
+        Link(destination: URL(string: url)!) {
+            HStack(spacing: 5) {
+                Image(systemName: icon).font(.system(size: 12, weight: .bold))
+                Text(title).font(.system(size: 12.5, weight: .semibold, design: .rounded))
+            }
+            .foregroundStyle(tint)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(tint.opacity(0.14)))
+        }
     }
 
     // Rows share one VStack so the inter-row hairlines are uniform.
@@ -653,6 +688,9 @@ struct TasksWidgetView: View {
                     .padding(.top, 3)
             }
             Spacer(minLength: 0)
+            if family == .systemLarge {
+                actionBar.padding(.top, 8)
+            }
         }
         .padding(.horizontal, family == .systemSmall ? 13 : 15)
         .padding(.vertical, family == .systemSmall ? 12 : 14)

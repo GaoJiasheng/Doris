@@ -264,6 +264,12 @@ targets:
         # We pick the latter — Doris is iPhone-form-factor, the
         # landscape iPad split-view layout isn't designed.
         UIRequiresFullScreen: true
+        # doris://quick/{add,focus,photo} — the large Tasks widget's
+        # buttons open the app straight into these.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.gavin.doris.ios.url
+            CFBundleURLSchemes: [doris]
+        NSCameraUsageDescription: "拍照记一条任务时需要使用相机。Doris uses the camera when you snap a photo into a task."
         # Same rationale as the macOS info.properties block — tie the
         # user-visible version + build to the build settings below.
         CFBundleShortVersionString: $(MARKETING_VERSION)
