@@ -6,6 +6,35 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.11.1 — 2026-10-14 (iOS)
+
+Images in the iPhone note editor behave the way you'd expect. iPhone
+only; the Mac side of this work (drag to resize) ships with the next
+Mac release.
+
+### Improved
+
+- **Tap an image to see it full size; long-press it for the options**
+  (小 / 中 / 大 / 全宽, view full size, delete). Before, a tap opened the
+  menu.
+- **Pull down to close the full-size view**, as in Photos (at normal
+  zoom; zoomed in, a drag still pans).
+
+### Fixed
+
+- **✕ closes the full-size view again.** In the editor the viewer is
+  presented from UIKit, where SwiftUI's dismiss does nothing; it now
+  closes itself explicitly.
+
+### Mac (not yet released)
+
+- **Drag to resize images** in the note body and in a checklist's image
+  rows: hover an image and drag the handle at its bottom-right corner;
+  the width steps through the four sizes a note stores. Clicking still
+  opens the size menu.
+
+---
+
 ## 1.11.0 — 2026-10-12
 
 Quick actions where you look first — the big iPhone widget and the Mac's

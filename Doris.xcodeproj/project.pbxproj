@@ -1263,14 +1263,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/DorisWidget-iOS/DorisWidget-iOS.entitlements";
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 47;
 				INFOPLIST_FILE = "apps/doris-ios/DorisWidget-iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.11.0;
+				MARKETING_VERSION = 1.11.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios.widget;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1409,14 +1409,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/DorisWidget-iOS/DorisWidget-iOS.entitlements";
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 47;
 				INFOPLIST_FILE = "apps/doris-ios/DorisWidget-iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.11.0;
+				MARKETING_VERSION = 1.11.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios.widget;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1505,13 +1505,13 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 47;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.11.0;
+				MARKETING_VERSION = 1.11.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios;
 				PRODUCT_NAME = Doris;
 				SDKROOT = iphoneos;
@@ -1526,13 +1526,13 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = "apps/doris-ios/Doris-iOS/Doris-iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 47;
 				INFOPLIST_FILE = "apps/doris-ios/Doris-iOS/Resources/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.11.0;
+				MARKETING_VERSION = 1.11.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gavin.doris.ios;
 				PRODUCT_NAME = Doris;
 				SDKROOT = iphoneos;

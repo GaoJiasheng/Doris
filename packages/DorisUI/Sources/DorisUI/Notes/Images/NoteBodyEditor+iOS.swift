@@ -238,15 +238,15 @@ struct NoteBodyTextViewIOS: UIViewRepresentable {
             }
         }
 
-        /// A transparent button over each image: tapping it opens the
-        /// image menu. (Attachments in an editable text view don't get
-        /// UIKit's own text-item menus.)
+        /// A transparent button over each image: a tap shows it full size,
+        /// a long press opens the image menu. (Attachments in an editable
+        /// text view don't get UIKit's own text-item interactions.)
         func placeImageButtons() {
             guard let tv = textView else { return }
             let found = NoteBodyTextBridge.attachments(in: tv.textStorage)
             while imageButtons.count < found.count {
                 let b = UIButton(type: .custom)
-                b.showsMenuAsPrimaryAction = true
+                b.showsMenuAsPrimaryAction = false   // the menu is on long press
                 b.accessibilityLabel = L("Image", "图片")
                 tv.addSubview(b)
                 imageButtons.append(b)
@@ -263,6 +263,11 @@ struct NoteBodyTextViewIOS: UIViewRepresentable {
                                   width: a.bounds.width, height: a.bounds.height)
                 if button.frame != rect { button.frame = rect }
                 button.menu = menu(for: a)
+                // Same identifier each time, so this replaces the last one.
+                button.addAction(UIAction(identifier: .init("doris.image.view")) { [weak self, weak a] _ in
+                    guard let a, !a.isPlaceholder else { return }
+                    self?.viewFull(a.ref.id)
+                }, for: .primaryActionTriggered)
             }
         }
 
@@ -401,6 +406,7 @@ struct NoteBodyTextViewIOS: UIViewRepresentable {
                   let data = NoteImageLoader.shared.fullData(id, in: parent.modelContext),
                   let presenter = tv.nearestViewController?.topmostPresented else { return }
             let host = UIHostingController(rootView: NoteImageViewer(data: data))
+            host.rootView = NoteImageViewer(data: data) { [weak host] in host?.dismiss(animated: true) }
             host.modalPresentationStyle = .fullScreen
             presenter.present(host, animated: true)
         }

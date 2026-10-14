@@ -246,6 +246,20 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.11.1", date: "2026-10-14", gh: false,
+      zh: { title: "iPhone 上的图片更顺手了(仅 iOS)",
+        improved: [
+          ["点图片看大图,长按出选项。", "笔记正文里点一下图片直接全屏查看;长按可以换尺寸(小 / 中 / 大 / 全宽)或删除。"],
+          ["大图往下一拉就关。", "和系统相册一样;放大状态下往下拖仍然是移动图片。"] ],
+        fixed: [
+          ["大图的 ✕ 按钮能正常关闭了。", ""] ] },
+      en: { title: "Friendlier images on iPhone (iOS only)",
+        improved: [
+          ["Tap an image to see it full size; long-press for options.", "In a note's body, a tap opens the image full screen; a long press changes its size (S / M / L / full width) or deletes it."],
+          ["Pull down to close the full-size view.", "Just like Photos; when zoomed in, a drag still pans the image."] ],
+        fixed: [
+          ["The ✕ on the full-size view closes it again.", ""] ] } },
+
     { v: "1.11.0", date: "2026-10-12", gh: true,
       zh: { title: "小组件和桌面卡片上的快捷按钮",
         new: [

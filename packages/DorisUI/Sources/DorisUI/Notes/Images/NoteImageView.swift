@@ -21,6 +21,11 @@ public struct NoteImageView: View {
     @State private var image: HeroPlatformImage?
     #if os(iOS)
     @State private var viewing: ViewedImage?
+    #else
+    @State private var hovering = false
+    @State private var containerWidth: CGFloat = 0
+    /// The image's width when a resize drag began.
+    @State private var dragStartWidth: CGFloat?
     #endif
 
     public init(ref: NoteImageRef, onResize: ((NoteImageSize) -> Void)? = nil, onDelete: (() -> Void)? = nil) {
@@ -33,6 +38,9 @@ public struct NoteImageView: View {
         FractionWidthLayout(fraction: ref.size.widthFraction, aspect: NoteImageLoader.shared.aspect(ref.id, in: ctx)) {
             picture
         }
+        #if os(macOS)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
+        #endif
         // Its line can sync before its bytes: look again until they're here.
         .task(id: ref.id) {
             while !Task.isCancelled {
@@ -71,13 +79,15 @@ public struct NoteImageView: View {
                 if onResize == nil { viewFull() } else { popUpMenu() }
             }
             .contextMenu { menuItems }
+            .overlay(alignment: .bottomTrailing) {
+                if onResize != nil, hovering || dragStartWidth != nil { resizeHandle }
+            }
+            .onHover { hovering = $0 }
         #else
-        if onResize == nil {
-            content.onTapGesture { viewFull() }
-        } else {
-            Menu { menuItems } label: { content }
-                .buttonStyle(.plain)
-        }
+        // Tap to see it full size; long press for sizes and delete.
+        content
+            .onTapGesture { viewFull() }
+            .contextMenu { menuItems }
         #endif
     }
 
@@ -107,6 +117,36 @@ public struct NoteImageView: View {
     }
 
     #if os(macOS)
+    /// Drag the corner to step through the four sizes — the sizes a note
+    /// stores, so it looks the same on the iPhone.
+    private var resizeHandle: some View {
+        let shape = RoundedRectangle(cornerRadius: 4, style: .continuous)
+        return Image(systemName: "arrow.up.left.and.arrow.down.right")
+            .font(.system(size: 8, weight: .bold))
+            .foregroundStyle(.black.opacity(0.6))
+            .frame(width: 16, height: 16)
+            .background(shape.fill(.white.opacity(0.95)).shadow(color: .black.opacity(0.35), radius: 2))
+            .padding(4)
+            .contentShape(Rectangle())
+            .onHover { inside in
+                if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                    .onChanged { drag in
+                        guard containerWidth > 0 else { return }
+                        let start = dragStartWidth ?? containerWidth * ref.size.widthFraction
+                        dragStartWidth = start
+                        let fraction = (start + drag.translation.width) / containerWidth
+                        let nearest = NoteImageSize.allCases.min {
+                            abs($0.widthFraction - fraction) < abs($1.widthFraction - fraction)
+                        } ?? ref.size
+                        if nearest != ref.size { onResize?(nearest) }
+                    }
+                    .onEnded { _ in dragStartWidth = nil }
+            )
+    }
+
     /// A click pops the same menu the editor shows for an image.
     private func popUpMenu() {
         NoteImageActions.menu(current: ref.size, canView: image != nil,

@@ -101,6 +101,114 @@ final class NoteBodyNSTextView: NSTextView {
         super.setFrameSize(newSize)
         if abs(old - newSize.width) > 0.5 { onWidthChange?() }
     }
+
+    // MARK: Drag to resize
+
+    /// Where each image sits (view coordinates), from the coordinator.
+    var imageFrames: () -> [ImageFrame] = { [] }
+    /// The text column's width: an image's size is a share of it.
+    var columnWidth: () -> CGFloat = { 300 }
+    /// Live, while dragging: the image at `charIndex` should be this size.
+    var onResize: ((Int, NoteImageSize) -> Void)?
+    var onResizeEnded: (() -> Void)?
+
+    struct ImageFrame {
+        let charIndex: Int
+        let rect: NSRect
+        let size: NoteImageSize
+    }
+
+    private var hovered: ImageFrame?
+    private var resizeTracking: NSTrackingArea?
+    static let handleSide: CGFloat = 14
+
+    private func handleRect(for frame: ImageFrame) -> NSRect {
+        NSRect(x: frame.rect.maxX - Self.handleSide - 4, y: frame.rect.maxY - Self.handleSide - 4,
+               width: Self.handleSide, height: Self.handleSide)
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let resizeTracking { removeTrackingArea(resizeTracking) }
+        // Always active: the notch dropdown and desktop card aren't key windows.
+        let area = NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                  owner: self, userInfo: nil)
+        addTrackingArea(area)
+        resizeTracking = area
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        let p = convert(event.locationInWindow, from: nil)
+        let frame = imageFrames().first { $0.rect.contains(p) }
+        if frame?.charIndex != hovered?.charIndex || frame?.rect != hovered?.rect {
+            if let old = hovered { setNeedsDisplay(old.rect.insetBy(dx: -2, dy: -2)) }
+            hovered = frame
+            if let frame { setNeedsDisplay(frame.rect.insetBy(dx: -2, dy: -2)) }
+        }
+        if let frame, handleRect(for: frame).insetBy(dx: -4, dy: -4).contains(p) {
+            NSCursor.resizeLeftRight.set()
+        }
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        if let old = hovered { setNeedsDisplay(old.rect.insetBy(dx: -2, dy: -2)) }
+        hovered = nil
+    }
+
+    /// The handle shows on the image under the pointer, so it's clear the
+    /// image can be resized without cluttering every picture.
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard let hovered else { return }
+        let r = handleRect(for: hovered)
+        NSGraphicsContext.saveGraphicsState()
+        let shadow = NSShadow()
+        shadow.shadowColor = .black.withAlphaComponent(0.35)
+        shadow.shadowBlurRadius = 3
+        shadow.set()
+        let path = NSBezierPath(roundedRect: r, xRadius: 4, yRadius: 4)
+        NSColor.white.withAlphaComponent(0.95).setFill()
+        path.fill()
+        NSGraphicsContext.restoreGraphicsState()
+        // Two short diagonal strokes, the usual "drag this corner" mark.
+        NSColor.black.withAlphaComponent(0.55).setStroke()
+        for inset in [3.5, 7.0] as [CGFloat] {
+            let line = NSBezierPath()
+            line.move(to: NSPoint(x: r.maxX - 3, y: r.minY + inset))
+            line.line(to: NSPoint(x: r.minX + inset, y: r.maxY - 3))
+            line.lineWidth = 1.2
+            line.lineCapStyle = .round
+            line.stroke()
+        }
+    }
+
+    /// Dragging the corner handle steps the image through the four sizes —
+    /// the sizes a note stores, so it looks the same on the iPhone.
+    override func mouseDown(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        guard let frame = imageFrames().first(where: { handleRect(for: $0).insetBy(dx: -4, dy: -4).contains(p) }) else {
+            return super.mouseDown(with: event)
+        }
+        var current = frame.size
+        while let e = window?.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
+            let q = convert(e.locationInWindow, from: nil)
+            let fraction = max(0.05, (q.x - frame.rect.minX) / max(1, columnWidth()))
+            let nearest = NoteImageSize.allCases.min {
+                abs($0.widthFraction - fraction) < abs($1.widthFraction - fraction)
+            } ?? current
+            if nearest != current {
+                current = nearest
+                onResize?(frame.charIndex, nearest)
+                hovered = imageFrames().first { $0.charIndex == frame.charIndex }
+                needsDisplay = true
+            }
+            NSCursor.resizeLeftRight.set()
+            if e.type == .leftMouseUp { break }
+        }
+        onResizeEnded?()
+    }
 }
 
 struct NoteBodyTextViewMac: NSViewRepresentable {
@@ -145,6 +253,10 @@ struct NoteBodyTextViewMac: NSViewRepresentable {
         tv.onImages = { [weak c] datas, index in c?.insertImages(datas, at: index) }
         tv.onWidthChange = { [weak c] in c?.layoutAttachments() }
         tv.markdownForRange = { [weak c] range in c?.markdown(in: range) ?? "" }
+        tv.imageFrames = { [weak c] in c?.imageFrames() ?? [] }
+        tv.columnWidth = { [weak c] in c?.columnWidthForResize ?? 300 }
+        tv.onResize = { [weak c] index, size in c?.resizeLive(at: index, to: size) }
+        tv.onResizeEnded = { [weak c] in c?.commitCurrent() }
         tv.updateDragTypeRegistration()
 
         scroll.documentView = tv
@@ -340,6 +452,38 @@ struct NoteBodyTextViewMac: NSViewRepresentable {
                 },
                 onDelete: { [weak self] in self?.deleteImage(at: charIndex) })
             menu.popUp(positioning: nil, at: NSPoint(x: cellFrame.minX, y: cellFrame.maxY + 4), in: textView)
+        }
+
+        // MARK: Drag to resize
+
+        var columnWidthForResize: CGFloat { columnWidth }
+
+        /// Where each image is drawn: it stands on its line's baseline.
+        func imageFrames() -> [NoteBodyNSTextView.ImageFrame] {
+            guard let tv = textView, let lm = tv.layoutManager, let storage = tv.textStorage else { return [] }
+            let origin = tv.textContainerOrigin
+            return NoteBodyTextBridge.attachments(in: storage).map { a, range in
+                let glyph = lm.glyphIndexForCharacter(at: range.location)
+                let line = lm.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+                let loc = lm.location(forGlyphAt: glyph)
+                let rect = NSRect(x: origin.x + line.minX + loc.x,
+                                  y: origin.y + line.minY + loc.y - a.bounds.height,
+                                  width: a.bounds.width, height: a.bounds.height)
+                return .init(charIndex: range.location, rect: rect, size: a.ref.size)
+            }
+        }
+
+        func resizeLive(at index: Int, to size: NoteImageSize) {
+            guard let storage = textView?.textStorage, index < storage.length,
+                  let a = storage.attribute(.attachment, at: index, effectiveRange: nil) as? NoteImageTextAttachment
+            else { return }
+            a.ref.size = size
+            layoutAttachments()
+        }
+
+        func commitCurrent() {
+            guard let storage = textView?.textStorage else { return }
+            commit(NoteBodyTextBridge.markdown(from: storage))
         }
 
         private func resize(at index: Int, to size: NoteImageSize) {
