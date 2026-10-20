@@ -246,6 +246,22 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.12.0", date: "2026-10-20", gh: true,
+      zh: { title: "子任务可以拖动排序了",
+        new: [
+          ["拖动子任务调整顺序。", "Mac 上鼠标移到一条上,左边出现把手,拖它;iPhone 上长按一条的任意位置再拖。其他条目会自动让开,条目下面的图片也跟着一起走。勾掉的子任务原地不动,顺序完全由你决定。"],
+          ["Mac 上 ⌃⌘↑ / ⌃⌘↓ 移动正在输入的那一条。", ""],
+          ["Mac 上拖动调整图片大小。", "鼠标移到正文或清单里的图片上,拖右下角的手柄,在小 / 中 / 大 / 全宽之间切换。"] ],
+        improved: [
+          ["两端都是 1.12.0,版本号重新对齐。", ""] ] },
+      en: { title: "Drag to reorder checklist items",
+        new: [
+          ["Reorder a checklist by dragging.", "On the Mac, hover an item and drag the grip at its left; on the iPhone, long-press an item anywhere and drag. The others slide aside, and images under an item move with it. Ticked items stay where you put them."],
+          ["⌃⌘↑ / ⌃⌘↓ on the Mac move the item you're typing in.", ""],
+          ["Drag to resize images on the Mac.", "Hover an image in a note or checklist and drag the handle at its bottom-right corner to step through S / M / L / full width."] ],
+        improved: [
+          ["Both apps are on 1.12.0 again.", ""] ] } },
+
     { v: "1.11.1", date: "2026-10-14", gh: false,
       zh: { title: "iPhone 上的图片更顺手了(仅 iOS)",
         improved: [

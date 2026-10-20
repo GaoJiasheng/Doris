@@ -6,6 +6,32 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.12.0 — 2026-10-20
+
+Put a checklist in the order you'll do it — drag its items around on
+the Mac and the iPhone. Both apps are on 1.12.0 again.
+
+### Added
+
+- **Drag checklist items to reorder them.** On the Mac, hover an item
+  and drag the grip that appears at its left; on the iPhone, long-press
+  anywhere on an item and drag. The other items slide aside as you go,
+  and images under an item move with it. Ticked items stay where you
+  put them — a checklist is an order of steps, so nothing sinks to the
+  bottom. (The item you're typing in keeps its long press for selecting
+  text.)
+- **⌃⌘↑ / ⌃⌘↓ on the Mac** move the item you're typing in up or down.
+- **Drag to resize images on the Mac** (from 1.11.1's Mac work): hover
+  an image in a note's body or a checklist and drag the handle at its
+  bottom-right corner; it steps through 小 / 中 / 大 / 全宽.
+
+### Changed
+
+- On the Mac, a checklist leaves a narrow margin on its left for the
+  drag grip.
+
+---
+
 ## 1.11.1 — 2026-10-14 (iOS)
 
 Images in the iPhone note editor behave the way you'd expect. iPhone
@@ -26,7 +52,7 @@ Mac release.
   presented from UIKit, where SwiftUI's dismiss does nothing; it now
   closes itself explicitly.
 
-### Mac (not yet released)
+### Mac (released in 1.12.0)
 
 - **Drag to resize images** in the note body and in a checklist's image
   rows: hover an image and drag the handle at its bottom-right corner;

@@ -70,7 +70,14 @@ public struct InlineNoteEditor: View {
                 if note.isChecklist {
                     ScrollView {
                         ChecklistEditorView(note: note)
+                            #if os(macOS)
+                            // Its grip gutter stands in for the left margin,
+                            // so the checkboxes still line up with the title.
+                            .padding(.leading, 14 - ChecklistEditorView.gripGutter)
+                            .padding(.trailing, 14)
+                            #else
                             .padding(.horizontal, 14)
+                            #endif
                             .padding(.vertical, 4)
                     }
                     .scrollContentBackground(.hidden)

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 import DorisCore
 #if canImport(AppKit)
 import AppKit
@@ -41,17 +42,64 @@ public struct ChecklistEditorView: View {
     /// freshly-inserted row would never grab the keyboard.
     @State private var focusedLine: Int?
 
+    // MARK: Drag to reorder
+    //
+    // An item moves together with the image rows under it (a "block"): an
+    // image belongs to the item it illustrates. While a block is dragged,
+    // `dragOrder` holds the live order (blocks by their first line's index)
+    // and the body is untouched; the drop writes it back once — one edit,
+    // one sync. Same system drag as the Today grid (see ReorderableNoteGrid
+    // for why not a DragGesture), with its own type so text fields and
+    // other drop targets never take it for text.
+
+    @State private var dragOrder: [Int]?
+    @State private var draggingBlock: Int?
+    /// Refreshed while the drag is over a row; the watchdog below ends a
+    /// drag that went quiet (released outside the list — `.onDrag` has no
+    /// cancel callback).
+    @State private var lastDragActivity: Date = .distantPast
+    #if os(macOS)
+    /// The block whose grip shows (the pointer is over its first row).
+    @State private var hoveredBlock: Int?
+    #endif
+
     public init(note: Note) {
         self.note = note
     }
 
     public var body: some View {
+        let all = lines
+        let blocks = Block.split(all)
         VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(lines.enumerated()), id: \.offset) { idx, line in
-                row(at: idx, line: line)
+            ForEach(ordered(blocks), id: \.start) { block in
+                blockView(block, lines: all)
             }
             addButton
                 .padding(.top, 4)
+        }
+        #if os(macOS)
+        // The grip's gutter, inside the list: hosts put the checklist in a
+        // ScrollView, which would clip a grip hung out in their margin.
+        .padding(.leading, Self.gripGutter)
+        #endif
+        .animation(.spring(response: 0.30, dampingFraction: 0.80), value: dragOrder)
+        // Catches a release between rows, so it still lands.
+        .background {
+            Color.clear
+                .contentShape(Rectangle())
+                .onDrop(of: [Self.dragType], delegate: ChecklistDropDelegate(
+                    isActive: draggingBlock != nil,
+                    onUpdate: { lastDragActivity = Date() },
+                    onPerform: finishDrag))
+        }
+        .task(id: lastDragActivity) {
+            guard draggingBlock != nil else { return }
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled, draggingBlock != nil else { return }
+            withAnimation(.spring(response: 0.30, dampingFraction: 0.80)) {
+                draggingBlock = nil
+                dragOrder = nil          // released outside: put it back
+            }
         }
         // Focus ring clicked for a SUB-task → land the caret on that line.
         // A notification (rather than an init parameter) because it must also
@@ -78,6 +126,168 @@ public struct ChecklistEditorView: View {
     /// Live re-parse from `note.bodyMarkdown` — never store derived
     /// state, so external edits / reverts always show through.
     private var lines: [Line] { Line.parseAll(note.bodyMarkdown) }
+
+    // MARK: - Blocks and dragging
+
+    static let dragType = UTType(exportedAs: "com.gavin.doris.checklist-row")
+    #if os(macOS)
+    /// Room left of the checkboxes for the hover grip.
+    public static let gripGutter: CGFloat = 14
+    #endif
+
+    private func ordered(_ blocks: [Block]) -> [Block] {
+        guard let dragOrder else { return blocks }
+        let byStart = Dictionary(uniqueKeysWithValues: blocks.map { ($0.start, $0) })
+        let live = dragOrder.compactMap { byStart[$0] }
+        // The body changed under the drag (a sync landed): show it as it is.
+        return live.count == blocks.count ? live : blocks
+    }
+
+    @ViewBuilder
+    private func blockView(_ block: Block, lines all: [Line]) -> some View {
+        let dragging = draggingBlock == block.start
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(block.lines, id: \.self) { idx in
+                if idx == block.start {
+                    headRow(block, line: all[idx])
+                } else {
+                    row(at: idx, line: all[idx])
+                }
+            }
+        }
+        // The dragged block leaves a gap where it would land; its snapshot
+        // follows the pointer.
+        .opacity(dragging ? 0 : 1)
+        .overlay {
+            if dragging {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(CyberPalette.neonCyan.opacity(0.55),
+                                  style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
+            }
+        }
+        #if os(iOS)
+        // The whole row lifts on a long press. The row being edited keeps
+        // its long press for selecting text (see ChecklistItemFieldIOS).
+        .onDrag({ beginDrag(block) }, preview: { dragPreview(block, lines: all) })
+        #endif
+        .onDrop(of: [Self.dragType], delegate: ChecklistDropDelegate(
+            isActive: draggingBlock != nil,
+            onEnter: { moveDragged(over: block.start) },
+            onUpdate: { lastDragActivity = Date() },
+            onPerform: finishDrag))
+    }
+
+    /// A block's first row; on the Mac it carries the grip that appears on
+    /// hover, out in the left margin so the text doesn't shift.
+    @ViewBuilder
+    private func headRow(_ block: Block, line: Line) -> some View {
+        #if os(macOS)
+        row(at: block.start, line: line)
+            .onHover { inside in
+                if inside { hoveredBlock = block.start }
+                else if hoveredBlock == block.start { hoveredBlock = nil }
+            }
+            .overlay(alignment: .topLeading) {
+                if line.image == nil, hoveredBlock == block.start || draggingBlock == block.start {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.4))
+                        .frame(width: Self.gripGutter, height: 18)
+                        .contentShape(Rectangle())
+                        .onHover { inside in
+                            // set, not push/pop: the grip can vanish under
+                            // the pointer, and an unmatched push sticks.
+                            (inside ? NSCursor.openHand : NSCursor.arrow).set()
+                        }
+                        .onDrag({ beginDrag(block) }, preview: { dragPreview(block, lines: lines) })
+                        .help(L("Drag to reorder", "拖动排序"))
+                        .offset(x: -Self.gripGutter - 1, y: 0)
+                }
+            }
+        #else
+        row(at: block.start, line: line)
+        #endif
+    }
+
+    private func beginDrag(_ block: Block) -> NSItemProvider {
+        draggingBlock = block.start
+        dragOrder = Block.split(lines).map(\.start)
+        lastDragActivity = Date()
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+        let provider = NSItemProvider()
+        provider.registerDataRepresentation(forTypeIdentifier: Self.dragType.identifier,
+                                            visibility: .ownProcess) { done in
+            done(Data(String(block.start).utf8), nil)
+            return nil
+        }
+        return provider
+    }
+
+    /// What follows the pointer: the item as a small card, with a photo
+    /// mark when images travel with it.
+    private func dragPreview(_ block: Block, lines all: [Line]) -> some View {
+        let line = all.indices.contains(block.start) ? all[block.start] : Line(checked: nil, text: "")
+        return HStack(spacing: 8) {
+            Image(systemName: line.image != nil ? "photo" : checkboxIcon(for: line.checked))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(checkboxColor(for: line.checked))
+            Text(line.image != nil ? L("Image", "图片") : (line.text.isEmpty ? " " : line.text))
+                .lineLimit(2)
+                .foregroundStyle(.primary)
+            if block.lines.count > 1 {
+                Image(systemName: "photo").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: 320, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(.background))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .strokeBorder(CyberPalette.neonCyan.opacity(0.5), lineWidth: 1))
+    }
+
+    /// The dragged block moves to `target`'s place as soon as it's over it,
+    /// pushing the others aside (`.onMove` semantics: forward lands after).
+    private func moveDragged(over target: Int) {
+        guard let dragging = draggingBlock, dragging != target, var order = dragOrder,
+              let from = order.firstIndex(of: dragging),
+              let to = order.firstIndex(of: target) else { return }
+        order.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+        dragOrder = order
+    }
+
+    private func finishDrag() {
+        guard draggingBlock != nil, let order = dragOrder else { return }
+        let all = lines
+        let blocks = Block.split(all)
+        let byStart = Dictionary(uniqueKeysWithValues: blocks.map { ($0.start, $0) })
+        // Snap, don't animate: the system is already flying the preview in.
+        var tx = Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) {
+            if order.count == blocks.count, order != blocks.map(\.start) {
+                let moved = order.compactMap { byStart[$0] }.flatMap { $0.lines.map { all[$0] } }
+                if moved.count == all.count { writeBack(moved) }
+            }
+            draggingBlock = nil
+            dragOrder = nil
+        }
+    }
+
+    /// ⌃⌘↑ / ⌃⌘↓ while typing in an item: move it (with its images) past
+    /// the neighbouring item, keeping the caret in it.
+    private func moveItem(at idx: Int, by step: Int) {
+        let all = lines
+        var blocks = Block.split(all)
+        guard let i = blocks.firstIndex(where: { $0.lines.contains(idx) }),
+              blocks.indices.contains(i + step) else { return }
+        blocks.swapAt(i, i + step)
+        writeBack(blocks.flatMap { $0.lines.map { all[$0] } })
+        let newStart = blocks[..<(i + step)].reduce(0) { $0 + $1.lines.count }
+        DispatchQueue.main.async { focusedLine = newStart }
+    }
 
     @ViewBuilder
     private func row(at idx: Int, line: Line) -> some View {
@@ -131,6 +341,7 @@ public struct ChecklistEditorView: View {
                 },
                 onMoveUp:   { moveFocus(from: idx, by: -1) },
                 onMoveDown: { moveFocus(from: idx, by: 1) },
+                onMoveItem: { moveItem(at: idx, by: $0) },
                 onPasteImages: { insertImages($0, at: idx) }
             )
             // Width-constrain so it wraps to the available space (reporting
@@ -569,6 +780,8 @@ struct ChecklistItemField: NSViewRepresentable {
     var onDeleteEmpty: () -> Void
     var onMoveUp: () -> Void = {}
     var onMoveDown: () -> Void = {}
+    /// ⌃⌘↑ (-1) / ⌃⌘↓ (+1): move this item up or down the list.
+    var onMoveItem: (Int) -> Void = { _ in }
     /// ⌘V with only an image on the pasteboard.
     var onPasteImages: ([Data]) -> Void = { _ in }
 
@@ -676,6 +889,11 @@ struct ChecklistItemField: NSViewRepresentable {
                     let images = NoteBodyNSTextView.pastedImages(from: .general)
                     guard !images.isEmpty else { return event }
                     self.parent.onPasteImages(images)
+                    return nil
+                }
+                if mods == [.control, .command], event.keyCode == 126 || event.keyCode == 125,
+                   !((editor as? NSTextView)?.hasMarkedText() ?? false) {
+                    self.parent.onMoveItem(event.keyCode == 126 ? -1 : 1)
                     return nil
                 }
                 guard mods.isEmpty else { return event }
@@ -875,6 +1093,49 @@ struct ChecklistItemFieldIOS: UIViewRepresentable {
 }
 
 #endif // os(iOS)
+
+// MARK: - Blocks
+
+/// An item and the image rows right under it, which move with it. Image
+/// rows before the first item form a block of their own.
+private struct Block: Equatable {
+    let start: Int
+    let lines: Range<Int>
+
+    static func split(_ lines: [Line]) -> [Block] {
+        var blocks: [Block] = []
+        var start = 0
+        for i in lines.indices where i > 0 && lines[i].image == nil {
+            blocks.append(Block(start: start, lines: start..<i))
+            start = i
+        }
+        if !lines.isEmpty { blocks.append(Block(start: start, lines: start..<lines.count)) }
+        return blocks
+    }
+}
+
+/// Drop side of the row drag (the counterpart to `.onDrag`'s provider —
+/// see GridDropDelegate for the history). Inactive unless this editor
+/// started the drag, so a row dragged from another window doesn't land.
+private struct ChecklistDropDelegate: DropDelegate {
+    var isActive: Bool
+    var onEnter: (() -> Void)? = nil
+    var onUpdate: () -> Void
+    var onPerform: () -> Void
+
+    func validateDrop(info: DropInfo) -> Bool { isActive }
+    func dropEntered(info: DropInfo) { if isActive { onEnter?() } }
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        guard isActive else { return DropProposal(operation: .forbidden) }
+        onUpdate()
+        return DropProposal(operation: .move)
+    }
+    func performDrop(info: DropInfo) -> Bool {
+        guard isActive else { return false }
+        onPerform()
+        return true
+    }
+}
 
 // MARK: - Line model (parse / serialize markdown checkbox syntax)
 
