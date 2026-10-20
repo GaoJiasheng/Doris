@@ -6,6 +6,20 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.12.1 — 2026-10-20 (macOS)
+
+### Fixed
+
+- **The checklist drag grip can be grabbed.** It showed when the pointer
+  was over an item, but it sat in the margin outside the item's own
+  area — so moving toward it counted as leaving the item, and it
+  vanished before the pointer got there. The margin is now part of the
+  item, and the grip stays put until you grab it.
+
+iPhone stays on 1.12.0 (no change there).
+
+---
+
 ## 1.12.0 — 2026-10-20
 
 Put a checklist in the order you'll do it — drag its items around on

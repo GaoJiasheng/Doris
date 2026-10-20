@@ -76,12 +76,10 @@ public struct ChecklistEditorView: View {
             }
             addButton
                 .padding(.top, 4)
+                #if os(macOS)
+                .padding(.leading, Self.gripGutter)   // in line with the items
+                #endif
         }
-        #if os(macOS)
-        // The grip's gutter, inside the list: hosts put the checklist in a
-        // ScrollView, which would clip a grip hung out in their margin.
-        .padding(.leading, Self.gripGutter)
-        #endif
         .animation(.spring(response: 0.30, dampingFraction: 0.80), value: dragOrder)
         // Catches a release between rows, so it still lands.
         .background {
@@ -146,14 +144,29 @@ public struct ChecklistEditorView: View {
     @ViewBuilder
     private func blockView(_ block: Block, lines all: [Line]) -> some View {
         let dragging = draggingBlock == block.start
-        VStack(alignment: .leading, spacing: 6) {
+        let rows = VStack(alignment: .leading, spacing: 6) {
             ForEach(block.lines, id: \.self) { idx in
-                if idx == block.start {
-                    headRow(block, line: all[idx])
-                } else {
-                    row(at: idx, line: all[idx])
-                }
+                row(at: idx, line: all[idx])
             }
+        }
+        Group {
+            #if os(macOS)
+            // The grip lives in a gutter that is part of the block, so the
+            // pointer stays "on the item" all the way to the grip. (Hung
+            // outside the row, it vanished as the pointer left the row to
+            // reach it — and a host's ScrollView would clip it anyway.)
+            HStack(alignment: .top, spacing: 0) {
+                grip(block, head: all[block.start])
+                rows
+            }
+            .contentShape(Rectangle())
+            .onHover { inside in
+                if inside { hoveredBlock = block.start }
+                else if hoveredBlock == block.start { hoveredBlock = nil }
+            }
+            #else
+            rows
+            #endif
         }
         // The dragged block leaves a gap where it would land; its snapshot
         // follows the pointer.
@@ -177,37 +190,27 @@ public struct ChecklistEditorView: View {
             onPerform: finishDrag))
     }
 
-    /// A block's first row; on the Mac it carries the grip that appears on
-    /// hover, out in the left margin so the text doesn't shift.
-    @ViewBuilder
-    private func headRow(_ block: Block, line: Line) -> some View {
-        #if os(macOS)
-        row(at: block.start, line: line)
+    #if os(macOS)
+    /// The block's gutter: empty until the pointer is over the item, then
+    /// the grip to drag it by.
+    private func grip(_ block: Block, head: Line) -> some View {
+        let shown = head.image == nil && (hoveredBlock == block.start || draggingBlock == block.start)
+        return Image(systemName: "line.3.horizontal")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(Color.primary.opacity(0.4))
+            .frame(width: Self.gripGutter, height: 20)
+            .contentShape(Rectangle())
+            .opacity(shown ? 1 : 0)
+            .allowsHitTesting(shown)
             .onHover { inside in
-                if inside { hoveredBlock = block.start }
-                else if hoveredBlock == block.start { hoveredBlock = nil }
+                // set, not push/pop: the grip can vanish under the
+                // pointer, and an unmatched push sticks.
+                (inside ? NSCursor.openHand : NSCursor.arrow).set()
             }
-            .overlay(alignment: .topLeading) {
-                if line.image == nil, hoveredBlock == block.start || draggingBlock == block.start {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.primary.opacity(0.4))
-                        .frame(width: Self.gripGutter, height: 18)
-                        .contentShape(Rectangle())
-                        .onHover { inside in
-                            // set, not push/pop: the grip can vanish under
-                            // the pointer, and an unmatched push sticks.
-                            (inside ? NSCursor.openHand : NSCursor.arrow).set()
-                        }
-                        .onDrag({ beginDrag(block) }, preview: { dragPreview(block, lines: lines) })
-                        .help(L("Drag to reorder", "拖动排序"))
-                        .offset(x: -Self.gripGutter - 1, y: 0)
-                }
-            }
-        #else
-        row(at: block.start, line: line)
-        #endif
+            .onDrag({ beginDrag(block) }, preview: { dragPreview(block, lines: lines) })
+            .help(L("Drag to reorder", "拖动排序"))
     }
+    #endif
 
     private func beginDrag(_ block: Block) -> NSItemProvider {
         draggingBlock = block.start

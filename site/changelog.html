@@ -246,6 +246,18 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.12.1", date: "2026-10-20", gh: true,
+      zh: { title: "Mac 上的拖动把手能抓住了(仅 macOS)",
+        fixed: [
+          ["子任务的拖动把手不会再一碰就消失。", "以前鼠标一移向把手,把手就消失了,根本拖不动。现在把手会一直显示,按住就能拖。"] ],
+        improved: [
+          ["iPhone 版没有变化,仍是 1.12.0。", ""] ] },
+      en: { title: "A drag grip you can grab on the Mac (macOS only)",
+        fixed: [
+          ["The checklist drag grip no longer vanishes as you reach for it.", "Moving toward it used to hide it, so items couldn't be dragged. It now stays put until you grab it."] ],
+        improved: [
+          ["The iPhone app is unchanged at 1.12.0.", ""] ] } },
+
     { v: "1.12.0", date: "2026-10-20", gh: true,
       zh: { title: "子任务可以拖动排序了",
         new: [
