@@ -59,8 +59,20 @@ public struct ChecklistEditorView: View {
     /// cancel callback).
     @State private var lastDragActivity: Date = .distantPast
     #if os(macOS)
-    /// The block whose grip shows (the pointer is over its first row).
+    /// The block whose grip shows (the pointer is over it).
     @State private var hoveredBlock: Int?
+    /// Where each block sits in the list (its laid-out slot, before the
+    /// drag offset), keyed by its first line.
+    @State private var blockFrames: [Int: CGRect] = [:]
+    /// The dragged block's centre when it was grabbed, and how far the
+    /// pointer has moved since (down is positive).
+    @State private var dragStartCentre: CGFloat = 0
+    @State private var dragTranslation: CGFloat = 0
+    /// Block heights and the list's top, taken when the grip is grabbed.
+    /// Slots during the drag are worked out from these and the live order
+    /// — not read back from layout, which already includes the drag offset.
+    @State private var dragHeights: [Int: CGFloat] = [:]
+    @State private var dragListTop: CGFloat = 0
     #endif
 
     public init(note: Note) {
@@ -80,6 +92,9 @@ public struct ChecklistEditorView: View {
                 .padding(.leading, Self.gripGutter)   // in line with the items
                 #endif
         }
+        #if os(macOS)
+        .coordinateSpace(.named(Self.listSpace))
+        #endif
         .animation(.spring(response: 0.30, dampingFraction: 0.80), value: dragOrder)
         // Catches a release between rows, so it still lands.
         .background {
@@ -168,8 +183,30 @@ public struct ChecklistEditorView: View {
             rows
             #endif
         }
+        #if os(macOS)
+        // The slot it's laid out in — read before the drag offset below.
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.listSpace)) } action: {
+            blockFrames[block.start] = $0
+        }
+        // The dragged block rides on the pointer, lifted over the others,
+        // which slide into place around it.
+        .background {
+            if dragging {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(.background)
+                    .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
+                    .padding(-3)
+            }
+        }
+        .offset(y: dragging ? liftOffset(block.start) : 0)
+        .zIndex(dragging ? 1 : 0)
+        // Only the others glide. The dragged one follows the pointer
+        // exactly; springing its slot while the offset jumps to the new
+        // slot would make it lurch a row on every swap.
+        .transaction { if dragging { $0.animation = nil } }
+        #else
         // The dragged block leaves a gap where it would land; its snapshot
-        // follows the pointer.
+        // follows the finger.
         .opacity(dragging ? 0 : 1)
         .overlay {
             if dragging {
@@ -178,16 +215,15 @@ public struct ChecklistEditorView: View {
                                   style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
             }
         }
-        #if os(iOS)
         // The whole row lifts on a long press. The row being edited keeps
         // its long press for selecting text (see ChecklistItemFieldIOS).
         .onDrag({ beginDrag(block) }, preview: { dragPreview(block, lines: all) })
-        #endif
         .onDrop(of: [Self.dragType], delegate: ChecklistDropDelegate(
             isActive: draggingBlock != nil,
             onEnter: { moveDragged(over: block.start) },
             onUpdate: { lastDragActivity = Date() },
             onPerform: finishDrag))
+        #endif
     }
 
     #if os(macOS)
@@ -197,18 +233,72 @@ public struct ChecklistEditorView: View {
         let shown = head.image == nil && (hoveredBlock == block.start || draggingBlock == block.start)
         return Image(systemName: "line.3.horizontal")
             .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(Color.primary.opacity(0.4))
+            .foregroundStyle(Color.primary.opacity(shown ? 0.4 : 0))
             .frame(width: Self.gripGutter, height: 20)
-            .contentShape(Rectangle())
-            .opacity(shown ? 1 : 0)
-            .allowsHitTesting(shown)
-            .onHover { inside in
-                // set, not push/pop: the grip can vanish under the
-                // pointer, and an unmatched push sticks.
-                (inside ? NSCursor.openHand : NSCursor.arrow).set()
+            // The press and drag are AppKit's (GripHandleView), not a
+            // SwiftUI gesture or the system drag-and-drop. A system drag
+            // session here showed its preview but never landed — and its
+            // blocking slide-back animation could wedge the app — and the
+            // move never leaves this list anyway.
+            .overlay {
+                if head.image == nil {
+                    GripHandle(onDrag: { dragGrip(block, translation: $0) },
+                               onEnd: endGripDrag)
+                }
             }
-            .onDrag({ beginDrag(block) }, preview: { dragPreview(block, lines: lines) })
             .help(L("Drag to reorder", "拖动排序"))
+    }
+
+    static let listSpace = "doris.checklist"
+
+    /// How far the dragged block is drawn from its current slot so it
+    /// stays under the pointer.
+    private func liftOffset(_ start: Int) -> CGFloat {
+        guard let order = dragOrder, let mid = slotMids(order)[start] else { return 0 }
+        return dragStartCentre + dragTranslation - mid
+    }
+
+    /// Each block's centre if the list were laid out in `order`.
+    private func slotMids(_ order: [Int]) -> [Int: CGFloat] {
+        var y = dragListTop
+        var mids: [Int: CGFloat] = [:]
+        for start in order {
+            let h = dragHeights[start] ?? 0
+            mids[start] = y + h / 2
+            y += h + 6                       // the list's row spacing
+        }
+        return mids
+    }
+
+    private func dragGrip(_ block: Block, translation: CGFloat) {
+        if draggingBlock == nil {
+            let starts = Block.split(lines).map(\.start)
+            guard let frame = blockFrames[block.start],
+                  starts.allSatisfy({ blockFrames[$0] != nil }) else { return }
+            dragHeights = blockFrames.mapValues(\.height)
+            dragListTop = starts.compactMap { blockFrames[$0]?.minY }.min() ?? 0
+            draggingBlock = block.start
+            dragOrder = starts
+            dragStartCentre = frame.midY
+        }
+        guard let dragging = draggingBlock, var order = dragOrder,
+              var i = order.firstIndex(of: dragging) else { return }
+        dragTranslation = translation
+        // The block's centre, wherever the pointer has taken it. Pass a
+        // neighbour's middle and the two swap places.
+        let centre = dragStartCentre + translation
+        while i + 1 < order.count, let next = slotMids(order)[order[i + 1]], centre > next {
+            order.swapAt(i, i + 1); i += 1
+        }
+        while i > 0, let prev = slotMids(order)[order[i - 1]], centre < prev {
+            order.swapAt(i, i - 1); i -= 1
+        }
+        if order != dragOrder { dragOrder = order }
+    }
+
+    private func endGripDrag() {
+        finishDrag()
+        dragTranslation = 0
     }
     #endif
 
@@ -1096,6 +1186,63 @@ struct ChecklistItemFieldIOS: UIViewRepresentable {
 }
 
 #endif // os(iOS)
+
+#if os(macOS)
+// MARK: - Grip (AppKit)
+
+/// The checklist grip's mouse handling: press, drag, release, reported as
+/// the vertical distance moved (down is positive). AppKit delivers the
+/// drag events to the view that took the press, so this keeps tracking
+/// wherever the pointer goes, in the menu-bar panel too (first mouse).
+private struct GripHandle: NSViewRepresentable {
+    var onDrag: (CGFloat) -> Void
+    var onEnd: () -> Void
+
+    func makeNSView(context: Context) -> GripHandleView {
+        let v = GripHandleView()
+        v.onDrag = onDrag
+        v.onEnd = onEnd
+        return v
+    }
+
+    func updateNSView(_ v: GripHandleView, context: Context) {
+        v.onDrag = onDrag
+        v.onEnd = onEnd
+    }
+}
+
+final class GripHandleView: NSView {
+    var onDrag: (CGFloat) -> Void = { _ in }
+    var onEnd: () -> Void = {}
+    private var startY: CGFloat = 0
+    private var dragging = false
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
+
+    override func mouseDown(with event: NSEvent) {
+        startY = event.locationInWindow.y
+        dragging = false
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        let moved = startY - event.locationInWindow.y      // window y grows upward
+        if !dragging {
+            guard abs(moved) >= 2 else { return }
+            dragging = true
+            NSCursor.closedHand.push()
+        }
+        onDrag(moved)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard dragging else { return }
+        dragging = false
+        NSCursor.pop()
+        onEnd()
+    }
+}
+#endif
 
 // MARK: - Blocks
 

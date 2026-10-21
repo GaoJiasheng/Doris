@@ -152,12 +152,7 @@ private struct DesktopPetContent: View {
 
     var body: some View {
         // AvatarHero is non-interactive; this wrapper owns click vs drag.
-        AvatarHero(mood: .idle,
-                   compact: true,
-                   showWeather: false,
-                   selfChrome: false,
-                   transparentBackdrop: true,
-                   interactive: false)
+        AvatarHero(mood: .idle, compact: true)
             .frame(width: size, height: size * 1.5)
             .contentShape(Rectangle())
             .help(L(

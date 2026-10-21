@@ -1,8 +1,8 @@
 // swift-tools-version: 5.10
 import PackageDescription
 
-// The character art — three packs of frame-by-frame PNG animation, plus
-// the built-in HeroAnim sequences. ~2,990 files, ~254 MB.
+// The character art — three packs of frame-by-frame PNG animation
+// (Characters/<id>/anim/<mood>), plus each pack's logo and portrait.
 //
 // This lives in its own package purely so the art does not reach iOS.
 // SwiftPM copies a target's `resources:` into *every* product that links
@@ -27,7 +27,6 @@ let package = Package(
             name: "DorisCharacters",
             path: "Sources/DorisCharacters",
             resources: [
-                .copy("HeroAnim"),
                 .copy("Characters")
             ]
         )

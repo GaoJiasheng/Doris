@@ -123,14 +123,11 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
     }
 
-    /// Avatar / character configuration — visibility, which character pack,
+    /// Avatar / character configuration — which character pack,
     /// reaction level, and where it lives (edge vs. desktop pet). This is the
     /// home for future character / logo customization too.
     private var avatarTab: some View {
         Form {
-            Toggle(L("Show avatar", "显示卡通助手"),
-                   isOn: Binding(get: { avatarSettings.avatarVisible },
-                                 set: { avatarSettings.avatarVisible = $0 }))
             // Which character pack drives the animation + portrait. Shows
             // only once more than the built-in pack is installed.
             if packStore.available.count > 1 {

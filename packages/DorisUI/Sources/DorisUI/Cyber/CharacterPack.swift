@@ -38,9 +38,8 @@ public struct CharacterManifest: Decodable {
     /// Optional per-pack color theme. Any subset of colors may be set; the
     /// rest fall back to the girl defaults.
     public let theme: ThemeManifest?
-    /// Internal escape hatch for the built-in `girl` pack, whose frames
-    /// live in the legacy `HeroAnim/` directory rather than
-    /// `Characters/girl/anim/`. New packs omit this.
+    /// Escape hatch for a pack whose frames live somewhere other than
+    /// `Characters/<id>/anim/`. Packs normally omit this.
     public let animDirectoryOverride: String?
 }
 
@@ -107,7 +106,7 @@ public struct CharacterPack: Identifiable, Equatable {
     /// Frame rate for looping moods (idle/listening/…).
     public let loopFps: Double
     /// Subdirectory in `the character-art bundle` holding the per-mood frame folders.
-    /// Default `Characters/<id>/anim`; `girl` overrides to legacy `HeroAnim`.
+    /// Default `Characters/<id>/anim`.
     public let animDirectory: String
     /// Subdirectory in `the character-art bundle` holding portrait/thumb/logo PNGs.
     public let resourceDirectory: String
@@ -149,10 +148,10 @@ public struct CharacterPack: Identifiable, Equatable {
         id: "girl",
         displayName: "小姑娘",
         displayNameEN: "Doris",
-        availableMoods: ["idle", "greeting", "alerted", "listening", "celebrating", "walking", "confused"],
-        fps: 16,
+        availableMoods: ["idle", "greeting", "alerted", "listening", "celebrating"],
+        fps: 12,
         loopFps: 12,
-        animDirectory: "HeroAnim",
+        animDirectory: "Characters/girl/anim",
         resourceDirectory: "Characters/girl",
         hasCustomIcon: false,
         theme: .girl

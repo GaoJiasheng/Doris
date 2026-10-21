@@ -68,7 +68,7 @@ private struct TokenSummaryCardInner: View {
                 Spacer(minLength: 8)
 
                 // Weather glance — fills the otherwise-empty right side
-                // (same shared snapshot the sidebar avatar uses).
+                // (the app-wide shared snapshot; started in onAppear below).
                 if let w = weather.snapshot {
                     HStack(spacing: 7) {
                         Image(systemName: w.symbolName)

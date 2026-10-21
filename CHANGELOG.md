@@ -6,6 +6,42 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.12.2 — 2026-10-21 (macOS)
+
+Checklist dragging that actually works on the Mac, and a leaner app: the
+animated character pane is gone, the character lives on in the notch
+logo and the desktop pet. iPhone stays on 1.12.0.
+
+### Fixed
+
+- **Dragging a checklist item works.** The grip used the system
+  drag-and-drop, which on the Mac showed the item's preview but never
+  dropped it, and its blocking slide-back animation could wedge the app.
+  The grip now tracks the mouse itself: the item rides under the
+  pointer, the others slide aside, and it lands where you let go — with
+  its images.
+
+### Removed
+
+- **The animated character pane** — the left column of the window the
+  notch and pet open, and its toggle in the header and in Settings
+  ("显示卡通助手"). Dragging items sideways kept setting off its
+  animations. The weather it showed is still on the Today tab's summary
+  card (without the wind / UV detail).
+- **About 90 MB of unused character art** — the "walking" and "confused"
+  clips (never played since the pane went) and a legacy copy of the
+  girl's animation. The app is about 100 MB smaller (DMG 274 → 177 MB).
+
+### Changed
+
+- The desktop pet no longer piles up unseen "Z" sleep particles while it
+  dozes (they were only drawn in the pane).
+- Releases no longer leave a runnable copy of Doris in `build/`: macOS
+  could launch one of those old copies instead of the installed app
+  (it once started 1.8.3).
+
+---
+
 ## 1.12.1 — 2026-10-20 (macOS)
 
 ### Fixed

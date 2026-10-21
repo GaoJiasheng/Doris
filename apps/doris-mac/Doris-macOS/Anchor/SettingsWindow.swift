@@ -671,12 +671,6 @@ private struct AppearanceSettingsView: View {
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            Toggle(isOn: Binding(get: { avatarSettings.avatarVisible },
-                                 set: { avatarSettings.avatarVisible = $0 })) {
-                Text(L("Show avatar", "显示卡通助手")).font(.subheadline)
-            }
-            .toggleStyle(.switch)
-
             // Edge-docked (notch / menu bar) vs free-floating desktop pet.
             VStack(alignment: .leading, spacing: 4) {
                 Text(L("Avatar placement", "助手位置")).font(.subheadline)

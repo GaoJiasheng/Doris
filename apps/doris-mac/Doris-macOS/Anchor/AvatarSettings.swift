@@ -34,18 +34,11 @@ public enum PetSize: String, CaseIterable {
     }
 }
 
-/// Whether the cyber-girl avatar ("小姑娘") pane is shown in the main
-/// window sidebar + the menu-bar dropdown. Persisted in `UserDefaults`
-/// so a collapse sticks across launches — this single value doubles as
-/// both the live state (toggled from either surface) and the remembered
-/// default the Settings toggle exposes.
+/// The character's settings: how lively it is, where it lives (the notch
+/// / menu-bar logo or a desktop pet), and the pet's size and position.
 @MainActor
 final class AvatarSettings: ObservableObject {
     static let shared = AvatarSettings()
-
-    @Published var avatarVisible: Bool {
-        didSet { UserDefaults.standard.set(avatarVisible, forKey: Self.visibleKey) }
-    }
 
     @Published var activityLevel: AvatarActivityLevel {
         didSet { UserDefaults.standard.set(activityLevel.rawValue, forKey: Self.activityKey) }
@@ -61,7 +54,6 @@ final class AvatarSettings: ObservableObject {
         didSet { UserDefaults.standard.set(petSize.rawValue, forKey: Self.petSizeKey) }
     }
 
-    private static let visibleKey   = "doris.avatar.visible"
     private static let activityKey   = "doris.avatar.activityLevel"
     private static let placementKey  = "doris.avatar.placement"
     private static let petSizeKey    = "doris.avatar.petSize"
@@ -92,11 +84,6 @@ final class AvatarSettings: ObservableObject {
     }
 
     private init() {
-        if let raw = UserDefaults.standard.object(forKey: Self.visibleKey) as? Bool {
-            self.avatarVisible = raw
-        } else {
-            self.avatarVisible = true
-        }
         if let raw = UserDefaults.standard.string(forKey: Self.activityKey),
            let level = AvatarActivityLevel(rawValue: raw) {
             self.activityLevel = level

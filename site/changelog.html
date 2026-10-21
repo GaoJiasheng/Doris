@@ -246,6 +246,20 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.12.2", date: "2026-10-21", gh: true,
+      zh: { title: "Mac 上子任务能拖了,界面更清爽(仅 macOS)",
+        fixed: [
+          ["子任务可以正常拖动排序了。", "以前拖起来只看到预览,松手不生效,还可能卡住。现在按住把手拖,这一条会跟着鼠标走,其他条目自动让开,松手就落在那里,下面的图片也一起走。"] ],
+        improved: [
+          ["去掉了窗口左边的卡通动画栏。", "左右拖东西时容易误触发它的动画。卡通形象保留在刘海 logo 和桌面宠物上;天气仍显示在「今日」顶部的卡片里。"],
+          ["安装包小了约 100 MB。", "清理了从未播放的动画素材,DMG 从 274 MB 降到 177 MB。"] ] },
+      en: { title: "Checklist dragging on the Mac, and a leaner window (macOS only)",
+        fixed: [
+          ["Dragging checklist items works.", "It used to show a preview and never drop, and could hang. The item now follows the pointer, the others slide aside, and it lands where you let go — images included."] ],
+        improved: [
+          ["The animated character column is gone.", "Dragging sideways kept setting it off. The character stays in the notch logo and the desktop pet; weather is still on the Today summary card."],
+          ["About 100 MB smaller.", "Unused animation art removed; the DMG went from 274 MB to 177 MB."] ] } },
+
     { v: "1.12.1", date: "2026-10-20", gh: true,
       zh: { title: "Mac 上的拖动把手能抓住了(仅 macOS)",
         fixed: [

@@ -2,7 +2,7 @@
   "id": "girl",
   "displayName": "赛博·女孩",
   "displayNameEN": "Cyber Girl",
-  "moods": ["idle", "greeting", "celebrating", "alerted", "listening", "confused", "walking"],
+  "moods": ["idle", "greeting", "celebrating", "alerted", "listening"],
   "fps": 12,
   "loopFps": 12,
   "theme": {

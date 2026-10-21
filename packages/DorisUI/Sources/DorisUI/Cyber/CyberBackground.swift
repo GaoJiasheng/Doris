@@ -32,7 +32,7 @@ public struct CyberBackground: View {
     // window that alone pinned CPU at 60–90% and tripped the energy warning
     // even when the window was idle. The ambient motion was imperceptible;
     // holding both halo + scanlines static lets CoreAnimation cache the layer
-    // once. (Same call AvatarHero already made for its own scanlines.)
+    // once.
     public var body: some View {
         ZStack {
             CyberPalette.backdrop

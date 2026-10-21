@@ -12,16 +12,15 @@ public typealias HeroPlatformImage = UIImage
 /// then signal completion via `onFinished` (the parent view typically
 /// uses that to drop back to the loop mood).
 ///
-/// Frames live at `DorisCharacters.bundle/HeroAnim/<mood>/<mood>_NNNN.png` and are
-/// loaded lazily on first use, then cached per-mood. A weak shared cache
-/// across all instances keeps memory in check when two screens (Mac
-/// dropdown panel + main window) play the same mood.
+/// Frames live at `DorisCharacters.bundle/<animDirectory>/<mood>/<mood>_NNNN.png` and are
+/// loaded lazily on first use, then cached per-mood in a weak shared
+/// cache, so a re-created player doesn't decode the same frames again.
 public struct AnimatedAvatarPlayer: View {
     /// Underlying clip name on disk (e.g. "idle", "greeting"). Drives both
     /// the directory lookup and the `<mood>_NNNN.png` filename prefix.
     let clip: String
-    /// True for ambient loops (idle, listening, walking, sleeping). False
-    /// for one-shot reactions (greeting, alerted, celebrating, confused).
+    /// True for ambient loops (idle, listening, sleeping). False for
+    /// one-shot reactions (greeting, alerted, celebrating).
     let isLooping: Bool
     /// Source frame rate. The bundled clips were rendered at 16 fps so
     /// playback at 16 fps maps frames 1:1 to the AI-generated motion.
@@ -35,8 +34,8 @@ public struct AnimatedAvatarPlayer: View {
     /// Looping clips never fire this. Use it to revert mood → idle.
     let onFinished: (() -> Void)?
     /// Subdirectory in `DorisCharacters.bundle` holding the per-mood frame folders
-    /// for the active character pack — e.g. "HeroAnim" (built-in girl) or
-    /// "Characters/<id>/anim". Frames load from `<animDirectory>/<clip>/`.
+    /// for the active character pack — "Characters/<id>/anim". Frames load
+    /// from `<animDirectory>/<clip>/`.
     let animDirectory: String
     /// When true, freeze on a single static frame with NO `TimelineView`, so
     /// the periodic frame timer stops firing entirely. Driven by the host's
@@ -49,7 +48,7 @@ public struct AnimatedAvatarPlayer: View {
         isLooping: Bool,
         fps: Double = 16,
         verticalOffset: CGFloat = 0,
-        animDirectory: String = "HeroAnim",
+        animDirectory: String = "Characters/girl/anim",
         paused: Bool = false,
         onFinished: (() -> Void)? = nil
     ) {

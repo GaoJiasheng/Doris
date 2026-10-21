@@ -110,8 +110,8 @@ struct MainTodayView: View {
                 // active) so the scroll content can lead directly with
                 // the actual content — saves a row of vertical space
                 // that was otherwise just visual chrome. iOS Today also
-                // shows a weather card here; we skip it on mac because
-                // the sidebar avatar already carries the weather pill.
+                // shows a weather card here; on the Mac the weather sits
+                // in the token summary card instead.
 
                 // ── Pinned ──────────────────────────────────────────────
                 // Pinned uses pink to read as "attention worthy"

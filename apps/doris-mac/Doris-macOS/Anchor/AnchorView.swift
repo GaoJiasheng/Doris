@@ -9,28 +9,10 @@ struct AnchorView: View {
     @ObservedObject var model: AnchorModel
     @ObservedObject private var lang = LanguageSettings.shared
     @ObservedObject private var theme = ThemeSettings.shared
-    @ObservedObject private var avatarSettings = AvatarSettings.shared
     /// Lifted up from `AnchorNotesView` so the parent can hide the
     /// brand row + tab bar when editing is active — the editor gets
     /// the full right-pane height for itself.
     @State private var editingNote: Note?
-    /// Live width of the expanded panel, used to auto-hide the avatar
-    /// pane when the panel is dragged too narrow (otherwise the 200pt
-    /// avatar crowds out the content + clips the header toggle). Seeded
-    /// wide so the avatar shows immediately on open before the first
-    /// geometry measurement lands.
-    @State private var expandedWidth: CGFloat = 600
-    /// Below this width the avatar pane + its toggle auto-hide and the
-    /// content takes the full panel; above it the avatar follows the
-    /// user's `avatarVisible` setting.
-    private let avatarMinPanelWidth: CGFloat = 440
-    /// Avatar shows only when the user wants it AND there's room.
-    private var showAvatarInExpanded: Bool {
-        avatarSettings.avatarVisible && expandedWidth >= avatarMinPanelWidth
-    }
-    /// The header collapse toggle is only meaningful (and only fits)
-    /// when the panel is wide enough to host the avatar.
-    private var avatarToggleVisible: Bool { expandedWidth >= avatarMinPanelWidth }
     let position: AnchorPosition
     /// True when the screen the anchor lives on has a real camera notch. Drives whether
     /// the idle visual is a small circle (next to the real notch) or a fake-notch pill.
@@ -85,18 +67,6 @@ struct AnchorView: View {
         // and the card came out looking light, even though everything
         // else in the app was dark.
         .preferredColorScheme(theme.mode.colorScheme)
-    }
-
-    /// Translate the dropdown's avatar state into a HeroMood for the
-    /// shared `AvatarHero` view. `.click` maps to a one-shot greeting
-    /// bounce, `.notify` to the alert head-shake.
-    private func heroMood(for state: AvatarState) -> HeroMood {
-        switch state {
-        case .idle:     return .idle
-        case .click:    return .greeting
-        case .notify:   return .alerted
-        case .expanded: return .idle
-        }
     }
 
     private var rendersAsFakeNotch: Bool {
@@ -382,46 +352,6 @@ struct AnchorView: View {
     private var expandedSummaryView: some View {
         let useFakeNotch = rendersAsFakeNotch
         return HStack(spacing: 0) {
-            // LEFT: same cyber-girl hero used in the main window's sidebar,
-            // here stretched to 200pt with the right corners flat (the
-            // panel's outer border draws the chrome). selfChrome=false to
-            // skip its built-in rounded clip so our UnevenRoundedRectangle
-            // is the only clip.
-            // Avatar pane is collapsible — hidden when the user turned
-            // it off (header toggle / Settings) OR when the panel is too
-            // narrow to fit it without crowding the content.
-            if showAvatarInExpanded {
-                AvatarHero(
-                    mood: heroMood(for: model.avatarState),
-                    showWeather: true,
-                    selfChrome: false
-                )
-                .frame(width: 200)
-                .clipShape(
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: 22,
-                        bottomLeadingRadius: 22,
-                        bottomTrailingRadius: 0,
-                        topTrailingRadius: 0,
-                        style: .continuous
-                    )
-                )
-                .transition(.move(edge: .leading).combined(with: .opacity))
-
-                // Vertical divider with a neon accent
-                Rectangle()
-                    .fill(LinearGradient(
-                        colors: [
-                            Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.0),
-                            Color(red: 1.0, green: 0.30, blue: 0.75).opacity(0.6),
-                            Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.6),
-                            Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.0)
-                        ],
-                        startPoint: .top, endPoint: .bottom
-                    ))
-                    .frame(width: 1)
-            }
-
             // RIGHT: header + tabs + content. When the user is editing
             // a note, hide the brand row + tab bar + divider so the
             // inline editor gets every pixel of vertical space — that's
@@ -459,28 +389,6 @@ struct AnchorView: View {
                                   dark: CyberPalette.neonCyan.opacity(0.7))
                         )
                     Spacer()
-                    // Collapse / restore the avatar pane. Hidden when
-                    // the panel is too narrow to host the avatar at all
-                    // (the avatar auto-hides by width there, so the
-                    // toggle would be a no-op). Persisted via
-                    // AvatarSettings; mirrors the Settings toggle.
-                    if avatarToggleVisible {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                avatarSettings.avatarVisible.toggle()
-                            }
-                        } label: {
-                            Image(systemName: "sidebar.left")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(avatarSettings.avatarVisible
-                                    ? AnyShapeStyle(CyberPalette.neonCyan.opacity(0.85))
-                                    : AnyShapeStyle(Color.primary.opacity(0.45)))
-                        }
-                        .buttonStyle(.plain)
-                        .help(avatarSettings.avatarVisible
-                              ? L("Hide avatar", "隐藏卡通助手")
-                              : L("Show avatar", "显示卡通助手"))
-                    }
                     // Theme toggle moved to Settings; the panel auto-
                     // dismisses on outside clicks, so no X button either.
                 }
@@ -527,15 +435,6 @@ struct AnchorView: View {
         // saved size is persisted in `AnchorScreenStore`, so the
         // SwiftUI content shouldn't hard-code the baseline 560×380.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        // Track the live panel width so the avatar pane auto-hides when
-        // the panel is dragged too narrow (and reappears when widened).
-        .background(
-            GeometryReader { proxy in
-                Color.clear
-                    .onAppear { expandedWidth = proxy.size.width }
-                    .onChange(of: proxy.size.width) { _, w in expandedWidth = w }
-            }
-        )
         .background(panelBackground(useFakeNotch: useFakeNotch))
         .overlay(panelBorder)
         // Resize is now handled at the NSPanel level via the

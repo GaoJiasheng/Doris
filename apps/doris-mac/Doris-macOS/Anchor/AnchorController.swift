@@ -92,8 +92,7 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
         }
         if avatarSettingsSinks.isEmpty {
             // Switch logo ↔ pet when the user changes placement; rebuild the
-            // pet on size change. (avatarVisible is intentionally NOT observed
-            // here — it only governs the in-window character, not the launcher.)
+            // pet on size change.
             AvatarSettings.shared.$placement
                 .receive(on: RunLoop.main)
                 .sink { [weak self] _ in self?.applyPlacement() }
@@ -332,8 +331,8 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     }
 
     private func showPanel() {
-        // (Re)build the SwiftUI host so the AvatarHero / AnchorView tree
-        // is freshly mounted. We tear it down on hide to stop animations,
+        // (Re)build the SwiftUI host so the AnchorView tree is freshly
+        // mounted. We tear it down on hide to stop animations,
         // so on show we have to put it back.
         if panel == nil || panel?.contentViewController == nil {
             buildPanel()
@@ -476,11 +475,7 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     private func applyPlacement() {
         // The menu-bar avatar (notch logo OR desktop pet) is the app's
         // anchor / launcher — ALWAYS exactly one of the two, chosen by
-        // `placement`. It is deliberately NOT tied to `avatarVisible`:
-        // that toggle only governs the in-window animated character
-        // (main-window left column + dropdown hero). Tying the launcher to
-        // it left the user with no way to open the app when they hid the
-        // character.
+        // `placement`.
         switch AvatarSettings.shared.placement {
         case .desktop:
             avatarWindow?.hide()

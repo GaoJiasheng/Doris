@@ -275,6 +275,14 @@ xcrun stapler validate "$DMG" 2>&1 | tail -2
 spctl --assess --type install --verbose "$DMG" 2>&1 | tail -2 \
   || true # spctl is informational at this point
 
+# The exported app stays behind in build/ — and LaunchServices registers
+# every copy of the bundle id it sees, so "open Doris" (Spotlight, the
+# doris:// scheme, Finder) could start an OLD release from build/ instead
+# of /Applications. Once it launched 1.8.3, the version that deleted
+# archived tasks. The DMG is the deliverable; drop the loose app.
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u "$APP" 2>/dev/null || true
+rm -rf "$APP"
+
 SIZE="$(du -h "$DMG" | cut -f1)"
 echo ""
 echo "✨ Release built: $DMG ($SIZE)"

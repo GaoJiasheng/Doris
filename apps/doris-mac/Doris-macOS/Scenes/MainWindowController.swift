@@ -176,14 +176,9 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     ///
     /// The two-step delay matters: we have to wait for AppKit to finish
     /// `makeKeyAndOrderFront` AND for SwiftUI to mount the hosting view
-    /// tree (so `AvatarHero`'s `.onChange(of: heroEvents.lastGreeting)`
-    /// observer is attached) before bumping the bus. If we bumped it
-    /// synchronously, the change would happen before the observer was
-    /// in place and the greeting would be silently missed.
-    ///
-    /// 200 ms is the same hand-tuned delay the dropdown panel uses for
-    /// the same reason; both surfaces share the singleton `HeroEvents`
-    /// bus + the same `AvatarHero` listener pattern.
+    /// tree before bumping the bus; the listener is the desktop pet's
+    /// `AvatarHero` (`.onChange(of: heroEvents.lastGreeting)`). 200 ms is
+    /// hand-tuned.
     private func scheduleGreetOnNextRunloop() {
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 200_000_000)

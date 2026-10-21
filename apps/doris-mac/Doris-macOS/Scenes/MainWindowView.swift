@@ -16,14 +16,11 @@ private struct WindowDragArea: NSViewRepresentable {
     }
 }
 
-/// "Deep work" main window. Same cyber vocabulary as the dropdown panel —
-/// adaptive backdrop (dark or light, controlled by `ThemeSettings`), the
-/// avatar hero in the sidebar header, neon-stroked surface cards in the
-/// detail pane. Toolbar exposes the theme toggle so users can flip modes
-/// without going to Settings.
-///
-/// Sidebar items: **Inbox** and **Notes**. The previous "Devices" placeholder
-/// was retired since it never had functional content.
+/// The main window — also what the notch and the desktop pet open (as a
+/// transient panel). Adaptive cyber backdrop (dark or light, controlled by
+/// `ThemeSettings`) and neon-stroked cards; the header carries the tabs,
+/// sync, theme and settings. (The animated-character sidebar is gone: the
+/// character lives in the notch logo and the desktop pet.)
 struct MainWindowView: View {
     @ObservedObject private var lang = LanguageSettings.shared
     /// Observed here (not just at the controller's view construction)
@@ -31,11 +28,6 @@ struct MainWindowView: View {
     /// SwiftUI re-evaluation. Without this binding the window kept
     /// whatever colorScheme was captured at first mount.
     @ObservedObject private var theme = ThemeSettings.shared
-    /// Drives whether the avatar sidebar shows. Two-way synced with
-    /// `columnVisibility` below: collapsing the sidebar (system toggle)
-    /// persists the preference, and flipping it from Settings collapses
-    /// / restores the sidebar here.
-    @ObservedObject private var avatarSettings = AvatarSettings.shared
     @State private var tab: Tab = .today
     /// Lifted up from `MainNotesList` so the detail header (DORIS
     /// brand + tab buttons) can hide while editing — the editor gets
@@ -43,12 +35,6 @@ struct MainWindowView: View {
     /// tapping a pinned/upcoming card on Today opens the same editor
     /// surface used by the TODO tab.
     @State private var editingNote: Note?
-    /// Two-way bound so we can react to "sidebar collapsed" — when the
-    /// avatar pane is hidden, the detail pane fills the window and
-    /// the system draws traffic lights + sidebar-toggle inline at the
-    /// detail's leading edge. The detail header needs to reserve room
-    /// for those, otherwise the DORIS / tabs strip slides under them.
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     /// Used to fetch a note by id when the focus ring is clicked
     /// (`.dorisOpenNote`) so we can drop straight into its editor.
     @Environment(\.modelContext) private var ctx
@@ -58,30 +44,10 @@ struct MainWindowView: View {
     var body: some View {
         ZStack {
             CyberBackground(haloIntensity: 0.7)
-            NavigationSplitView(columnVisibility: $columnVisibility) {
-                // Apply zoom *inside* each pane rather than wrapping
-                // NavigationSplitView. The earlier "wrap the whole
-                // thing in dorisZoom" approach put a GeometryReader
-                // above NavigationSplitView, which broke its
-                // internal hit-test routing — clicks on TODO/Events/
-                // sync/theme stopped registering. Per-pane zoom
-                // keeps NavSplitView's own layout/divider/responder
-                // logic intact; each pane's content is what scales.
-                sidebar.dorisZoom()
-            } detail: {
-                detail.dorisZoom()
-            }
-            .navigationSplitViewStyle(.balanced)
-            .scrollContentBackground(.hidden)
-            // Hide the window toolbar entirely. NavigationSplitView otherwise
-            // auto-creates one to host its sidebar-toggle button, and since
-            // our header is in-content (not the toolbar), that toolbar row
-            // sat empty — a big ~52pt band above the header on top of the
-            // ~28pt title bar. With it hidden, only the traffic-light strip
-            // remains. (The sidebar toggle is re-added in `detailHeader`.)
-            .toolbar(.hidden, for: .windowToolbar)
+            detail.dorisZoom()
+                .scrollContentBackground(.hidden)
         }
-        .frame(minWidth: 760, minHeight: 520)
+        .frame(minWidth: 540, minHeight: 520)
         // The window is borderless + clear, so the content's own rounded
         // shape IS the visible window (with the window's drop shadow). Round
         // the corners + add a hairline edge so it reads as a real window, not
@@ -92,24 +58,6 @@ struct MainWindowView: View {
                 .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
         )
         .preferredColorScheme(theme.mode.colorScheme)
-        // Restore the saved avatar-sidebar preference on open.
-        .onAppear {
-            columnVisibility = avatarSettings.avatarVisible ? .all : .detailOnly
-        }
-        // Settings toggle → collapse / restore the sidebar here.
-        .onChange(of: avatarSettings.avatarVisible) { _, visible in
-            withAnimation(.smooth(duration: 0.2)) {
-                columnVisibility = visible ? .all : .detailOnly
-            }
-        }
-        // User dragged/clicked the system sidebar toggle → remember it.
-        // Guarded so the two onChange handlers don't ping-pong.
-        .onChange(of: columnVisibility) { _, vis in
-            let nowVisible = (vis != .detailOnly)
-            if nowVisible != avatarSettings.avatarVisible {
-                avatarSettings.avatarVisible = nowVisible
-            }
-        }
         // Cmd-+ / Cmd-− / Cmd-0 are intercepted by
         // `MainWindowController.installZoomKeyMonitor` (NSEvent
         // local monitor). The keypress mutates `ZoomSettings.shared.scale`;
@@ -119,63 +67,6 @@ struct MainWindowView: View {
         // which `dorisZoom()` reflows into without changing the
         // visual font size. So Cmd-+ scales fonts/icons, drag
         // expands layout space.
-    }
-
-    // MARK: - Sidebar
-
-    /// Sidebar is the avatar hero on the deep-space gradient. The
-    /// background gradient still extends to the top edge of the window
-    /// (under the transparent title bar) so the traffic-light buttons
-    /// float over solid dark space — but the AvatarHero CONTENT itself
-    /// respects the title-bar safe area, so the character + weather
-    /// pill start a comfortable distance below the buttons instead of
-    /// colliding with them.
-    private var sidebar: some View {
-        AvatarHero(compact: true, showWeather: true, selfChrome: false)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Resizable column: gives the split divider a drag range so the
-            // user can re-proportion avatar ↔ content (was non-resizable, so
-            // dragging the divider just moved the window).
-            .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 460)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.04, green: 0.04, blue: 0.10),
-                        Color(red: 0.01, green: 0.01, blue: 0.04)
-                    ],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
-    }
-
-    private func sidebarItem(_ value: Tab, label: String, system: String) -> some View {
-        let selected = tab == value
-        return Button {
-            tab = value
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: system)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(selected ? AnyShapeStyle(CyberPalette.neonCyan) : AnyShapeStyle(Color.primary.opacity(0.6)))
-                    .frame(width: 18)
-                Text(label)
-                    .font(.system(size: 13, weight: selected ? .semibold : .regular))
-                    .foregroundStyle(selected ? AnyShapeStyle(Color.primary) : AnyShapeStyle(Color.primary.opacity(0.7)))
-                Spacer()
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(selected ? CyberPalette.neonCyan.opacity(0.12) : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(selected ? CyberPalette.neonCyan.opacity(0.4) : Color.clear, lineWidth: 0.6)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Detail
@@ -222,22 +113,6 @@ struct MainWindowView: View {
     /// stays minimal and the whole "navigation strip" reads as one row.
     private var detailHeader: some View {
         HStack(alignment: .center, spacing: 16) {
-            // Sidebar (avatar) toggle — re-homed here because the window
-            // toolbar (which used to carry NavigationSplitView's automatic
-            // toggle) is now hidden to kill the empty band above the header.
-            Button {
-                withAnimation(.smooth(duration: 0.2)) {
-                    columnVisibility = (columnVisibility == .detailOnly) ? .all : .detailOnly
-                }
-            } label: {
-                Image(systemName: "sidebar.leading")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.primary.opacity(0.55))
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help(L("Toggle avatar sidebar", "切换卡通侧栏"))
-
             // DORIS wordmark — single line, with `.fixedSize` so SwiftUI
             // doesn't squeeze it letter-by-letter into a vertical column
             // when the toolbar fills up. The decorative "cyber helper /
@@ -307,7 +182,7 @@ struct MainWindowView: View {
                 // Custom window close button — top-RIGHT. The borderless
                 // window has no system traffic lights. A plain transparent
                 // xmark in `.primary` so it follows the light/dark theme with
-                // no jarring colored chip (matches the sidebar-toggle glyph).
+                // no jarring colored chip.
                 Button {
                     MainWindowController.shared.closeMainWindow()
                 } label: {
@@ -323,8 +198,7 @@ struct MainWindowView: View {
         }
         // No system traffic lights anymore (borderless window) and the
         // custom close button is the first item in the row, so the header
-        // just needs a small leading gutter that clears the rounded corner —
-        // the same on both sidebar states.
+        // just needs a small leading gutter that clears the rounded corner.
         .padding(.leading, 16)
         .padding(.trailing, 18)
         // Minimal top padding now that the strip sits just below the title

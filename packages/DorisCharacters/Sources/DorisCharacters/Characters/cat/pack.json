@@ -2,7 +2,7 @@
   "id": "cat",
   "displayName": "赛博猫",
   "displayNameEN": "Cyber Cat",
-  "moods": ["idle", "greeting", "celebrating", "alerted", "listening", "confused", "walking"],
+  "moods": ["idle", "greeting", "celebrating", "alerted", "listening"],
   "fps": 12,
   "loopFps": 12,
   "theme": {
