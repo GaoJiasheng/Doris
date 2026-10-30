@@ -17,30 +17,38 @@ import DorisMacChrome
 ///   - Nothing happens at launch — the window object isn't even created.
 ///   - First call to `show()` lazily builds the `NSWindow` +
 ///     `NSHostingController(MainWindowView)` and orders it front.
-///   - Subsequent calls to `show()` reuse the same instance (single-window
-///     semantics, like the previous `Window` scene gave us).
+///   - Subsequent calls to `show()` reuse the same instance.
+///
+/// Two instances, two windows: `shared` is the main window — it stays until
+/// the user closes it — and `popup` is the panel the notch logo and the pet
+/// open beside themselves, which closes when focus leaves it. They used to
+/// be one window in two modes, so clicking the notch to dismiss the popup
+/// closed a main window the user had opened on purpose.
 ///   - Closing the window doesn't quit the app — the controller keeps
 ///     the (hidden) window around so the next `show()` is instant and
 ///     state-preserving.
 @MainActor
 final class MainWindowController: NSObject, NSWindowDelegate {
-    static let shared = MainWindowController()
+    /// The main window ("Open Main Window", a banner's note).
+    static let shared = MainWindowController(transient: false)
+    /// The notch / pet popup.
+    static let popup = MainWindowController(transient: true)
 
     private var window: NSWindow?
-    /// Transient mode = the window dismisses when focus leaves it (the
-    /// "展开窗口" summoned from the notch/avatar, like the old dropdown).
-    /// Persistent mode = it stays until the custom close button / Cmd-W
-    /// (the "主窗口" opened via "Open Main Window").
-    private var transient = false
+    /// The popup dismisses when focus leaves it (like the old dropdown);
+    /// the main window stays until the close button / Cmd-W.
+    private let transient: Bool
     /// Global mouse-down monitor for transient mode. It fires ONLY for
     /// clicks outside Doris's own windows, so the window dismisses
     /// popover-style without closing on clicks into its own popovers /
     /// Settings panel. Mirrors `AnchorController`'s dropdown behavior.
     private var outsideClickMonitor: Any?
 
-    /// Whether the main window is currently on screen — used by
-    /// `AnchorController` to toggle it from the notch/pet click.
+    /// Whether this window is on screen — the notch/pet click toggles the popup.
     var isMainWindowVisible: Bool { window?.isVisible ?? false }
+
+    /// The window's identifier, which Cmd-W uses to find which one to close.
+    var windowID: String { transient ? "doris-popup" : "doris-main" }
 
     // Per-mode remembered sizes. The transient ("展开") size lives in
     // `AnchorScreenStore.savedExpandedSize` (shared with the dropdown's
@@ -54,7 +62,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         return (w >= 400 && h >= 300) ? NSSize(width: w, height: h) : NSSize(width: 900, height: 600)
     }
 
-    private override init() { super.init() }
+    private init(transient: Bool) {
+        self.transient = transient
+        super.init()
+    }
 
     /// Open the main window if it doesn't exist yet, or bring it to
     /// front if it does. Always activates the app so the window comes
@@ -68,8 +79,11 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     /// on the right display, so users with multi-monitor setups don't
     /// get the main window left behind on whatever screen it was last
     /// closed on.
-    func show(preferredScreen: NSScreen? = nil, transient: Bool = false, frame: NSRect? = nil) {
-        self.transient = transient
+    func show(preferredScreen: NSScreen? = nil, frame: NSRect? = nil) {
+        // Opening the main window puts the popup away — one of them is
+        // enough. (The reverse doesn't hold: the popup never touches the
+        // main window.)
+        if !transient { MainWindowController.popup.closeMainWindow() }
         NSApp.activate(ignoringOtherApps: true)
         if let window {
             if window.isMiniaturized { window.deminiaturize(nil) }
@@ -85,9 +99,12 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         // `.preferredColorScheme` reactively — don't apply it here too
         // (a static modifier at construction time wins, freezing the
         // window to whatever theme was active when first opened).
-        let root = MainWindowView()
+        let root = MainWindowView(onClose: { [weak self] in self?.closeMainWindow() })
             .modelContainer(container)
         let host = NSHostingController(rootView: root)
+        // The content's minimum is the window's minimum — but don't let the
+        // content's ideal size resize the window; the frame is ours.
+        host.sizingOptions = [.minSize]
 
         // BORDERLESS window — same approach as the menu-bar dropdown panel
         // (DorisAnchorPanel). A `.titled` window always reserves a ~28pt
@@ -116,7 +133,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         win.isOpaque = false
         win.hasShadow = true
         win.contentViewController = host
-        win.identifier = NSUserInterfaceItemIdentifier("doris-main")
+        win.identifier = NSUserInterfaceItemIdentifier(windowID)
         win.isReleasedWhenClosed = false
         win.delegate = self
         self.window = win
@@ -134,18 +151,44 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         if let frame {
             // Transient (notch/pet): beside the pet/avatar at the saved
             // EXPANDED size (the rect is computed by AnchorController).
-            win.setFrame(frame, display: false)
+            let screen = NSScreen.screens.first { $0.frame.contains(NSPoint(x: frame.midX, y: frame.maxY - 1)) }
+                ?? preferredScreen ?? NSScreen.main
+            win.setFrame(fitted(frame, on: screen), display: false)
         } else {
             // Persistent ("Open Main Window"): the saved MAIN size, centered.
             var f = win.frame
             f.size = savedMainSize
-            win.setFrame(f, display: false)
+            win.setFrame(fitted(f, on: preferredScreen ?? win.screen ?? NSScreen.main), display: false)
             if let screen = preferredScreen {
                 centerWindow(win, on: screen)
             } else {
                 win.center()
             }
         }
+    }
+
+    /// `frame` grown to the content's minimum at the current zoom and kept
+    /// on the screen. A saved size from before a zoom change (or from the
+    /// old, smaller dropdown) would otherwise leave the content wider than
+    /// the window, cut off on both sides. Grows around the top centre, so
+    /// a popup under the notch stays under it.
+    private func fitted(_ frame: NSRect, on screen: NSScreen?) -> NSRect {
+        let scale = ZoomSettings.shared.scale
+        var f = frame
+        f.size.width = max(f.width, MainWindowView.minimumSize.width * scale)
+        f.size.height = max(f.height, MainWindowView.minimumSize.height * scale)
+        f.origin.x = frame.midX - f.width / 2
+        f.origin.y = frame.maxY - f.height
+        guard let screen else { return f }
+        // The visible frame, except that a popup hanging from the notch
+        // logo may start above it (flush under the logo, in the menu bar).
+        var vf = screen.visibleFrame
+        vf.size.height = max(vf.maxY, min(frame.maxY, screen.frame.maxY)) - vf.minY
+        f.size.width = min(f.width, vf.width)
+        f.size.height = min(f.height, vf.height)
+        f.origin.x = min(max(f.minX, vf.minX), vf.maxX - f.width)
+        f.origin.y = min(max(f.minY, vf.minY), vf.maxY - f.height)
+        return f
     }
 
     // MARK: - Transient (focus-loss) dismissal
@@ -210,7 +253,18 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     /// window and fire on a stale instance.
     func windowWillClose(_ notification: Notification) {
         uninstallOutsideClickMonitor()
-        transient = false
+    }
+
+    /// The popup also goes away when the user moves to the main window —
+    /// the outside-click monitor only sees clicks in other apps. (Doris's
+    /// own popovers and Settings don't count: they aren't the main window.)
+    func windowDidResignKey(_ notification: Notification) {
+        guard transient else { return }
+        DispatchQueue.main.async { [weak self] in
+            if NSApp.keyWindow?.identifier?.rawValue == MainWindowController.shared.windowID {
+                self?.closeMainWindow()
+            }
+        }
     }
 
     /// Persist the window's size per mode as the user resizes, so each mode

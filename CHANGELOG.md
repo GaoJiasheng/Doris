@@ -6,6 +6,38 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.13.0 — 2026-10-30
+
+Bold, underline and highlighting in notes, on both the Mac and the
+iPhone; a two-column Mac window; and a main window that stays put.
+Both apps are on 1.13.0 again.
+
+### New
+
+- **Bold, underline and highlight in note text.** Highlights come in
+  red, green and yellow. On the Mac: the format bar above the note,
+  the right-click Format menu, or ⌘B / ⌘U / ⌘⇧H (yellow). On the
+  iPhone: the bar above the keyboard, or Format in the selection menu.
+  Formatting shows the same on both devices; marks are stored as
+  `**bold**`, `<u>…</u>` and `<mark red|green|yellow>…</mark>` inside
+  the note's text, so older clients still show the words.
+- **Two columns on a wide Mac window.** At 860 pt and up, the TODO tab
+  shows the list on the left and the selected note on the right (like
+  Evernote). The notch popup and narrow windows keep the single column.
+
+### Fixed
+
+- **Clicking the notch logo no longer closes the main window.** The
+  logo now only opens and closes its popup; the main window (from the
+  menu bar or the Dock) is independent and closes only when you close
+  it.
+- **The popup is never clipped.** The window has a minimum size that
+  follows the zoom level (⌘+ / ⌘−) and is kept on screen; when space
+  runs short the header drops the date, then the tab labels, then the
+  wordmark, instead of cutting buttons off.
+
+---
+
 ## 1.12.2 — 2026-10-21 (macOS)
 
 Checklist dragging that actually works on the Mac, and a leaner app: the

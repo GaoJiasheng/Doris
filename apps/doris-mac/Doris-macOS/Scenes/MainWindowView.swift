@@ -16,8 +16,8 @@ private struct WindowDragArea: NSViewRepresentable {
     }
 }
 
-/// The main window — also what the notch and the desktop pet open (as a
-/// transient panel). Adaptive cyber backdrop (dark or light, controlled by
+/// The main window's content — also the popup the notch and the desktop pet
+/// open (a separate transient window; see MainWindowController). Adaptive cyber backdrop (dark or light, controlled by
 /// `ThemeSettings`) and neon-stroked cards; the header carries the tabs,
 /// sync, theme and settings. (The animated-character sidebar is gone: the
 /// character lives in the notch logo and the desktop pet.)
@@ -28,6 +28,15 @@ struct MainWindowView: View {
     /// SwiftUI re-evaluation. Without this binding the window kept
     /// whatever colorScheme was captured at first mount.
     @ObservedObject private var theme = ThemeSettings.shared
+    /// The content is laid out at window size ÷ zoom, so the window's
+    /// minimum grows with the zoom: at 110% a 540pt window would leave
+    /// only 491pt to lay out in.
+    @ObservedObject private var zoom = ZoomSettings.shared
+    /// The smallest layout (in content points, before zoom) everything is
+    /// designed to fit.
+    static let minimumSize = CGSize(width: 540, height: 520)
+    /// Closes the window this view is in (main window or popup).
+    var onClose: () -> Void = {}
     @State private var tab: Tab = .today
     /// Lifted up from `MainNotesList` so the detail header (DORIS
     /// brand + tab buttons) can hide while editing — the editor gets
@@ -47,7 +56,8 @@ struct MainWindowView: View {
             detail.dorisZoom()
                 .scrollContentBackground(.hidden)
         }
-        .frame(minWidth: 540, minHeight: 520)
+        .frame(minWidth: Self.minimumSize.width * zoom.scale,
+               minHeight: Self.minimumSize.height * zoom.scale)
         // The window is borderless + clear, so the content's own rounded
         // shape IS the visible window (with the window's drop shadow). Round
         // the corners + add a hairline edge so it reads as a real window, not
@@ -112,6 +122,33 @@ struct MainWindowView: View {
     /// We pulled those two off the window toolbar so the title bar
     /// stays minimal and the whole "navigation strip" reads as one row.
     private var detailHeader: some View {
+        // Widest row first: ViewThatFits keeps the first one that fits, so
+        // a narrow window (or a big ⌘+ zoom) drops the date, then the tab
+        // labels, then the wordmark. A row that didn't fit used to push the
+        // whole window's content wider than the window, cut off on both sides.
+        ViewThatFits(in: .horizontal) {
+            headerRow(brand: true, labels: true, date: true)
+            headerRow(brand: true, labels: true, date: false)
+            headerRow(brand: true, labels: false, date: false)
+            headerRow(brand: false, labels: false, date: false)
+        }
+        // No system traffic lights anymore (borderless window) and the
+        // custom close button is the first item in the row, so the header
+        // just needs a small leading gutter that clears the rounded corner.
+        .padding(.leading, 16)
+        .padding(.trailing, 18)
+        // Borderless window has no title bar / drag strip to clear — just a
+        // small top gutter so the row sits comfortably at the very top.
+        .padding(.top, 12)
+        .padding(.bottom, 12)
+        // This header strip IS the title bar: dragging its empty areas moves
+        // the window. (The window is no longer movable-by-background, so the
+        // split divider resizes instead of moving the window.) Buttons sit on
+        // top and keep their clicks.
+        .background(WindowDragArea())
+    }
+
+    private func headerRow(brand: Bool, labels: Bool, date: Bool) -> some View {
         HStack(alignment: .center, spacing: 16) {
             // DORIS wordmark — single line, with `.fixedSize` so SwiftUI
             // doesn't squeeze it letter-by-letter into a vertical column
@@ -119,17 +156,19 @@ struct MainWindowView: View {
             // 赛博助手" subtitle that used to live here was removed —
             // it duplicates the dock-bar app name and was the main
             // source of visual noise when the row got crowded.
-            Text("DORIS")
-                .font(.system(size: 16, weight: .heavy, design: .rounded))
-                .kerning(2)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [CyberPalette.neonPink, CyberPalette.neonCyan],
-                        startPoint: .leading, endPoint: .trailing
+            if brand {
+                Text("DORIS")
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .kerning(2)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [CyberPalette.neonPink, CyberPalette.neonCyan],
+                            startPoint: .leading, endPoint: .trailing
+                        )
                     )
-                )
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
 
             HStack(spacing: 6) {
                 // Today is the landing tab — first slot so it reads
@@ -137,10 +176,10 @@ struct MainWindowView: View {
                 // iOS empty-state icon and stays out of the way of
                 // the theme toggle's sun/moon glyphs (which sit on
                 // the trailing edge of the same strip).
-                tabButton(.today, label: L("Today", "今日"), system: "sparkles")
-                tabButton(.notes, label: L("TODO", "TODO"), system: "checklist")
-                tabButton(.events, label: L("Events", "事件"), system: "tray.fill")
-                tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill")
+                tabButton(.today, label: L("Today", "今日"), system: "sparkles", showsLabel: labels)
+                tabButton(.notes, label: L("TODO", "TODO"), system: "checklist", showsLabel: labels)
+                tabButton(.events, label: L("Events", "事件"), system: "tray.fill", showsLabel: labels)
+                tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill", showsLabel: labels)
             }
 
             Spacer()
@@ -154,11 +193,13 @@ struct MainWindowView: View {
             // Abbreviated weekday ("Sat, May 16") keeps the stamp
             // narrow without losing day-of-week info.
             HStack(spacing: 10) {
-                Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary.opacity(0.6))
-                    .lineLimit(1)
-                    .fixedSize()
+                if date {
+                    Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary.opacity(0.6))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
                 SyncNowToolbarButton(showsTime: false)
                 ThemeToggleButton()
 
@@ -184,7 +225,7 @@ struct MainWindowView: View {
                 // xmark in `.primary` so it follows the light/dark theme with
                 // no jarring colored chip.
                 Button {
-                    MainWindowController.shared.closeMainWindow()
+                    onClose()
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
@@ -196,28 +237,14 @@ struct MainWindowView: View {
                 .help(L("Close window", "关闭窗口"))
             }
         }
-        // No system traffic lights anymore (borderless window) and the
-        // custom close button is the first item in the row, so the header
-        // just needs a small leading gutter that clears the rounded corner.
-        .padding(.leading, 16)
-        .padding(.trailing, 18)
-        // Minimal top padding now that the strip sits just below the title
-        // bar (the title-bar height itself is the only gap above it).
-        // Borderless window has no title bar / drag strip to clear — just a
-        // small top gutter so the row sits comfortably at the very top.
-        .padding(.top, 12)
-        .padding(.bottom, 12)
-        // This header strip IS the title bar: dragging its empty areas moves
-        // the window. (The window is no longer movable-by-background, so the
-        // split divider resizes instead of moving the window.) Buttons sit on
-        // top and keep their clicks.
-        .background(WindowDragArea())
     }
 
     /// Capsule-style tab button. Selected = cyan-accented, unselected =
     /// dim primary. Same vocabulary as the dropdown panel's tab row so
     /// the two surfaces feel like one product.
-    private func tabButton(_ value: Tab, label: String, system: String) -> some View {
+    /// `showsLabel: false` is the narrow-window form: icon only, the name
+    /// in the tooltip.
+    private func tabButton(_ value: Tab, label: String, system: String, showsLabel: Bool = true) -> some View {
         let isSelected = tab == value
         return Button {
             tab = value
@@ -228,17 +255,19 @@ struct MainWindowView: View {
             HStack(spacing: 6) {
                 Image(systemName: system)
                     .font(.system(size: 11, weight: .semibold))
-                Text(label)
-                    .font(.system(size: 12, weight: isSelected ? .semibold : .regular, design: .rounded))
-                    .kerning(0.4)
-                    // Without these, SwiftUI compresses the label
-                    // when the row gets crowded and the text breaks
-                    // into one-character-per-line vertical stacks
-                    // ("今日" → 今 / 日, "TODO" → T / O / D / O).
-                    // `fixedSize` reserves the natural width; the
-                    // surrounding Spacer absorbs any leftover slack.
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
+                if showsLabel {
+                    Text(label)
+                        .font(.system(size: 12, weight: isSelected ? .semibold : .regular, design: .rounded))
+                        .kerning(0.4)
+                        // Without these, SwiftUI compresses the label
+                        // when the row gets crowded and the text breaks
+                        // into one-character-per-line vertical stacks
+                        // ("今日" → 今 / 日, "TODO" → T / O / D / O).
+                        // `fixedSize` reserves the natural width; the
+                        // surrounding Spacer absorbs any leftover slack.
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
             }
             .foregroundStyle(
                 isSelected
@@ -263,6 +292,7 @@ struct MainWindowView: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .help(label)
     }
 }
 
@@ -430,6 +460,23 @@ private struct MainNotesList: View {
     @State private var filter: TodoFilter = .active
     @State private var confirmingEmptyTrash = false
 
+    // MARK: Two columns
+    //
+    // A wide window shows the list and the selected note side by side
+    // (like Evernote); a narrow one — the notch popup, a small window —
+    // keeps the one-column list, where opening a note replaces it.
+
+    /// Wide enough for two columns.
+    @State private var wide = false
+    private static let twoColumnWidth: CGFloat = 860
+    /// The note in the right column.
+    @State private var selectedID: UUID?
+    /// The user closed the right column's note (Back / Delete): show the
+    /// empty state rather than falling back to another note.
+    @State private var cleared = false
+    /// Reopened in the right column next time.
+    @AppStorage("doris.todo.lastOpened") private var lastOpenedID: String = ""
+
     /// Three-partition filter: trash > archived > active. Each row sits
     /// in exactly one. Sort key flips by view: trash by deletedAt,
     /// archived by archivedAt, active by pin/done/createdAt.
@@ -483,13 +530,75 @@ private struct MainNotesList: View {
 
     var body: some View {
         Group {
-            if let editing {
+            if wide {
+                twoColumns
+            } else if let editing {
                 InlineNoteEditor(note: editing) {
                     self.editing = nil
                 }
             } else {
                 listBody
             }
+        }
+        .onGeometryChange(for: Bool.self) { $0.size.width >= Self.twoColumnWidth } action: { isWide in
+            wide = isWide
+            // A note open full-width moves into the right column.
+            if isWide, let open = editing { select(open); editing = nil }
+        }
+        // Opened from elsewhere (focus ring, a banner): into the right
+        // column when there is one.
+        .onChange(of: editing) { _, open in
+            if wide, let open { select(open); editing = nil }
+        }
+        // Clicking a row (which puts the caret in its title) shows it on the
+        // right, the way a click selects a note in a notes app.
+        .onChange(of: focusedNoteID) { _, id in
+            if wide, let id, let n = notes.first(where: { $0.id == id }) { select(n) }
+        }
+    }
+
+    private func select(_ note: Note) {
+        selectedID = note.id
+        cleared = false
+        lastOpenedID = note.id.uuidString
+    }
+
+    /// The right column's note: the one picked, else the last one opened,
+    /// else the top of the list.
+    private var rightNote: Note? {
+        if cleared { return nil }
+        if let selectedID, let n = notes.first(where: { $0.id == selectedID }), !n.deleted { return n }
+        if let last = UUID(uuidString: lastOpenedID),
+           let n = notes.first(where: { $0.id == last }), !n.deleted { return n }
+        return sortedNotes.first
+    }
+
+    private var twoColumns: some View {
+        let open = rightNote
+        return HSplitView {
+            listBody
+                .frame(minWidth: 260, idealWidth: 330, maxWidth: 480)
+            Group {
+                if let open {
+                    InlineNoteEditor(note: open) {
+                        cleared = true
+                        selectedID = nil
+                    }
+                    // A fresh editor per note — no state carried across.
+                    .id(open.id)
+                } else {
+                    VStack(spacing: 10) {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 26, weight: .light))
+                            .foregroundStyle(.secondary)
+                        Text(L("Pick a task on the left", "在左边选一条任务"))
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .frame(minWidth: 380, maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -513,13 +622,21 @@ private struct MainNotesList: View {
                                 note: n,
                                 focused: $focusedNoteID,
                                 onSubmit: { addNoteAfter(n) },
-                                onExpand: { editing = n },
+                                onExpand: {
+                                    if wide { select(n) } else { editing = n; lastOpenedID = n.id.uuidString }
+                                },
                                 onDeleteEmpty: { deleteEmptyAndFocusPrev(n) },
                                 onDropBefore: { dragged in
                                     moveDraggedBefore(n.id, dragged: dragged)
                                 },
                                 onMoveUp: { focusAdjacentNote(of: n, direction: -1) },
                                 onMoveDown: { focusAdjacentNote(of: n, direction: +1) }
+                            )
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(wide && rightNote?.id == n.id
+                                          ? CyberPalette.neonCyan.opacity(0.10) : Color.clear)
+                                    .padding(.horizontal, -6)
                             )
                         }
                     }

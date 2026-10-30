@@ -22,14 +22,12 @@ final class NoteImageTextAttachment: NSTextAttachment {
     required init?(coder: NSCoder) { fatalError("not coded") }
 }
 
-/// Converts between the body's Markdown and what the text views edit.
+/// Converts between the stored body and what the text views edit.
 ///
-/// Only images are special: each image line becomes one attachment
-/// character, everything else stays literal text — Markdown syntax
-/// included. That is the whole point of doing it this way rather than with
-/// a rich-text editor: the stored body stays plain Markdown, round-trips
-/// exactly, and the views stay ordinary text views (which is what keeps
-/// input methods behaving).
+/// Each image line becomes one attachment character. Bold, underline and
+/// highlight marks (`NoteInlineMarkup`) become styled runs — the marks
+/// themselves never show — and are written back from the runs' style
+/// attributes, a line at a time. Everything else is literal text.
 @MainActor
 enum NoteBodyTextBridge {
     static let attachmentChar = "\u{FFFC}"
@@ -44,49 +42,77 @@ enum NoteBodyTextBridge {
                 a.addAttributes(attributes, range: NSRange(location: 0, length: a.length))
                 out.append(a)
             } else {
-                out.append(NSAttributedString(string: line, attributes: attributes))
+                for run in NoteInlineMarkup.parse(line: line) {
+                    out.append(NSAttributedString(string: run.text,
+                                                  attributes: NoteRichText.attributes(run.style, base: attributes)))
+                }
             }
             if i < lines.count - 1 { out.append(NSAttributedString(string: "\n", attributes: attributes)) }
         }
         return out
     }
 
-    /// Back to Markdown. Images always come out on a line of their own, even
-    /// if the view momentarily has text beside one (mid-composition, say),
-    /// so the stored body is valid whatever state the view is in.
+    /// Back to the stored form. Images always come out on a line of their
+    /// own, even if the view momentarily has text beside one (mid-
+    /// composition, say), so the stored body is valid whatever state the
+    /// view is in. Styled text closes its marks at the end of every line.
     static func markdown(from text: NSAttributedString) -> String {
-        var out = ""
-        var afterImage = false
+        enum Piece { case text(String, NoteInlineMarkup.Style), newline, image(NoteImageRef) }
+        var pieces: [Piece] = []
         let ns = text.string as NSString
-        func appendText(_ piece: String) {
-            guard !piece.isEmpty else { return }
-            if afterImage && !piece.hasPrefix("\n") { out += "\n" }
-            afterImage = false
-            out += piece
-        }
-        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, range, _ in
-            if let a = value as? NoteImageTextAttachment {
-                // Only the attachment character itself is the image. Text
-                // typed beside it can inherit the attribute (UIKit carries
-                // it into the typing attributes); that is still text.
-                var pending = ""
-                for i in range.location..<(range.location + range.length) {
-                    if ns.character(at: i) == 0xFFFC {
-                        appendText(pending); pending = ""
-                        if !out.isEmpty && !out.hasSuffix("\n") { out += "\n" }
-                        out += NoteImageMarkup.line(a.ref)
-                        afterImage = true
-                    } else {
-                        pending += ns.substring(with: NSRange(location: i, length: 1))
-                    }
+        text.enumerateAttributes(in: NSRange(location: 0, length: text.length)) { attrs, range, _ in
+            let image = attrs[.attachment] as? NoteImageTextAttachment
+            let style = NoteRichText.style(of: attrs)
+            var pending = ""
+            func flush() {
+                if !pending.isEmpty { pieces.append(.text(pending, style)); pending = "" }
+            }
+            for i in range.location..<(range.location + range.length) {
+                let unit = ns.character(at: i)
+                if unit == 0xFFFC {
+                    flush()
+                    // Only our attachment is an image. Text typed beside one
+                    // can inherit the attribute (UIKit carries it into the
+                    // typing attributes); that is still text. Attachments
+                    // that aren't ours (rich paste) have nothing to save.
+                    if let image { pieces.append(.image(image.ref)) }
+                } else if unit == 0x0A {
+                    flush(); pieces.append(.newline)
+                } else {
+                    pending += ns.substring(with: NSRange(location: i, length: 1))
                 }
-                appendText(pending)
-            } else {
-                // Attachment characters that aren't ours (rich content pasted
-                // from elsewhere) have nothing to save — drop them.
-                appendText(ns.substring(with: range).replacingOccurrences(of: attachmentChar, with: ""))
+            }
+            flush()
+        }
+
+        var out = ""
+        var line: [NoteInlineMarkup.Run] = []
+        var lineHasContent = false        // text or an image on the current line
+        var afterImage = false
+        func endLine() {
+            out += NoteInlineMarkup.serialize(line)
+            line = []
+        }
+        for piece in pieces {
+            switch piece {
+            case .text(let t, let style):
+                if afterImage { out += "\n"; afterImage = false; lineHasContent = false }
+                line.append(.init(t, style))
+                lineHasContent = true
+            case .newline:
+                endLine()
+                out += "\n"
+                afterImage = false
+                lineHasContent = false
+            case .image(let ref):
+                endLine()
+                if lineHasContent { out += "\n" }
+                out += NoteImageMarkup.line(ref)
+                afterImage = true
+                lineHasContent = true
             }
         }
+        endLine()
         return out
     }
 

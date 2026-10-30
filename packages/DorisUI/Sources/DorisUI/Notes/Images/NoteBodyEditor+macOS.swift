@@ -34,6 +34,13 @@ final class NoteBodyNSTextView: NSTextView {
     var onWidthChange: (() -> Void)?
     /// Markdown for a range, so copying an image copies its line.
     var markdownForRange: ((NSRange) -> String)?
+    /// The plain look (font, colour) styles are put on top of.
+    var baseAttributes: () -> [NSAttributedString.Key: Any] = { [:] }
+
+    /// The body's own text form, with its bold / underline / highlight marks,
+    /// on the pasteboard beside the plain text — so copying between notes
+    /// keeps styles while pasting elsewhere gets clean text.
+    static let bodyType = NSPasteboard.PasteboardType("com.gavin.doris.body")
 
     private static let imageTypes: [NSPasteboard.PasteboardType] = [.fileURL, .png, .tiff,
                                                                      .init(UTType.jpeg.identifier),
@@ -71,10 +78,28 @@ final class NoteBodyNSTextView: NSTextView {
     }
 
     override func paste(_ sender: Any?) {
-        let images = Self.pastedImages(from: .general)
+        let pb = NSPasteboard.general
+        let images = Self.pastedImages(from: pb)
         if !images.isEmpty { onImages?(images, nil); return }
-        super.paste(sender)
+        // Copied from a note: keep its styles.
+        // Into the storage directly: `insertText` would lay the current
+        // typing style over the pasted runs (bold typing made it all bold).
+        if let body = pb.string(forType: Self.bodyType), let storage = textStorage {
+            let pasted = NoteBodyTextBridge.attributedString(markdown: body, attributes: baseAttributes())
+            let range = selectedRange()
+            guard shouldChangeText(in: range, replacementString: pasted.string) else { return }
+            storage.replaceCharacters(in: range, with: pasted)
+            didChangeText()
+            setSelectedRange(NSRange(location: range.location + pasted.length, length: 0))
+            return
+        }
+        // Anything else comes in as plain text — fonts and colours from a
+        // web page or another app aren't the note's styles.
+        pasteAsPlainText(sender)
     }
+
+    /// Plain text only (plus images, handled above): no RTF from drops.
+    override var readablePasteboardTypes: [NSPasteboard.PasteboardType] { [.string] }
 
     override var acceptableDragTypes: [NSPasteboard.PasteboardType] {
         Self.imageTypes + super.acceptableDragTypes
@@ -89,11 +114,84 @@ final class NoteBodyNSTextView: NSTextView {
     }
 
     override func writeSelection(to pboard: NSPasteboard, types: [NSPasteboard.PasteboardType]) -> Bool {
-        guard let md = markdownForRange?(selectedRange()), md.contains(NoteImageMarkup.scheme) else {
+        guard let md = markdownForRange?(selectedRange()), !md.isEmpty else {
             return super.writeSelection(to: pboard, types: types)
         }
         pboard.clearContents()
-        return pboard.setString(md, forType: .string)
+        pboard.declareTypes([Self.bodyType, .string], owner: nil)
+        pboard.setString(md, forType: Self.bodyType)
+        // Elsewhere: the text without marks — but image lines stay, so a
+        // paste into another note still finds its images.
+        let plain = md.contains(NoteImageMarkup.scheme) ? md : NoteInlineMarkup.plain(md)
+        return pboard.setString(plain, forType: .string)
+    }
+
+    // MARK: Bold / underline / highlight
+
+    func applyRichText(_ command: NoteRichText.Command) {
+        let range = selectedRange()
+        if range.length == 0 {
+            // Nothing selected: what's typed next takes (or drops) the style.
+            typingAttributes = NoteRichText.typingAttributes(typingAttributes, after: command,
+                                                             base: baseAttributes())
+            return
+        }
+        guard let storage = textStorage, !hasMarkedText(),
+              shouldChangeText(in: range, replacementString: nil) else { return }
+        NoteRichText.apply(command, to: storage, range: range, base: baseAttributes())
+        didChangeText()
+    }
+
+    @objc func dorisBold(_ sender: Any?) { applyRichText(.bold) }
+    @objc func dorisUnderline(_ sender: Any?) { applyRichText(.underline) }
+    @objc func dorisHighlightYellow(_ sender: Any?) { applyRichText(.highlight(.yellow)) }
+    @objc func dorisHighlightGreen(_ sender: Any?) { applyRichText(.highlight(.green)) }
+    @objc func dorisHighlightRed(_ sender: Any?) { applyRichText(.highlight(.red)) }
+    @objc func dorisHighlightNone(_ sender: Any?) { applyRichText(.highlight(nil)) }
+
+    /// ⌘B bold, ⌘U underline, ⌘⇧H highlight (yellow).
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard window?.firstResponder === self, !hasMarkedText() else {
+            return super.performKeyEquivalent(with: event)
+        }
+        let mods = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        switch (mods, event.charactersIgnoringModifiers?.lowercased()) {
+        case ([.command], "b"): applyRichText(.bold); return true
+        case ([.command], "u"): applyRichText(.underline); return true
+        case ([.command, .shift], "h"): applyRichText(.highlight(.yellow)); return true
+        default: return super.performKeyEquivalent(with: event)
+        }
+    }
+
+    /// The text menu gets 格式 (our three styles) in place of the system's
+    /// font submenu, whose italics / fonts / colours a note can't keep.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let menu = super.menu(for: event) ?? NSMenu()
+        for item in menu.items where item.submenu?.items.contains(where: {
+            $0.action == #selector(NSFontManager.orderFrontFontPanel(_:))
+        }) == true {
+            menu.removeItem(item)
+        }
+        let format = NSMenu()
+        func add(_ title: String, _ action: Selector, _ key: String = "",
+                 _ mods: NSEvent.ModifierFlags = [.command]) {
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+            item.keyEquivalentModifierMask = mods
+            item.target = self
+            format.addItem(item)
+        }
+        add(L("Bold", "加粗"), #selector(dorisBold(_:)), "b")
+        add(L("Underline", "下划线"), #selector(dorisUnderline(_:)), "u")
+        format.addItem(.separator())
+        add(L("Highlight Yellow", "黄色高亮"), #selector(dorisHighlightYellow(_:)), "h", [.command, .shift])
+        add(L("Highlight Green", "绿色高亮"), #selector(dorisHighlightGreen(_:)))
+        add(L("Highlight Red", "红色高亮"), #selector(dorisHighlightRed(_:)))
+        add(L("Remove Highlight", "清除高亮"), #selector(dorisHighlightNone(_:)))
+        let item = NSMenuItem(title: L("Format", "格式"), action: nil, keyEquivalent: "")
+        item.submenu = format
+        menu.insertItem(item, at: 0)
+        menu.insertItem(.separator(), at: 1)
+        return menu
     }
 
     override func setFrameSize(_ newSize: NSSize) {
@@ -231,8 +329,11 @@ struct NoteBodyTextViewMac: NSViewRepresentable {
         tv.isEditable = true
         tv.isSelectable = true
         tv.allowsUndo = true
-        tv.isRichText = false          // images are handled here, not by NSTextView
+        // Rich text for bold / underline / highlight runs. Images are still
+        // handled here, not by NSTextView, and paste brings plain text in.
+        tv.isRichText = true
         tv.importsGraphics = false
+        tv.usesFontPanel = false
         tv.drawsBackground = false
         tv.backgroundColor = .clear
         tv.textContainerInset = inset
@@ -253,6 +354,7 @@ struct NoteBodyTextViewMac: NSViewRepresentable {
         tv.onImages = { [weak c] datas, index in c?.insertImages(datas, at: index) }
         tv.onWidthChange = { [weak c] in c?.layoutAttachments() }
         tv.markdownForRange = { [weak c] range in c?.markdown(in: range) ?? "" }
+        tv.baseAttributes = { [weak c] in c?.baseAttributes ?? [:] }
         tv.imageFrames = { [weak c] in c?.imageFrames() ?? [] }
         tv.columnWidth = { [weak c] in c?.columnWidthForResize ?? 300 }
         tv.onResize = { [weak c] index, size in c?.resizeLive(at: index, to: size) }
@@ -262,6 +364,7 @@ struct NoteBodyTextViewMac: NSViewRepresentable {
         scroll.documentView = tv
         c.load(note.bodyMarkdown, noteID: note.id)
         c.observeInsertRequests()
+        c.observeFormatRequests()
         return scroll
     }
 
@@ -287,6 +390,7 @@ struct NoteBodyTextViewMac: NSViewRepresentable {
         private var fixing = false
         private var retry: Timer?
         private var insertObserver: NSObjectProtocol?
+        private var formatObserver: NSObjectProtocol?
         /// Where the user last put the caret; nil until then, so an image
         /// added from the toolbar before any editing goes at the end.
         private var userSelection: NSRange?
@@ -295,6 +399,7 @@ struct NoteBodyTextViewMac: NSViewRepresentable {
 
         deinit {
             if let insertObserver { NotificationCenter.default.removeObserver(insertObserver) }
+            if let formatObserver { NotificationCenter.default.removeObserver(formatObserver) }
         }
 
         /// "Insert image" from the toolbar lands at the cursor. Synchronous
@@ -310,6 +415,27 @@ struct NoteBodyTextViewMac: NSViewRepresentable {
                     let at = tv.window?.firstResponder === tv ? nil
                         : (self.userSelection?.location ?? tv.textStorage?.length ?? 0)
                     self.insertImages(request.datas, at: at)
+                }
+            }
+        }
+
+        /// The format bar's buttons, for this note. The click took focus
+        /// from the text, so put it back on the user's selection first.
+        func observeFormatRequests() {
+            formatObserver = NotificationCenter.default.addObserver(
+                forName: .dorisRichTextCommand, object: nil, queue: nil) { [weak self] n in
+                MainActor.assumeIsolated {
+                    guard let self, let request = n.object as? NoteRichTextRequest,
+                          request.noteID == self.parent.note.id,
+                          let tv = self.textView, let window = tv.window else { return }
+                    if window.firstResponder !== tv {
+                        window.makeFirstResponder(tv)
+                        if let sel = self.userSelection,
+                           sel.location + sel.length <= (tv.textStorage?.length ?? 0) {
+                            tv.setSelectedRange(sel)
+                        }
+                    }
+                    tv.applyRichText(request.command)
                 }
             }
         }

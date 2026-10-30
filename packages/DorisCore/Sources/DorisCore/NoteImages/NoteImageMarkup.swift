@@ -77,11 +77,11 @@ public enum NoteImageMarkup {
 
     /// The body for places that show text, not pictures — list excerpts,
     /// sticky previews, notifications: each image line becomes
-    /// `placeholder`.
+    /// `placeholder`, and bold / underline / highlight marks come out.
     public static func displayText(_ body: String, placeholder: String) -> String {
-        guard body.contains(scheme) else { return body }
+        guard body.contains(scheme) else { return NoteInlineMarkup.plain(body) }
         return body.split(separator: "\n", omittingEmptySubsequences: false)
-            .map { parse(line: $0) == nil ? String($0) : placeholder }
+            .map { parse(line: $0) == nil ? NoteInlineMarkup.plain(line: String($0)) : placeholder }
             .joined(separator: "\n")
     }
 }

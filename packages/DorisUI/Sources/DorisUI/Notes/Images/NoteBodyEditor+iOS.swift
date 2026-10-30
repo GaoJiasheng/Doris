@@ -16,17 +16,21 @@ public struct NoteBodyEditor: View {
     @Environment(\.modelContext) private var ctx
     var inset: CGSize
     var minHeight: CGFloat
+    var readOnly: Bool
 
     /// `minHeight`: the text view itself is at least this tall, so a tap
-    /// anywhere in that area starts editing.
-    public init(note: Note, inset: CGSize = .zero, minHeight: CGFloat = 0) {
+    /// anywhere in that area starts editing. `readOnly`: the reading view —
+    /// same text, styles and images, links tappable, no keyboard.
+    public init(note: Note, inset: CGSize = .zero, minHeight: CGFloat = 0, readOnly: Bool = false) {
         self.note = note
         self.inset = inset
         self.minHeight = minHeight
+        self.readOnly = readOnly
     }
 
     public var body: some View {
-        NoteBodyTextViewIOS(note: note, modelContext: ctx, inset: inset, minHeight: minHeight)
+        NoteBodyTextViewIOS(note: note, modelContext: ctx, inset: inset, minHeight: minHeight,
+                            readOnly: readOnly)
     }
 }
 
@@ -60,7 +64,14 @@ final class NoteBodyUITextView: UITextView {
     var onWidthChange: (() -> Void)?
     var onLayout: (() -> Void)?
     var markdownForRange: ((NSRange) -> String)?
+    /// The plain look (font, colour) styles are put on top of.
+    var baseAttributes: () -> [NSAttributedString.Key: Any] = { [:] }
     private var lastWidth: CGFloat = 0
+
+    /// The body's own text form, with its marks, beside the plain text on
+    /// the pasteboard — copying between notes keeps bold / underline /
+    /// highlight, pasting elsewhere gets clean text.
+    static let bodyType = "com.gavin.doris.body"
 
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
         if action == #selector(paste(_:)), UIPasteboard.general.hasImages { return true }
@@ -68,27 +79,151 @@ final class NoteBodyUITextView: UITextView {
     }
 
     override func paste(_ sender: Any?) {
-        let images = NoteImagePasteboard.pastedImages(from: .general)
+        let pb = UIPasteboard.general
+        let images = NoteImagePasteboard.pastedImages(from: pb)
         if !images.isEmpty { onImages?(images); return }
+        // Copied from a note: the text goes in as typed text (so undo and
+        // the usual change handling work), then gets its styles back.
+        if let data = pb.data(forPasteboardType: Self.bodyType),
+           let body = String(data: data, encoding: .utf8),
+           !body.contains(NoteImageMarkup.scheme),
+           let range = selectedTextRange {
+            let styled = NoteBodyTextBridge.attributedString(markdown: body, attributes: baseAttributes())
+            let start = offset(from: beginningOfDocument, to: range.start)
+            replace(range, withText: styled.string)
+            styled.enumerateAttributes(in: NSRange(location: 0, length: styled.length)) { attrs, r, _ in
+                textStorage.setAttributes(attrs, range: NSRange(location: start + r.location, length: r.length))
+            }
+            delegate?.textViewDidChange?(self)
+            return
+        }
         super.paste(sender)
     }
 
-    /// Copying a selection that holds images copies their Markdown lines,
-    /// so pasting into another note shows the same images.
+    /// Copying puts the selection's text form (marks, image lines) on the
+    /// pasteboard for notes, and plain text — or the image lines, so another
+    /// note still finds the images — for everything else.
     override func copy(_ sender: Any?) {
-        guard let md = markdownForRange?(selectedRange), md.contains(NoteImageMarkup.scheme) else {
-            return super.copy(sender)
-        }
-        UIPasteboard.general.string = md
+        guard writeSelection() else { return super.copy(sender) }
     }
 
     override func cut(_ sender: Any?) {
-        guard let md = markdownForRange?(selectedRange), md.contains(NoteImageMarkup.scheme) else {
-            return super.cut(sender)
-        }
-        UIPasteboard.general.string = md
+        guard writeSelection() else { return super.cut(sender) }
         replace(selectedTextRange ?? UITextRange(), withText: "")
     }
+
+    private func writeSelection() -> Bool {
+        guard let md = markdownForRange?(selectedRange), !md.isEmpty else { return false }
+        let plain = md.contains(NoteImageMarkup.scheme) ? md : NoteInlineMarkup.plain(md)
+        UIPasteboard.general.items = [[
+            Self.bodyType: Data(md.utf8),
+            UTType.utf8PlainText.identifier: plain,
+        ]]
+        return true
+    }
+
+    // MARK: Bold / underline / highlight
+
+    /// The style the next typed text takes. Set by a toolbar tap with
+    /// nothing selected (UIKit's typing attributes don't keep our keys, and
+    /// are rebuilt on every selection change); cleared once the caret moves.
+    var pendingTypingStyle: NoteInlineMarkup.Style?
+
+    /// The style typed text should have here: the one just switched on,
+    /// else that of the character before the caret.
+    var styleAtCaret: NoteInlineMarkup.Style {
+        if let pendingTypingStyle { return pendingTypingStyle }
+        let at = selectedRange.location
+        guard at > 0, at <= textStorage.length else { return .init() }
+        let ns = textStorage.string as NSString
+        let prev = ns.character(at: at - 1)
+        if prev == 0x0A || prev == 0xFFFC { return .init() }
+        return NoteRichText.style(of: textStorage.attributes(at: at - 1, effectiveRange: nil))
+    }
+
+    func applyRichText(_ command: NoteRichText.Command) {
+        guard markedTextRange == nil else { return }
+        let range = selectedRange
+        if range.length == 0 {
+            // Nothing selected: what's typed next takes (or drops) the style.
+            let next = NoteRichText.typingStyle(styleAtCaret, after: command)
+            pendingTypingStyle = next
+            typingAttributes = NoteRichText.attributes(next, base: baseAttributes())
+            return
+        }
+        let before = textStorage.attributedSubstring(from: range)
+        textStorage.beginEditing()
+        NoteRichText.apply(command, to: textStorage, range: range, base: baseAttributes())
+        textStorage.endEditing()
+        registerUndo(restoring: before, at: range)
+        selectedRange = range
+        delegate?.textViewDidChange?(self)
+    }
+
+    /// Undo a style change by putting the old runs back (and redo the same way).
+    private func registerUndo(restoring old: NSAttributedString, at range: NSRange) {
+        undoManager?.registerUndo(withTarget: self) { tv in
+            guard range.location + range.length <= tv.textStorage.length,
+                  tv.textStorage.attributedSubstring(from: range).string == old.string else { return }
+            let now = tv.textStorage.attributedSubstring(from: range)
+            old.enumerateAttributes(in: NSRange(location: 0, length: old.length)) { attrs, r, _ in
+                tv.textStorage.setAttributes(attrs, range: NSRange(location: range.location + r.location,
+                                                                   length: r.length))
+            }
+            tv.registerUndo(restoring: now, at: range)
+            tv.delegate?.textViewDidChange?(tv)
+        }
+        undoManager?.setActionName(L("Format", "格式"))
+    }
+
+    /// 格式 in the text menu, for a selection.
+    var formatMenu: UIMenu {
+        let highlight = UIMenu(title: L("Highlight", "高亮"), image: UIImage(systemName: "highlighter"),
+                               children: NoteInlineMarkup.Highlight.allCases.map { h in
+            UIAction(title: NoteFormatBar.name(h),
+                     image: UIImage(systemName: "circle.fill")?.withTintColor(
+                        NoteRichText.color(h).withAlphaComponent(1), renderingMode: .alwaysOriginal)) {
+                [weak self] _ in self?.applyRichText(.highlight(h))
+            }
+        } + [UIAction(title: L("Remove Highlight", "清除高亮"), image: UIImage(systemName: "eraser")) {
+            [weak self] _ in self?.applyRichText(.highlight(nil))
+        }])
+        return UIMenu(title: L("Format", "格式"), image: UIImage(systemName: "textformat"), children: [
+            UIAction(title: L("Bold", "加粗"), image: UIImage(systemName: "bold")) { [weak self] _ in
+                self?.applyRichText(.bold)
+            },
+            UIAction(title: L("Underline", "下划线"), image: UIImage(systemName: "underline")) { [weak self] _ in
+                self?.applyRichText(.underline)
+            },
+            highlight,
+        ])
+    }
+
+    /// B · U · highlight above the keyboard, and a button to put it away.
+    lazy var formatAccessory: UIToolbar = {
+        let bar = UIToolbar(frame: CGRect(x: 0, y: 0, width: 320, height: 44))
+        func item(_ symbol: String, _ label: String, _ command: NoteRichText.Command) -> UIBarButtonItem {
+            let b = UIBarButtonItem(image: UIImage(systemName: symbol),
+                                    primaryAction: UIAction { [weak self] _ in self?.applyRichText(command) })
+            b.accessibilityLabel = label
+            return b
+        }
+        let highlight = UIBarButtonItem(
+            image: UIImage(systemName: "highlighter"),
+            primaryAction: UIAction { [weak self] _ in self?.applyRichText(.highlight(.yellow)) },
+            menu: (formatMenu.children.last as? UIMenu))
+        highlight.accessibilityLabel = L("Highlight", "高亮")
+        let done = UIBarButtonItem(image: UIImage(systemName: "keyboard.chevron.compact.down"),
+                                   primaryAction: UIAction { [weak self] _ in self?.resignFirstResponder() })
+        done.accessibilityLabel = L("Hide Keyboard", "收起键盘")
+        bar.items = [item("bold", L("Bold", "加粗"), .bold),
+                     item("underline", L("Underline", "下划线"), .underline),
+                     highlight,
+                     UIBarButtonItem(systemItem: .flexibleSpace),
+                     done]
+        bar.sizeToFit()
+        return bar
+    }()
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -105,6 +240,7 @@ struct NoteBodyTextViewIOS: UIViewRepresentable {
     let modelContext: ModelContext
     var inset: CGSize
     var minHeight: CGFloat
+    var readOnly = false
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -121,11 +257,18 @@ struct NoteBodyTextViewIOS: UIViewRepresentable {
         tv.smartDashesType = .no
         tv.typingAttributes = context.coordinator.baseAttributes
         tv.delegate = context.coordinator
+        if readOnly {
+            tv.isEditable = false
+            tv.dataDetectorTypes = [.link, .phoneNumber]
+        } else {
+            tv.inputAccessoryView = tv.formatAccessory
+        }
         tv.setContentHuggingPriority(.required, for: .vertical)
 
         let c = context.coordinator
         c.textView = tv
         tv.onImages = { [weak c] datas in c?.insertImages(datas) }
+        tv.baseAttributes = { [weak c] in c?.baseAttributes ?? [:] }
         tv.onWidthChange = { [weak c] in c?.layoutAttachments() }
         tv.onLayout = { [weak c] in c?.placeImageButtons() }
         tv.markdownForRange = { [weak c] range in c?.markdown(in: range) ?? "" }
@@ -289,6 +432,8 @@ struct NoteBodyTextViewIOS: UIViewRepresentable {
                 guard let a else { return }
                 self?.delete(a)
             }
+            // Reading: look, don't change.
+            if parent.readOnly { return UIMenu(children: [view]) }
             return UIMenu(children: [UIMenu(options: .displayInline, children: sizes), view, delete])
         }
 
@@ -301,13 +446,26 @@ struct NoteBodyTextViewIOS: UIViewRepresentable {
 
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange,
                       replacementText text: String) -> Bool {
-            // Never let typed text pick up an image's attachment attribute.
-            textView.typingAttributes = baseAttributes
+            // Never let typed text pick up an image's attachment attribute —
+            // but keep its bold / underline / highlight.
+            if let tv = self.textView {
+                textView.typingAttributes = NoteRichText.attributes(tv.styleAtCaret, base: baseAttributes)
+            }
             return true
+        }
+
+        /// A selection's text menu gets 格式 (bold, underline, highlight).
+        func textView(_ textView: UITextView, editMenuForTextIn range: NSRange,
+                      suggestedActions: [UIMenuElement]) -> UIMenu? {
+            guard range.length > 0, let tv = self.textView else { return nil }
+            return UIMenu(children: suggestedActions + [tv.formatMenu])
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {
             if textView.isFirstResponder { userSelection = textView.selectedRange }
+            // Typing moves the caret too; from here the character before it
+            // carries the style. A tap elsewhere drops a pending style.
+            self.textView?.pendingTypingStyle = nil
         }
 
         func textViewDidChange(_ textView: UITextView) {

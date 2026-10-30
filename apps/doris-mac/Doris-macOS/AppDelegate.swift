@@ -262,9 +262,15 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
                      // (no system close button), so AppKit would otherwise
                      // just beep. Only act when the main window is key; let
                      // other windows (e.g. Settings) handle their own Cmd-W.
-                if NSApp.keyWindow?.identifier?.rawValue == "doris-main" {
+                switch NSApp.keyWindow?.identifier?.rawValue {
+                case MainWindowController.shared.windowID:
                     Task { @MainActor in MainWindowController.shared.closeMainWindow() }
                     return nil
+                case MainWindowController.popup.windowID:
+                    Task { @MainActor in MainWindowController.popup.closeMainWindow() }
+                    return nil
+                default:
+                    break
                 }
                 return event
             default:

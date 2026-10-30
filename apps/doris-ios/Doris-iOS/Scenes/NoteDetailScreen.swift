@@ -74,8 +74,9 @@ struct NoteDetailScreen: View {
                     ChecklistEditorView(note: note)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                 } else if showingMarkdownPreview {
-                    MarkdownText(note.bodyMarkdown)
-                        .frame(minHeight: 320, alignment: .topLeading)
+                    // The reading view: the body as it looks — bold,
+                    // underline, highlight, images — with links tappable.
+                    NoteBodyEditor(note: note, minHeight: 320, readOnly: true)
                         .padding(10)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)

@@ -83,9 +83,13 @@ public struct InlineNoteEditor: View {
                     .scrollContentBackground(.hidden)
                 } else {
                     #if os(macOS)
-                    NoteBodyEditor(note: note, inset: CGSize(width: 0, height: 2))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
+                    VStack(alignment: .leading, spacing: 2) {
+                        NoteFormatBar(noteID: note.id)
+                            .padding(.leading, 10)
+                        NoteBodyEditor(note: note, inset: CGSize(width: 0, height: 2))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                    }
                     #else
                     TextEditor(text: $note.bodyMarkdown)
                         .font(.body)

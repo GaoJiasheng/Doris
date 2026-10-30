@@ -27,6 +27,35 @@ final class NoteBodyTextBridgeTests: XCTestCase {
         }
     }
 
+    /// Styled text loads with its marks hidden and saves back exactly.
+    func testStyledRoundTrip() {
+        let bodies = [
+            "a **b** <u>c</u> <mark red>d</mark>",
+            "**bold <u>both</u>**\n\(img())\n<mark green>中文高亮</mark>",
+            "2 ** 3 stays literal",
+        ]
+        for body in bodies {
+            let text = NoteBodyTextBridge.attributedString(markdown: body, attributes: attrs)
+            XCTAssertFalse(text.string.contains("<u>") || text.string.contains("<mark"), body)
+            XCTAssertEqual(NoteBodyTextBridge.markdown(from: text), body, body)
+        }
+        let shown = NoteBodyTextBridge.attributedString(markdown: "a **b**", attributes: attrs)
+        XCTAssertEqual(shown.string, "a b")
+    }
+
+    /// Styling a selection writes the marks; doing it again takes them off.
+    func testCommandsToggle() {
+        let text = NoteBodyTextBridge.attributedString(markdown: "hello world", attributes: attrs)
+        let word = NSRange(location: 6, length: 5)
+        NoteRichText.apply(.bold, to: text, range: word, base: attrs)
+        XCTAssertEqual(NoteBodyTextBridge.markdown(from: text), "hello **world**")
+        NoteRichText.apply(.highlight(.yellow), to: text, range: NSRange(location: 0, length: 11), base: attrs)
+        XCTAssertEqual(NoteBodyTextBridge.markdown(from: text), "<mark yellow>hello </mark>**<mark yellow>world</mark>**")
+        NoteRichText.apply(.highlight(nil), to: text, range: NSRange(location: 0, length: 11), base: attrs)
+        NoteRichText.apply(.bold, to: text, range: word, base: attrs)
+        XCTAssertEqual(NoteBodyTextBridge.markdown(from: text), "hello world")
+    }
+
     func testEachImageIsOneCharacter() {
         let body = "a\n\(img())\nb"
         let text = NoteBodyTextBridge.attributedString(markdown: body, attributes: attrs)

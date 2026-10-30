@@ -246,6 +246,26 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.13.0", date: "2026-10-30", gh: true,
+      zh: { title: "笔记支持加粗、下划线、高亮,Mac 窗口变成两列",
+        new: [
+          ["笔记正文可以加粗、加下划线、高亮。", "高亮有红、绿、黄三色。Mac 上用笔记上方的格式栏、右键「格式」菜单,或 ⌘B / ⌘U / ⌘⇧H(黄色高亮);iPhone 上用键盘上方的工具栏,或选中文字后的「格式」菜单。两端显示一致。"],
+          ["Mac 主窗口够宽时变成左右两列。", "「TODO」页左边是列表,右边直接显示选中的笔记,像印象笔记那样。刘海弹出窗口和窄窗口仍是单列。"] ],
+        fixed: [
+          ["点刘海 logo 不会再关掉主窗口。", "logo 只负责打开和收起弹出窗口;主窗口是独立的,只有你自己关它才会关。"],
+          ["弹出窗口不会再被裁切。", "窗口有跟随缩放比例(⌘+ / ⌘−)的最小尺寸,并保证留在屏幕内;空间不够时顶栏会依次省掉日期、标签文字和 DORIS 字样,而不是把按钮切掉。"] ],
+        improved: [
+          ["两端都是 1.13.0,版本号重新对齐。", ""] ] },
+      en: { title: "Bold, underline and highlight in notes; two columns on the Mac",
+        new: [
+          ["Bold, underline and highlight note text.", "Highlights come in red, green and yellow. On the Mac use the format bar above the note, the right-click Format menu, or ⌘B / ⌘U / ⌘⇧H (yellow); on the iPhone, the bar above the keyboard or Format in the selection menu. It looks the same on both."],
+          ["Two columns in a wide Mac window.", "The TODO tab shows the list on the left and the selected note on the right, like Evernote. The notch popup and narrow windows stay single-column."] ],
+        fixed: [
+          ["Clicking the notch logo no longer closes the main window.", "The logo only opens and closes its popup; the main window stays open until you close it."],
+          ["The popup is never clipped.", "Its minimum size follows the zoom level (⌘+ / ⌘−) and it stays on screen; when space runs short the header drops the date, the tab labels and the wordmark instead of cutting buttons off."] ],
+        improved: [
+          ["Both apps are on 1.13.0 again.", ""] ] } },
+
     { v: "1.12.2", date: "2026-10-21", gh: true,
       zh: { title: "Mac 上子任务能拖了,界面更清爽(仅 macOS)",
         fixed: [

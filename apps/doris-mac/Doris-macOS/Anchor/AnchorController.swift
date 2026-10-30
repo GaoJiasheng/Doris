@@ -282,7 +282,7 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     /// focus, or the parent note with the caret dropped on the matching
     /// checklist line for a sub-task focus.
     private func toggleFocusedTask() {
-        let willOpen = !MainWindowController.shared.isMainWindowVisible
+        let willOpen = !MainWindowController.popup.isMainWindowVisible
         toggleExpanded()
         guard willOpen,
               let s = FocusTimer.shared.session,
@@ -300,14 +300,14 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     }
 
     private func toggleExpanded() {
-        // Unified surface: the "展开窗口" summoned from the notch/pet IS the
-        // main window in transient (focus-loss-close) mode, sharing
-        // MainWindowView's full layout (avatar sidebar + tabs + Token).
-        // Notification banners still use the AnchorView panel via
-        // showPanel()/dismissActiveMessage() — only this user-click path is
-        // redirected.
-        if MainWindowController.shared.isMainWindowVisible {
-            MainWindowController.shared.closeMainWindow()
+        // The notch/pet click toggles the POPUP — MainWindowView in its own
+        // transient (focus-loss-close) window. It never touches the main
+        // window, which stays until the user closes it. Notification
+        // banners still use the AnchorView panel via showPanel() /
+        // dismissActiveMessage() — only this user-click path is redirected.
+        let popup = MainWindowController.popup
+        if popup.isMainWindowVisible {
+            popup.closeMainWindow()
         } else {
             // Hide any AnchorView panel (e.g. a live banner) first so we
             // never show two surfaces at once, then open the main window
@@ -316,9 +316,7 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             model.state = .idle
             hidePanel()
             let rect = computeRect(for: .expanded)
-            MainWindowController.shared.show(
-                transient: true,
-                frame: rect == .zero ? nil : rect)
+            popup.show(frame: rect == .zero ? nil : rect)
             HeroEvents.shared.greet()
         }
     }
