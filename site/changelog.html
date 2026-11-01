@@ -246,6 +246,30 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.13.1", date: "2026-11-01", gh: true,
+      zh: { title: "Mac 两列模式修好了,高亮菜单有了名字",
+        fixed: [
+          ["Mac 两列模式不会再闪退,右边一栏在任何缩放比例下都能编辑。", "两栏中间的分隔线可以拖动,调整左边列表的宽度,下次打开还是这个宽度。"],
+          ["在左边点一下就能选中任务。", "点进某一条的标题或子任务,右边也会显示这条任务。"] ],
+        new: [
+          ["可以手动关掉两列。", "窗口够宽时,筛选栏右侧有一个切换按钮,单列、两列随你选,会记住你的选择。"],
+          ["高亮菜单有了名字。", "Mac 格式栏现在是 B · U · 笔 · 高亮 ⌄:点笔直接加黄色高亮(⌘⇧H),点「高亮 ⌄」选颜色,菜单里的圆点也显示真实颜色了。iPhone 键盘上方的工具栏也有同样的「高亮 ⌄」按钮。"],
+          ["iPhone 也能加粗、加下划线、高亮了。", "1.13.0 的格式功能这次一起带到 iPhone 上。"] ],
+        improved: [
+          ["两端文案统一整理了一遍。", "待办事项统一叫「任务」,主标签叫「待办」;同一个操作用同一个说法(恢复、取消归档、添加、标为已完成)。说法和实际不符的地方也改了:回收站写明任务会在 24 小时后清除;Mac 编辑器里的按钮其实是归档,现在也写「归档」。"],
+          ["iPhone 小组件跟随 App 的语言设置。", "选了英文,小组件和日期也显示英文。"] ] },
+      en: { title: "Two columns fixed on the Mac; a named highlight menu",
+        fixed: [
+          ["Two-column mode no longer crashes the Mac app, and the right column can be edited at any zoom.", "Drag the divider between them to resize the list; the width is remembered."],
+          ["One click selects a task on the left.", "Clicking into a title or checklist item also shows that task on the right."] ],
+        new: [
+          ["Turn two columns off.", "When the window is wide enough, a button at the right of the filter bar switches between one and two columns, and remembers your choice."],
+          ["The highlight menu has a name.", "The Mac format bar reads B · U · pen · Highlight ⌄: the pen highlights yellow (⌘⇧H), Highlight ⌄ picks a colour, and the menu's dots show the real colours. The iPhone keyboard bar has the same button."],
+          ["Bold, underline and highlight on the iPhone.", "1.13.0's formatting arrives on the iPhone with this release."] ],
+        improved: [
+          ["The wording in both apps was reviewed.", "To-dos are called tasks everywhere and the same action has the same name. Text that described the wrong thing is fixed: the trash says tasks are cleared after 24 hours, and the Mac editor's button says Archive, which is what it always did."],
+          ["The iPhone widget follows the app's language.", "Choose English and the widget, dates included, is in English."] ] } },
+
     { v: "1.13.0", date: "2026-10-30", gh: true,
       zh: { title: "笔记支持加粗、下划线、高亮,Mac 窗口变成两列",
         new: [

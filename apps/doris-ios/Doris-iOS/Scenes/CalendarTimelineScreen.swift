@@ -216,8 +216,8 @@ struct CalendarTimelineScreen: View {
             Text(L("Nothing scheduled", "暂无安排"))
                 .font(.system(size: 17, weight: .semibold, design: .rounded))
                 .foregroundStyle(.primary.opacity(0.65))
-            Text(L("Set a due date on a note to see it in the timeline.",
-                   "在笔记上设置截止日期即可出现在时间轴上。"))
+            Text(L("Give a task a due date to see it on the timeline.",
+                   "给任务设定截止日期，就会出现在时间轴上。"))
                 .font(.system(size: 13))
                 .foregroundStyle(.primary.opacity(0.45))
                 .multilineTextAlignment(.center)

@@ -11,8 +11,8 @@ struct EventsWidget: Widget {
         StaticConfiguration(kind: kind, provider: EventsProvider()) { entry in
             EventsWidgetView(entry: entry)
         }
-        .configurationDisplayName("Doris Events")
-        .description("Recent events.")
+        .configurationDisplayName(L("Doris · Events", "Doris · 事件"))
+        .description(L("Recent notifications.", "最近收到的通知。"))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
     }
 }
@@ -81,7 +81,7 @@ struct EventsWidgetView: View {
         if entry.messages.isEmpty {
             VStack {
                 Image(systemName: "bell.slash")
-                Text("No events")
+                Text(L("No events yet", "暂无事件"))
                     .font(.caption)
             }
         } else {

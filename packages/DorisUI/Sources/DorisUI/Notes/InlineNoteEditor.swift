@@ -107,17 +107,17 @@ public struct InlineNoteEditor: View {
         .onChange(of: note.bodyMarkdown) { _, _ in note.touch() }
         .onChange(of: note.title)        { _, _ in note.touch() }
         .alert(
-            L("Delete this note?", "删除这条笔记?"),
+            L("Archive this task?", "归档这个任务？"),
             isPresented: $confirmingDelete
         ) {
-            Button(L("Delete", "删除"), role: .destructive) {
+            Button(L("Archive", "归档")) {
                 note.archive()
                 try? ctx.save()
                 onClose()
             }
             Button(L("Cancel", "取消"), role: .cancel) {}
         } message: {
-            Text(L("The note will be archived and can be recovered from Settings.", "笔记将被归档，可以从设置中恢复。"))
+            Text(L("It moves to Archived and stays there until you delete it. You can restore it any time.", "任务会移到「已归档」，一直保留到你手动删除，随时可以恢复。"))
         }
     }
 
@@ -165,7 +165,7 @@ public struct InlineNoteEditor: View {
                     .overlay(Capsule().stroke(Color.primary.opacity(0.15), lineWidth: 0.6))
             }
             .buttonStyle(.plain)
-            .help(L("Insert images (or paste / drag them in)", "插入图片(也可以直接粘贴或拖进来)"))
+            .help(L("Insert images (or paste / drag them in)", "插入图片（也可以直接粘贴或拖进来）"))
             #endif
 
             // Prominent Complete button — the attribute row below has
@@ -213,11 +213,11 @@ public struct InlineNoteEditor: View {
                 .foregroundStyle(.primary.opacity(0.45))
                 .help(absoluteTimeText)
 
-            // Delete
+            // Archive
             Button(role: .destructive) {
                 confirmingDelete = true
             } label: {
-                Image(systemName: "trash")
+                Image(systemName: "archivebox")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(CyberPalette.neonPink.opacity(0.9))
                     .padding(.horizontal, 8)
@@ -230,7 +230,7 @@ public struct InlineNoteEditor: View {
                     )
             }
             .buttonStyle(.plain)
-            .help(L("Delete this note", "删除这条笔记"))
+            .help(L("Archive this task", "归档这个任务"))
         }
     }
 
@@ -313,7 +313,7 @@ public struct InlineNoteEditor: View {
         .toggleStyle(.button)
         .tint(CyberPalette.neonCyan)
         .help(note.isChecklist
-              ? L("Plain note", "纯文本")
+              ? L("Plain text", "纯文本")
               : L("Convert to checklist", "转为清单"))
     }
 

@@ -56,8 +56,8 @@ struct TasksWidget: Widget {
         StaticConfiguration(kind: kind, provider: TasksProvider()) { entry in
             TasksWidgetView(entry: entry)
         }
-        .configurationDisplayName("Doris · 今日")
-        .description("置顶 + 今日待办，点一下即可勾选完成。")
+        .configurationDisplayName(L("Doris · Today", "Doris · 今日"))
+        .description(L("Pinned and today's tasks — tap one to tick it off.", "置顶 + 今日任务，点一下即可勾选完成。"))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
         .contentMarginsDisabled()
     }
@@ -74,6 +74,7 @@ enum TaskSection {
 struct TaskSnapshot: Identifiable {
     let id: UUID
     let title: String
+    @MainActor var displayTitle: String { title.isEmpty ? L("Untitled", "无标题") : title }
     let isCompleted: Bool
     let section: TaskSection
     let longTerm: Bool
@@ -190,7 +191,7 @@ struct TasksProvider: TimelineProvider {
             let p = n.checklistProgress
             return TaskSnapshot(
                 id: n.id,
-                title: n.title.isEmpty ? "无标题" : n.title,
+                title: n.title,   // "Untitled" is filled in when drawn, in the chosen language
                 isCompleted: n.isCompleted,
                 section: section,
                 longTerm: n.longTerm,
@@ -326,25 +327,21 @@ struct TasksWidgetView: View {
         return p
     }
 
-    // Cached so we don't allocate a DateFormatter every render.
-    private static let heroDateFormatterFull: DateFormatter = {
+    // Cached so we don't allocate a DateFormatter every render; one per
+    // language, picked when drawn.
+    private static func formatter(_ locale: String, _ format: String) -> DateFormatter {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "zh_CN")
-        f.dateFormat = "M月d日 EEE"
+        f.locale = Locale(identifier: locale)
+        f.dateFormat = format
         return f
-    }()
-    private static let laterDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "zh_CN")
-        f.dateFormat = "EEE M/d"
-        return f
-    }()
-    private static let heroDateFormatterShort: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "zh_CN")
-        f.dateFormat = "M/d"
-        return f
-    }()
+    }
+    private static let heroFullZH = formatter("zh_CN", "M月d日 EEE")
+    private static let heroFullEN = formatter("en_US", "EEE, MMM d")
+    private static let laterZH = formatter("zh_CN", "EEE M/d")
+    private static let laterEN = formatter("en_US", "EEE M/d")
+    private static let heroDateFormatterShort = formatter("zh_CN", "M/d")
+    private static var heroDateFormatterFull: DateFormatter { LanguageSettings.shared.mode == .english ? heroFullEN : heroFullZH }
+    private static var laterDateFormatter: DateFormatter { LanguageSettings.shared.mode == .english ? laterEN : laterZH }
 
     // MARK: Body
 
@@ -407,11 +404,11 @@ struct TasksWidgetView: View {
             VStack(alignment: .leading, spacing: 0) {
                 if showCaptions {
                     if !pinnedRows.isEmpty {
-                        sectionCaption("置顶", tint: CyberPalette.neonPink)
+                        sectionCaption(L("Pinned", "置顶"), tint: CyberPalette.neonPink)
                         rowStack(pinnedRows)
                     }
                     if !dueRows.isEmpty {
-                        sectionCaption("日程", tint: CyberPalette.neonCyan)
+                        sectionCaption(L("Upcoming", "日程"), tint: CyberPalette.neonCyan)
                             .padding(.top, pinnedRows.isEmpty ? 0 : 4)
                         rowStack(dueRows)
                     }
@@ -455,9 +452,9 @@ struct TasksWidgetView: View {
     /// text or show a picker, so these are links, not in-place intents.
     private var actionBar: some View {
         HStack(spacing: 8) {
-            actionLink("添加", icon: "plus", url: "doris://quick/add", tint: CyberPalette.neonCyan)
-            actionLink("专注", icon: "timer", url: "doris://quick/focus", tint: CyberPalette.neonPink)
-            actionLink("拍照", icon: "camera.fill", url: "doris://quick/photo",
+            actionLink(L("Add", "添加"), icon: "plus", url: "doris://quick/add", tint: CyberPalette.neonCyan)
+            actionLink(L("Focus", "专注"), icon: "timer", url: "doris://quick/focus", tint: CyberPalette.neonPink)
+            actionLink(L("Photo", "拍照"), icon: "camera.fill", url: "doris://quick/photo",
                        tint: Color(red: 0.62, green: 0.51, blue: 1.0))
         }
         .frame(height: Self.actionBarHeight)
@@ -491,7 +488,7 @@ struct TasksWidgetView: View {
     private var laterRule: some View {
         HStack(spacing: 6) {
             Rectangle().fill(HierarchicalShapeStyle.primary.opacity(0.14)).frame(height: 0.5)
-            Text("之后")
+            Text(L("Later", "之后"))
                 .font(.system(size: 9.5, weight: .semibold, design: .rounded))
                 .foregroundStyle(.tertiary)
                 .fixedSize()
@@ -505,7 +502,7 @@ struct TasksWidgetView: View {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(CyberPalette.neonCyan.opacity(0.85))
-            Text("今天没有待办")
+            Text(L("Nothing due today", "今天没有待办"))
                 .font(.system(size: 12, weight: .regular, design: .rounded))
                 .foregroundStyle(.secondary)
         }
@@ -518,9 +515,10 @@ struct TasksWidgetView: View {
     private func footerText(shown: Int, laterShown: Int) -> String? {
         var parts: [String] = []
         let hidden = entry.listedTotal - shown
-        if hidden > 0 { parts.append("+\(hidden) 更多") }
+        if hidden > 0 { parts.append(L("+\(hidden) more", "+\(hidden) 更多")) }
         let laterLeft = entry.laterTotal - laterShown
-        if laterLeft > 0 { parts.append(laterShown > 0 ? "之后还有 \(laterLeft) 项" : "之后 \(laterLeft) 项") }
+        if laterLeft > 0 { parts.append(laterShown > 0 ? L("\(laterLeft) more later", "之后还有 \(laterLeft) 项")
+                                                   : L("\(laterLeft) later", "之后 \(laterLeft) 项")) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -533,7 +531,7 @@ struct TasksWidgetView: View {
                 .font(.system(size: family == .systemSmall ? 19 : 22,
                               weight: .bold, design: .rounded).monospacedDigit())
                 .foregroundStyle(CyberPalette.neonCyan)
-            Text("件待办")
+            Text(L("to do", "件待办"))
                 .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 6)
@@ -594,7 +592,7 @@ struct TasksWidgetView: View {
                     : AnyShapeStyle(t.tint))
                 .frame(width: 5, height: 5)
 
-            Text(t.title)
+            Text(t.displayTitle)
                 .font(.system(size: t.section == .later ? 12 : 13, weight: .regular, design: .rounded))
                 .strikethrough(t.isCompleted, color: CyberPalette.doneAccent.opacity(0.8))
                 .foregroundStyle(t.isCompleted
@@ -675,13 +673,13 @@ struct TasksWidgetView: View {
                 Image(systemName: "checkmark.circle")
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(CyberPalette.neonCyan.opacity(0.85))
-                Text("今天没有待办")
+                Text(L("Nothing due today", "今天没有待办"))
                     .font(.system(size: 12, weight: .regular, design: .rounded))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .center)
             if entry.laterTotal > 0 {
-                Text("之后 \(entry.laterTotal) 项")
+                Text(L("\(entry.laterTotal) later", "之后 \(entry.laterTotal) 项"))
                     .font(.system(size: 10.5, weight: .medium, design: .rounded))
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -705,14 +703,14 @@ struct TasksWidgetView: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
                 Image(systemName: "checklist").font(.caption2)
-                Text("\(entry.openCount) 件待办").font(.caption2.weight(.semibold))
+                Text(L("\(entry.openCount) to do", "\(entry.openCount) 件待办")).font(.caption2.weight(.semibold))
             }
             ForEach(Array(entry.tasks.prefix(2).enumerated()), id: \.element.id) { idx, t in
                 HStack(spacing: 4) {
                     Image(systemName: t.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 9, weight: .semibold))
                         .symbolRenderingMode(.hierarchical)
-                    Text(t.title)
+                    Text(t.displayTitle)
                         .font(.caption2)
                         .lineLimit(1)
                         .strikethrough(t.isCompleted)

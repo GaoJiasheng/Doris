@@ -43,7 +43,7 @@ struct SettingsScreen: View {
                 .foregroundStyle(.primary.opacity(0.7))
         } footer: {
             Text(L("Dark is the neon cyber look. Light is a bright version: white cards, deeper accents that stay readable.",
-                   "深色是霓虹赛博风格;浅色是明亮版本,白色卡片,强调色加深以保证清晰可读。"))
+                   "深色是霓虹赛博风格；浅色是明亮版本，白色卡片，强调色加深以保证清晰可读。"))
                 .foregroundStyle(.primary.opacity(0.5))
         }
         .listRowBackground(CyberPalette.listRowFill)
@@ -63,8 +63,8 @@ struct SettingsScreen: View {
             Text(L("Language", "语言"))
                 .foregroundStyle(.primary.opacity(0.7))
         } footer: {
-            Text(L("Switch the UI between English, Chinese, or both side-by-side.",
-                   "在英文、中文或双语之间切换界面显示。"))
+            Text(L("Switch the interface between English and Chinese.",
+                   "在英文和中文之间切换界面。"))
                 .foregroundStyle(.primary.opacity(0.5))
         }
         .listRowBackground(CyberPalette.listRowFill)
@@ -97,14 +97,14 @@ struct SettingsScreen: View {
                         .monospaced()
                     if CloudKitEnvironmentProbe.current == .development {
                         Text(L("Not the Production database — this build syncs with a separate dataset your other devices don't read.",
-                               "不是 Production 数据库 —— 此构建同步到一份独立数据,其他设备读不到。"))
+                               "不是 Production 数据库 —— 此构建同步到一份独立数据，其他设备读不到。"))
                             .foregroundStyle(.orange)
                     }
-                    Text(L("Restart Doris after toggling iCloud for the change to take effect.",
-                           "切换 iCloud 后需要重启 Doris 才能生效。"))
+                    Text(L("Restart Doris after turning iCloud on or off.",
+                           "开关 iCloud 后需重启 Doris 才能生效。"))
                 } else {
-                    Text(L("Local only. Notes stay on this device.",
-                           "仅本地存储,笔记不会离开本机。"))
+                    Text(L("Local only. Your tasks stay on this device.",
+                           "仅本地存储，任务不会离开本机。"))
                 }
             }
             .foregroundStyle(.primary.opacity(0.5))

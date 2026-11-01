@@ -67,21 +67,21 @@ struct QuickAddSheet: View {
                         .frame(height: 220)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
-                TextField(photo == nil ? L("What needs doing?", "要做什么?")
-                                       : L("A title for this photo (optional)", "给这张照片起个标题(可不填)"),
+                TextField(photo == nil ? L("What needs doing?", "要做什么？")
+                                       : L("A title for this photo (optional)", "给这张照片起个标题（可不填）"),
                           text: $title)
                     .font(.title3.weight(.semibold))
                     .focused($titleFocused)
                     .submitLabel(.done)
                     .onSubmit(save)
-                Picker(L("Due", "日期"), selection: $due) {
+                Picker(L("Due", "截止"), selection: $due) {
                     ForEach(Due.allCases, id: \.self) { Text($0.label).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 Spacer(minLength: 0)
             }
             .padding(20)
-            .navigationTitle(photo == nil ? L("Add Task", "添加任务") : L("Photo Task", "拍照记一条"))
+            .navigationTitle(photo == nil ? L("Add task", "添加任务") : L("Photo Task", "拍照记一条"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -210,7 +210,7 @@ struct FocusPickerSheet: View {
                     Button {
                         onPick(nil, L("Focus", "专注"), minutes)
                     } label: {
-                        Label(L("Just focus — no task", "自由专注(不绑定任务)"), systemImage: "sparkles")
+                        Label(L("Just focus — no task", "自由专注（不绑定任务）"), systemImage: "sparkles")
                     }
                 }
             }

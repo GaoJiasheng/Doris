@@ -213,8 +213,8 @@ struct TodayScreen: View {
             Text(L("All clear", "今日清净"))
                 .font(.system(size: 19, weight: .semibold, design: .rounded))
                 .foregroundStyle(.primary.opacity(0.65))
-            Text(L("Pin a note or set a due date to see it here.",
-                   "置顶笔记或设定截止日期即可出现在这里。"))
+            Text(L("Pin a task or give it a due date to see it here.",
+                   "置顶任务或设定截止日期，就会出现在这里。"))
                 .font(.system(size: 14))
                 .foregroundStyle(.primary.opacity(0.45))
                 .multilineTextAlignment(.center)

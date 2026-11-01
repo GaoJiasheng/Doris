@@ -174,18 +174,21 @@ final class NoteBodyNSTextView: NSTextView {
         }
         let format = NSMenu()
         func add(_ title: String, _ action: Selector, _ key: String = "",
-                 _ mods: NSEvent.ModifierFlags = [.command]) {
+                 _ mods: NSEvent.ModifierFlags = [.command],
+                 swatch: NoteRichText.Highlight? = nil) {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
             item.keyEquivalentModifierMask = mods
             item.target = self
+            if let swatch { item.image = NoteRichText.swatch(swatch) }
             format.addItem(item)
         }
         add(L("Bold", "加粗"), #selector(dorisBold(_:)), "b")
         add(L("Underline", "下划线"), #selector(dorisUnderline(_:)), "u")
         format.addItem(.separator())
-        add(L("Highlight Yellow", "黄色高亮"), #selector(dorisHighlightYellow(_:)), "h", [.command, .shift])
-        add(L("Highlight Green", "绿色高亮"), #selector(dorisHighlightGreen(_:)))
-        add(L("Highlight Red", "红色高亮"), #selector(dorisHighlightRed(_:)))
+        add(L("Highlight Yellow", "黄色高亮"), #selector(dorisHighlightYellow(_:)), "h", [.command, .shift],
+            swatch: .yellow)
+        add(L("Highlight Green", "绿色高亮"), #selector(dorisHighlightGreen(_:)), swatch: .green)
+        add(L("Highlight Red", "红色高亮"), #selector(dorisHighlightRed(_:)), swatch: .red)
         add(L("Remove Highlight", "清除高亮"), #selector(dorisHighlightNone(_:)))
         let item = NSMenuItem(title: L("Format", "格式"), action: nil, keyEquivalent: "")
         item.submenu = format

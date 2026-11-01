@@ -214,7 +214,7 @@ private struct AppearanceSettingsView: View {
             }
 
             HStack {
-                Text(L("Auto-sync every 60s", "每 60 秒自动同步"))
+                Text(L("Auto-sync every minute", "每分钟自动同步"))
                     .frame(width: 160, alignment: .leading)
                     .foregroundStyle(.primary)
                 Toggle("", isOn: $sync.autoSyncEnabled)
@@ -226,8 +226,8 @@ private struct AppearanceSettingsView: View {
             SyncNowRow()
 
             Text(L(
-                "Sync Now performs a local save plus a CloudKit reachability check (account status + user record fetch). \"Last synced\" only updates when both succeed. Restart Doris after toggling iCloud for the change to take effect.",
-                "立即同步会先本地保存,然后真实验证 iCloud 可达性(账号状态 + 拉取用户 record)。两步都成功才会刷新「上次同步」时间。切换 iCloud 后需重启 Doris 才会生效。"
+                "Sync Now saves your changes and checks that iCloud is reachable; \"Last synced\" only updates when both succeed. Restart Doris after turning iCloud on or off.",
+                "「立即同步」会保存改动并确认 iCloud 可以连上，两步都成功才会更新「上次同步」时间。开关 iCloud 后需重启 Doris 才能生效。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))
@@ -281,7 +281,7 @@ private struct AppearanceSettingsView: View {
                 .foregroundStyle(.primary)
             Text(L(
                 "Let AI agents on this Mac read and update your tasks — \"add a to-do\", \"what's left today\", ticking off steps as they work. Nothing can be deleted, and every change shows in the notch.",
-                "让这台 Mac 上的 AI agent 读写你的任务:「记一个待办」「今天还剩什么」,边干活边勾掉步骤。不能删除任何东西,每次改动都会在刘海提示。"
+                "让这台 Mac 上的 AI agent 读写你的任务：「记一个待办」「今天还剩什么」，边干活边勾掉步骤。不能删除任何东西，每次改动都会在刘海提示。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))
@@ -294,16 +294,16 @@ private struct AppearanceSettingsView: View {
             }
 
             settingSwitch(L("Agents can change tasks", "允许 agent 修改任务"),
-                          caption: L("Off: agents can only read your tasks.", "关闭后 agent 只能查看,不能新建或修改。"),
+                          caption: L("Off: agents can only read your tasks.", "关闭后 agent 只能查看，不能新建或修改。"),
                           isOn: $agentAllowWrites)
-            settingSwitch(L("Tell agents when to use Doris", "写入使用提示"),
+            settingSwitch(L("Tell agents when to use Doris", "告诉 agent 何时用 Doris"),
                           caption: L("Adds a short, marked section to CLAUDE.md / AGENTS.md so agents think of Doris when you say \"remind me…\". Removed when you turn this off.",
-                                     "在 CLAUDE.md / AGENTS.md 里加一小段带标记的说明,让 agent 听到「记一下」时想到 Doris。关闭即移除。"),
+                                     "在 CLAUDE.md / AGENTS.md 里加一小段带标记的说明，让 agent 听到「记一下」时想到 Doris。关闭即移除。"),
                           isOn: $agentWriteHints)
                 .onChange(of: agentWriteHints) { _, _ in integrations.syncAgentHints() }
 
             HStack(spacing: 8) {
-                Button(L("Copy config for other apps", "复制配置(其他客户端)")) {
+                Button(L("Copy config for other apps", "复制配置（给其他应用）")) {
                     copyAgentConfig()
                 }
                 .controlSize(.small)
@@ -314,7 +314,7 @@ private struct AppearanceSettingsView: View {
                 }
             }
             Text(L("Claude Desktop, Cursor, LM Studio and others: paste it into their MCP settings.",
-                   "Claude Desktop、Cursor、LM Studio 等:粘贴到它们的 MCP 设置里。"))
+                   "Claude Desktop、Cursor、LM Studio 等：粘贴到它们的 MCP 设置里。"))
                 .font(.caption)
                 .foregroundStyle(.primary.opacity(0.5))
         }
@@ -393,13 +393,13 @@ private struct AppearanceSettingsView: View {
             return msg
         case .missingCLI:
             return L("Doris CLI not installed — finish the install wizard first.",
-                     "Doris CLI 还没装,请先完成安装向导。")
+                     "Doris CLI 还没装，请先完成安装向导。")
         case .brokenHook(let path):
             if isAgentRow(provider) {
                 return L("It points at a doris that's gone (\(path)).", "指向的 doris 已不存在(\(path))。")
             }
             return L("The hook can't run doris (\(path)) — notifications aren't arriving.",
-                     "钩子无法运行 doris(\(path)),通知收不到。")
+                     "钩子无法运行 doris(\(path))，通知收不到。")
         default:
             break
         }
@@ -432,7 +432,7 @@ private struct AppearanceSettingsView: View {
                 HStack(spacing: 6) {
                     statusBadge(isAgentRow(provider) ? L("Connected", "已接入") : L("Registered", "已注册"),
                                 tint: CyberPalette.neonCyan)
-                    Button(isAgentRow(provider) ? L("Disconnect", "断开") : L("Unregister", "解除")) {
+                    Button(isAgentRow(provider) ? L("Disconnect", "断开") : L("Unregister", "取消注册")) {
                         Task {
                             do { try await integrations.unregister(provider) }
                             catch { integrationError = error.localizedDescription }
@@ -533,8 +533,8 @@ private struct AppearanceSettingsView: View {
                 ThemeToggleButton()
             }
             Text(L(
-                "Dark is the neon cyber look. Light is a bright version with white cards and deeper, readable accents. Colors follow the character you pick. Click the sun/moon button anywhere in the app for a one-click flip.",
-                "深色是霓虹赛博风格;浅色是明亮版本,白色卡片,强调色加深以保证清晰可读。配色随所选形象变化。任何位置的太阳/月亮按钮都能一键切换。"
+                "Dark is the neon cyber look. Light is a bright version with white cards and deeper, readable accents. Colours follow the character you pick, and the sun/moon button flips between them anywhere in the app.",
+                "深色是霓虹赛博风格；浅色是明亮版本，白色卡片，强调色加深以保证清晰可读。配色随所选形象变化，随处可点太阳/月亮按钮一键切换。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))
@@ -564,8 +564,8 @@ private struct AppearanceSettingsView: View {
                 Spacer()
             }
             Text(L(
-                "Switch the UI between English and Chinese.",
-                "在英文和中文之间切换界面显示。"
+                "Switch the interface between English and Chinese.",
+                "在英文和中文之间切换界面。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))
@@ -603,7 +603,7 @@ private struct AppearanceSettingsView: View {
                     Button {
                         voice.addBinding()
                     } label: {
-                        Label(L("Add binding", "新增绑定"), systemImage: "plus.circle.fill")
+                        Label(L("Add binding", "添加绑定"), systemImage: "plus.circle.fill")
                     }
                     .buttonStyle(.borderless)
                     .disabled(!voice.enabled || voice.bindings.count >= VoiceSettings.TriggerKey.allCases.count)
@@ -614,7 +614,7 @@ private struct AppearanceSettingsView: View {
 
             Text(L(
                 "Hold a trigger key, speak, release. Doris transcribes locally with Apple Speech, then activates the chosen app and pastes (with optional auto-submit). Press Esc anytime to abort. First use prompts for Microphone, Speech Recognition, Input Monitoring, and Accessibility.",
-                "按住触发键说话,松开后 Doris 用 Apple Speech 本地转写,自动前置目标 App 并粘贴(可选自动回车)。任何时候按 Esc 可终止录音。首次使用会逐步请求麦克风、语音识别、输入监听及辅助功能权限。"
+                "按住触发键说话，松开后 Doris 用 Apple Speech 本地转写，自动前置目标 App 并粘贴（可选自动回车）。任何时候按 Esc 可终止录音。首次使用会逐步请求麦克风、语音识别、输入监听及辅助功能权限。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))
@@ -704,8 +704,8 @@ private struct AppearanceSettingsView: View {
             .toggleStyle(.switch)
 
             Text(L(
-                "The desktop panel floats a pinned + today summary on your desktop. To stick a single note, right-click it → Stick to desktop.",
-                "桌面面板会在桌面上浮出「置顶 + 今日」的汇总。把单条笔记贴到桌面:右键那条笔记 →「贴到桌面」。"
+                "The desktop panel floats your pinned and today's tasks on the desktop. To stick a single task there, right-click it → Stick to desktop.",
+                "桌面面板会在桌面上浮出「置顶 + 今日」的任务汇总。想把单个任务贴到桌面：右键该任务 →「贴到桌面」。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))
@@ -736,8 +736,8 @@ private struct AppearanceSettingsView: View {
                     .labelsHidden()
                     .frame(maxWidth: 180)
                 }
-                Text(L("Pick the character Doris uses — animation, portrait, menu-bar mark, and color theme switch with it.",
-                       "选择桌宠形象 —— 动画、头像、刘海图标与配色主题随之切换。"))
+                Text(L("Pick the character Doris uses — its animation, portrait, menu-bar mark and colour theme switch with it.",
+                       "选择 Doris 的形象 —— 动画、头像、刘海图标与配色主题随之切换。"))
                     .font(.caption)
                     .foregroundStyle(.primary.opacity(0.6))
                     .fixedSize(horizontal: false, vertical: true)
@@ -759,7 +759,7 @@ private struct AppearanceSettingsView: View {
 
             Text(L(
                 "On the notch extension (top edge of a notched display) the avatar always renders as solid black so it fuses with the real notch — this slider has no effect there. On every other edge, the avatar background uses this opacity.",
-                "在刘海扩展形态(带刘海屏幕的顶部)下,头像始终渲染为纯黑以与真刘海融合,此滑块无效。其它边缘下,头像背景采用该不透明度。"
+                "在刘海扩展形态（带刘海屏幕的顶部）下，头像始终渲染为纯黑以与真刘海融合，此滑块无效。其它边缘下，头像背景采用该不透明度。"
             ))
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.6))
@@ -880,7 +880,7 @@ private struct SyncStatusBanner: View {
 
     private var bannerTitle: String {
         if sync.lastSyncError != nil { return L("Sync failed", "同步失败") }
-        if !sync.cloudKitEnabled     { return L("iCloud sync is off", "iCloud 同步未启用") }
+        if !sync.cloudKitEnabled     { return L("iCloud sync is off", "iCloud 同步未开启") }
         if sync.lastSyncedAt == nil  { return L("Not synced yet", "尚未同步") }
         return L("In sync with iCloud", "已与 iCloud 同步")
     }
@@ -889,12 +889,12 @@ private struct SyncStatusBanner: View {
         if let err = sync.lastSyncError { return err }
         if !sync.cloudKitEnabled {
             return L(
-                "Notes stay on this Mac. Toggle iCloud on below to mirror to other devices.",
-                "笔记仅保存在本机。下方开启 iCloud 即可与其他设备同步。"
+                "Your tasks stay on this Mac. Turn on iCloud below to sync them to your other devices.",
+                "任务仅保存在本机。在下方开启 iCloud 即可与其他设备同步。"
             )
         }
         if sync.lastSyncedAt == nil {
-            return L("Click Sync Now below to start a sync.",
+            return L("Click Sync Now below to start syncing.",
                      "点击下方「立即同步」开始第一次同步。")
         }
         return lastSyncedLabel
@@ -950,7 +950,7 @@ private struct SyncNowRow: View {
 
     private var lastSyncedLabel: String {
         guard let last = sync.lastSyncedAt else {
-            return L("Never synced yet", "尚未同步")
+            return L("Never synced", "尚未同步")
         }
         _ = nowTick
         let f = RelativeDateTimeFormatter()

@@ -109,7 +109,7 @@ struct NotesScreen: View {
                                     startPoint: .leading, endPoint: .trailing
                                 )
                             )
-                        Text(L("cyber notes", "赛博笔记"))
+                        Text(L("cyber helper", "赛博助手"))
                             .font(.system(size: 9, weight: .medium, design: .monospaced))
                             .foregroundStyle(CyberPalette.neonCyan.opacity(0.7))
                             .kerning(1.5)
@@ -230,7 +230,7 @@ struct NotesScreen: View {
                 try? ctx.save()
             } label: {
                 Label(
-                    n.done ? L("Undo", "取消完成") : L("Done", "完成"),
+                    n.done ? L("Not done", "取消完成") : L("Done", "完成"),
                     systemImage: n.done ? "arrow.uturn.backward" : "checkmark.circle.fill"
                 )
             }
@@ -267,7 +267,7 @@ struct NotesScreen: View {
                 try? ctx.save()
             } label: {
                 Label(
-                    n.done ? L("Mark as undone", "标为未完成") : L("Mark as done", "标为已完成"),
+                    n.done ? L("Mark as not done", "标为未完成") : L("Mark as done", "标为已完成"),
                     systemImage: n.done ? "circle" : "checkmark.circle.fill"
                 )
             }
@@ -365,7 +365,7 @@ struct NotesScreen: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(CyberPalette.neonCyan.opacity(0.7))
             TextField(
-                L("Search notes…", "搜索笔记…"),
+                L("Search tasks…", "搜索任务…"),
                 text: $searchText
             )
             .textFieldStyle(.plain)
@@ -524,13 +524,13 @@ struct NotesScreen: View {
                 .font(.system(size: 36))
                 .foregroundStyle(.primary.opacity(0.4))
             Text(searchText.isEmpty
-                 ? L("No notes yet", "暂无笔记")
+                 ? L("No tasks yet", "暂无任务")
                  : L("No results", "无搜索结果"))
                 .font(.subheadline)
                 .foregroundStyle(.primary.opacity(0.65))
             if searchText.isEmpty {
-                Text(L("Tap + to create one. Pull down to sync.",
-                       "点击 + 新建一条。下拉同步。"))
+                Text(L("Tap + to add one. Pull down to sync.",
+                       "点 + 添加任务，下拉可同步。"))
                     .font(.caption)
                     .foregroundStyle(.primary.opacity(0.45))
                     .multilineTextAlignment(.center)
@@ -563,7 +563,7 @@ private struct ArchivedNotesSheet: View {
                         Image(systemName: "archivebox")
                             .font(.system(size: 36))
                             .foregroundStyle(.primary.opacity(0.3))
-                        Text(L("No archived notes", "没有已归档的笔记"))
+                        Text(L("No archived tasks", "暂无归档任务"))
                             .font(.subheadline)
                             .foregroundStyle(.primary.opacity(0.55))
                     }

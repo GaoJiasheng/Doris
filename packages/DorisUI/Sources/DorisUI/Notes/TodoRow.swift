@@ -141,8 +141,8 @@ public struct TodoRow: View {
                 }
                 .buttonStyle(.plain)
                 .help(note.done
-                      ? L("Mark not done", "取消完成")
-                      : L("Mark done", "标记完成"))
+                      ? L("Mark as not done", "标为未完成")
+                      : L("Mark as done", "标为已完成"))
             }
 
             // Inline-editable title.
@@ -311,7 +311,7 @@ public struct TodoRow: View {
         // Confirmation alert — only used for PERMANENT delete (from
         // the Trash view). Soft-delete (Active/Archived → Trash) goes
         // through silently because Trash is recoverable.
-        .alert(L("Permanently delete?", "彻底删除?"),
+        .alert(L("Permanently delete?", "彻底删除？"),
                isPresented: $confirmingDelete) {
             Button(L("Delete forever", "彻底删除"), role: .destructive) {
                 ctx.delete(note)
@@ -384,7 +384,7 @@ public struct TodoRow: View {
                 actionIcon("arrow.uturn.backward", tint: CyberPalette.neonCyan)
             }
             .buttonStyle(.plain)
-            .help(L("Restore (back to active)", "还原(回到活动)"))
+            .help(L("Restore", "恢复"))
         } else {
             // Active or archived row → archive toggle
             Button {
@@ -398,7 +398,7 @@ public struct TodoRow: View {
             }
             .buttonStyle(.plain)
             .help(note.archived
-                  ? L("Unarchive (back to active)", "解归档(回到活动)")
+                  ? L("Unarchive", "取消归档")
                   : L("Archive", "归档"))
         }
     }
@@ -518,6 +518,9 @@ struct TodoTitleField: NSViewRepresentable {
         tf.placeholderString = placeholder
         tf.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
         tf.delegate = context.coordinator
+        // A click into the title focuses the row right away (the Mac's
+        // two-column window shows it on the right), not at the first keystroke.
+        tf.onFocus = { [weak coordinator = context.coordinator] in coordinator?.parent.onFocusChange(true) }
         tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
         tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tf.setContentHuggingPriority(.required, for: .vertical)

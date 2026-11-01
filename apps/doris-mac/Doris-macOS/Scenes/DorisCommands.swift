@@ -4,7 +4,7 @@ import DorisUI
 struct DorisCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button(L("New Note", "新建笔记")) {
+            Button(L("New Task", "新建任务")) {
                 if let url = URL(string: "doris://new-note") {
                     NSWorkspace.shared.open(url)
                 }

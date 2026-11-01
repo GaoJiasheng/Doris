@@ -46,7 +46,7 @@ struct EventsScreen: View {
                                     m.state = .actioned
                                     try? ctx.save()
                                 } label: {
-                                    Label(L("Mark done", "标为已读"), systemImage: "checkmark.circle")
+                                    Label(L("Mark as read", "标为已读"), systemImage: "checkmark.circle")
                                 }
                                 Button {
                                     m.state = .dismissed

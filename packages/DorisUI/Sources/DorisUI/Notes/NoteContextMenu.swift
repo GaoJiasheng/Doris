@@ -47,7 +47,7 @@ private struct NoteContextMenuModifier: ViewModifier {
             .popover(isPresented: $showDatePicker, arrowEdge: .trailing) {
                 datePickerPopover
             }
-            .alert(L("Permanently delete?", "彻底删除?"),
+            .alert(L("Permanently delete?", "彻底删除？"),
                    isPresented: $confirmingPermanentDelete) {
                 Button(L("Delete forever", "彻底删除"), role: .destructive) {
                     ctx.delete(note)
@@ -72,7 +72,7 @@ private struct NoteContextMenuModifier: ViewModifier {
                 note.deletedAt = nil
                 note.updatedAt = now
             } label: {
-                Label(L("Restore", "还原"), systemImage: "arrow.uturn.backward")
+                Label(L("Restore", "恢复"), systemImage: "arrow.uturn.backward")
             }
             Button(role: .destructive) {
                 confirmingPermanentDelete = true
@@ -89,7 +89,7 @@ private struct NoteContextMenuModifier: ViewModifier {
             // "hide past + completed" filter sees it immediately.
             Button { toggleDone() } label: {
                 Label(
-                    note.done ? L("Mark not done", "标为未完成") : L("Mark as done", "标为已完成"),
+                    note.done ? L("Mark as not done", "标为未完成") : L("Mark as done", "标为已完成"),
                     systemImage: note.done ? "arrow.uturn.backward" : "checkmark.circle.fill"
                 )
             }
@@ -147,7 +147,7 @@ private struct NoteContextMenuModifier: ViewModifier {
             Divider()
             Button { toggleArchive() } label: {
                 Label(
-                    note.archived ? L("Unarchive", "解归档") : L("Archive", "归档"),
+                    note.archived ? L("Unarchive", "取消归档") : L("Archive", "归档"),
                     systemImage: note.archived ? "tray.and.arrow.up" : "archivebox"
                 )
             }
@@ -241,7 +241,7 @@ private struct NoteContextMenuModifier: ViewModifier {
         let cal = Calendar.current
         let dueDay = cal.startOfDay(for: due)
         let today = cal.startOfDay(for: Date())
-        let prefix = L("Scheduled: ", "已排期: ")
+        let prefix = L("Scheduled: ", "已排期：")
         if dueDay < today {
             let days = cal.dateComponents([.day], from: dueDay, to: today).day ?? 0
             return prefix + L("\(days)d overdue", "逾期 \(days) 天")

@@ -50,17 +50,17 @@ public struct NoteEditorSheet: View {
         .frame(minWidth: 540, idealWidth: 620, minHeight: 420, idealHeight: 520)
         .background(CyberPalette.backdrop.ignoresSafeArea())
         .alert(
-            L("Delete this note?", "删除这条笔记?"),
+            L("Archive this task?", "归档这个任务？"),
             isPresented: $confirmingDelete
         ) {
-            Button(L("Delete", "删除"), role: .destructive) {
+            Button(L("Archive", "归档")) {
                 note.archive()
                 try? ctx.save()
                 dismiss()
             }
             Button(L("Cancel", "取消"), role: .cancel) {}
         } message: {
-            Text(L("This can't be undone.", "此操作无法撤销。"))
+            Text(L("It moves to Archived and stays there until you delete it. You can restore it any time.", "任务会移到「已归档」，一直保留到你手动删除，随时可以恢复。"))
         }
     }
     #endif
@@ -83,7 +83,7 @@ public struct NoteEditorSheet: View {
                     Button(role: .destructive) {
                         confirmingDelete = true
                     } label: {
-                        Image(systemName: "trash")
+                        Image(systemName: "archivebox")
                             .foregroundStyle(CyberPalette.neonPink.opacity(0.9))
                     }
                 }
@@ -98,17 +98,17 @@ public struct NoteEditorSheet: View {
                 }
             }
             .alert(
-                L("Delete this note?", "删除这条笔记?"),
+                L("Archive this task?", "归档这个任务？"),
                 isPresented: $confirmingDelete
             ) {
-                Button(L("Delete", "删除"), role: .destructive) {
+                Button(L("Archive", "归档")) {
                     ctx.delete(note)
                     try? ctx.save()
                     dismiss()
                 }
                 Button(L("Cancel", "取消"), role: .cancel) {}
             } message: {
-                Text(L("This can't be undone.", "此操作无法撤销。"))
+                Text(L("It moves to Archived and stays there until you delete it. You can restore it any time.", "任务会移到「已归档」，一直保留到你手动删除，随时可以恢复。"))
             }
         }
     }
@@ -121,7 +121,7 @@ public struct NoteEditorSheet: View {
             Image(systemName: "note.text")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(CyberPalette.neonPink)
-            Text(L("Edit Note", "编辑笔记"))
+            Text(L("Edit Task", "编辑任务"))
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .kerning(0.5)
                 .foregroundStyle(.primary)
@@ -129,7 +129,7 @@ public struct NoteEditorSheet: View {
             Button(role: .destructive) {
                 confirmingDelete = true
             } label: {
-                Label(L("Delete", "删除"), systemImage: "trash")
+                Label(L("Archive", "归档"), systemImage: "archivebox")
                     .font(.caption)
                     .foregroundStyle(CyberPalette.neonPink.opacity(0.9))
             }

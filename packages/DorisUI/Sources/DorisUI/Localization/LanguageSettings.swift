@@ -1,6 +1,10 @@
 import Foundation
 import SwiftUI
 import Combine
+import DorisIPC
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 /// User-tunable display language. Persisted in `UserDefaults`. Two modes:
 /// English-only or Chinese-only. Default is Chinese on first launch.
@@ -27,16 +31,27 @@ public final class LanguageSettings: ObservableObject {
 
     @Published public var mode: Mode {
         didSet {
-            UserDefaults.standard.set(mode.rawValue, forKey: "doris.language.mode")
+            UserDefaults.standard.set(mode.rawValue, forKey: Self.key)
+            Self.groupDefaults?.set(mode.rawValue, forKey: Self.key)
+            #if canImport(WidgetKit)
+            WidgetCenter.shared.reloadAllTimelines()
+            #endif
         }
     }
 
+    private static let key = "doris.language.mode"
+    /// Widgets can't read the app's own defaults, so the choice is copied
+    /// into the App Group, where they look for it.
+    private static let groupDefaults = UserDefaults(suiteName: DorisIdentifiers.appGroup)
+
     private init() {
-        let raw = UserDefaults.standard.string(forKey: "doris.language.mode")
+        let raw = UserDefaults.standard.string(forKey: Self.key)
+            ?? Self.groupDefaults?.string(forKey: Self.key)
             ?? Mode.chinese.rawValue
         // Legacy `.bilingual` ("both") rows demote to Chinese — bilingual
         // is no longer offered as a UI option.
         self.mode = Mode(rawValue: raw) ?? .chinese
+        Self.groupDefaults?.set(mode.rawValue, forKey: Self.key)
     }
 }
 

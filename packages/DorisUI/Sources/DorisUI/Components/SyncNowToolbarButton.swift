@@ -184,7 +184,7 @@ public struct SyncNowToolbarButton: View {
     private var statusLabel: String {
         if spinning { return L("Syncing…", "同步中…") }
         if let err = sync.lastSyncError { return truncate(err, max: 18) }
-        if !sync.cloudKitEnabled { return L("iCloud off", "未启用 iCloud") }
+        if !sync.cloudKitEnabled { return L("iCloud off", "iCloud 未开启") }
         guard let last = sync.lastSyncedAt else {
             return L("Never synced", "尚未同步")
         }
@@ -197,11 +197,11 @@ public struct SyncNowToolbarButton: View {
     private var helpText: String {
         if let err = sync.lastSyncError {
             return L("Sync error: \(err)\nClick for details.",
-                     "同步错误:\(err)\n点击查看详情。")
+                     "同步错误：\(err)\n点击查看详情。")
         }
         if !sync.cloudKitEnabled {
-            return L("iCloud sync is off. Click to enable.",
-                     "iCloud 同步未启用。点击查看详情。")
+            return L("iCloud sync is off. Click for details.",
+                     "iCloud 同步未开启，点击查看详情。")
         }
         var label = L("Sync Now", "立即同步")
         if let last = sync.lastSyncedAt {
@@ -228,7 +228,7 @@ public struct SyncNowToolbarButton: View {
             return L("Sync failed", "同步失败")
         }
         if !sync.cloudKitEnabled {
-            return L("iCloud sync is off", "iCloud 同步未启用")
+            return L("iCloud sync is off", "iCloud 同步未开启")
         }
         return L("In sync", "已同步")
     }
@@ -239,8 +239,8 @@ public struct SyncNowToolbarButton: View {
         }
         if !sync.cloudKitEnabled {
             return L(
-                "Notes only live on this Mac. Open Sync Settings and enable \"Use iCloud sync\" to mirror your data across devices.",
-                "笔记仅保存在本机。打开「同步设置」并启用「使用 iCloud 同步」即可在多设备之间镜像数据。"
+                "Your tasks only live on this Mac. Open Sync Settings and turn on \"Use iCloud sync\" to sync them across your devices.",
+                "任务仅保存在本机。打开「同步设置」并开启「使用 iCloud 同步」，即可在多台设备间同步。"
             )
         }
         if let last = sync.lastSyncedAt {
@@ -249,7 +249,7 @@ public struct SyncNowToolbarButton: View {
             return L("Last synced ", "上次同步 ")
                 + f.localizedString(for: last, relativeTo: Date())
         }
-        return L("Never synced yet", "尚未同步")
+        return L("Never synced", "尚未同步")
     }
 
     private func truncate(_ s: String, max: Int) -> String {

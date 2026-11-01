@@ -103,7 +103,7 @@ struct RootTabView: View {
 
             NotesScreen()
                 .tabItem {
-                    Label(L("Notes", "笔记"), systemImage: "note.text")
+                    Label(L("To-dos", "待办"), systemImage: "note.text")
                 }
                 .tag(Tab.notes)
 

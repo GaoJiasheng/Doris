@@ -244,7 +244,7 @@ final class VoiceController {
             }
             showError(
                 message: L("Requesting permission… answer the system prompt, then press the hotkey again.",
-                           "正在请求权限,请在系统弹窗中选择,然后再次按下热键。"),
+                           "正在请求权限，请在系统弹窗中选择，然后再次按下热键。"),
                 autoDismiss: 4.0)
         case .deniedMicrophone:
             let phase = VoiceFloater.micPermissionError(

@@ -210,7 +210,7 @@ public struct AvatarHero: View {
                 Button(L("\(m) min", "\(m) 分钟")) { focus.adjust(minutes: m) }
             }
         } label: {
-            focusPromptLabel(L("More", "再续"), "arrow.clockwise")
+            focusPromptLabel(L("Keep going", "再续"), "arrow.clockwise")
         }
         #if os(macOS)
         // `.borderlessButton` is macOS-only; without it the menu draws its

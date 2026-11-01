@@ -127,7 +127,7 @@ struct NoteDetailScreen: View {
                                          : .primary.opacity(0.65))
                 }
                 .accessibilityLabel(note.done
-                                    ? L("Mark not done", "标为未完成")
+                                    ? L("Mark as not done", "标为未完成")
                                     : L("Mark as done", "标为已完成"))
             }
             // Photos into the body: at the cursor in a text note, at the end
@@ -167,7 +167,7 @@ struct NoteDetailScreen: View {
             }
         }
         .alert(
-            L("Archive this note?", "归档这条笔记?"),
+            L("Archive this task?", "归档这个任务？"),
             isPresented: $confirmingArchive
         ) {
             Button(L("Archive", "归档")) {
@@ -179,7 +179,7 @@ struct NoteDetailScreen: View {
             Button(L("Cancel", "取消"), role: .cancel) {}
         } message: {
             Text(L("It moves to Archived and stays there until you delete it. You can restore it any time.",
-                   "笔记会移到「已归档」,一直保留,直到你手动删除,随时可以恢复。"))
+                   "任务会移到「已归档」，一直保留到你手动删除，随时可以恢复。"))
         }
         .sheet(isPresented: $showingDatePicker) {
             dueDatePickerSheet

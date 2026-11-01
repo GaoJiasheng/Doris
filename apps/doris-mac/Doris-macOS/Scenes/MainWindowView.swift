@@ -177,7 +177,7 @@ struct MainWindowView: View {
                 // the theme toggle's sun/moon glyphs (which sit on
                 // the trailing edge of the same strip).
                 tabButton(.today, label: L("Today", "今日"), system: "sparkles", showsLabel: labels)
-                tabButton(.notes, label: L("TODO", "TODO"), system: "checklist", showsLabel: labels)
+                tabButton(.notes, label: L("To-dos", "待办"), system: "checklist", showsLabel: labels)
                 tabButton(.events, label: L("Events", "事件"), system: "tray.fill", showsLabel: labels)
                 tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill", showsLabel: labels)
             }
@@ -350,8 +350,8 @@ private struct MainEventsList: View {
             Text(L("No events yet", "暂无事件"))
                 .font(.headline)
                 .foregroundStyle(.primary.opacity(0.7))
-            Text(L("CLI pushes, share extension drops, and cross-device events will land here.",
-                   "CLI 通知、Share 扩展、跨设备事件都会出现在这里。"))
+            Text(L("Notifications from Claude Code, Codex, the CLI and your other devices show up here.",
+                   "Claude Code、Codex、命令行和其他设备发来的通知都会出现在这里。"))
                 .font(.caption)
                 .foregroundStyle(.primary.opacity(0.5))
                 .multilineTextAlignment(.center)
@@ -464,10 +464,15 @@ private struct MainNotesList: View {
     //
     // A wide window shows the list and the selected note side by side
     // (like Evernote); a narrow one — the notch popup, a small window —
-    // keeps the one-column list, where opening a note replaces it.
+    // keeps the one-column list, where opening a note replaces it. The
+    // button in the filter bar turns two columns off for a wide window too.
 
     /// Wide enough for two columns.
-    @State private var wide = false
+    @State private var roomy = false
+    /// The user's choice; only matters when there's room.
+    @AppStorage("doris.todo.twoColumns") private var twoColumnsOn = true
+    /// Showing two columns.
+    private var wide: Bool { roomy && twoColumnsOn }
     private static let twoColumnWidth: CGFloat = 860
     /// The note in the right column.
     @State private var selectedID: UUID?
@@ -476,6 +481,9 @@ private struct MainNotesList: View {
     @State private var cleared = false
     /// Reopened in the right column next time.
     @AppStorage("doris.todo.lastOpened") private var lastOpenedID: String = ""
+    /// The left column's width, dragged at the divider.
+    @AppStorage("doris.todo.listWidth") private var listWidth: Double = 330
+    @State private var listDragStart: Double?
 
     /// Three-partition filter: trash > archived > active. Each row sits
     /// in exactly one. Sort key flips by view: trash by deletedAt,
@@ -540,10 +548,13 @@ private struct MainNotesList: View {
                 listBody
             }
         }
-        .onGeometryChange(for: Bool.self) { $0.size.width >= Self.twoColumnWidth } action: { isWide in
-            wide = isWide
+        .onGeometryChange(for: Bool.self) { $0.size.width >= Self.twoColumnWidth } action: { isRoomy in
+            roomy = isRoomy
             // A note open full-width moves into the right column.
-            if isWide, let open = editing { select(open); editing = nil }
+            if wide, let open = editing { select(open); editing = nil }
+        }
+        .onChange(of: twoColumnsOn) {
+            if wide, let open = editing { select(open); editing = nil }
         }
         // Opened from elsewhere (focus ring, a banner): into the right
         // column when there is one.
@@ -573,11 +584,16 @@ private struct MainNotesList: View {
         return sortedNotes.first
     }
 
+    /// Plain SwiftUI columns, not `HSplitView`: an AppKit split view under
+    /// the zoom's scale effect is drawn in one place and clicked in another
+    /// (the right column couldn't be edited), and its nested hosting views
+    /// could loop on layout until AppKit killed the app.
     private var twoColumns: some View {
         let open = rightNote
-        return HSplitView {
+        return HStack(spacing: 0) {
             listBody
-                .frame(minWidth: 260, idealWidth: 330, maxWidth: 480)
+                .frame(width: min(max(listWidth, 260), 480))
+            columnDivider
             Group {
                 if let open {
                     InlineNoteEditor(note: open) {
@@ -591,15 +607,39 @@ private struct MainNotesList: View {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 26, weight: .light))
                             .foregroundStyle(.secondary)
-                        Text(L("Pick a task on the left", "在左边选一条任务"))
+                        Text(L("Pick a task on the left", "在左侧选择一个任务"))
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .frame(minWidth: 380, maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        // The divider moves as it's dragged; measure in the columns' space.
+        .coordinateSpace(name: "todoColumns")
+    }
+
+    /// A hairline with a wider grab area; drag it to resize the list.
+    private var columnDivider: some View {
+        Rectangle()
+            .fill(Color.primary.opacity(0.08))
+            .frame(width: 1)
+            .frame(maxHeight: .infinity)
+            .padding(.horizontal, 3)
+            .contentShape(Rectangle())
+            .onHover { inside in
+                if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1, coordinateSpace: .named("todoColumns"))
+                    .onChanged { g in
+                        let start = listDragStart ?? min(max(listWidth, 260), 480)
+                        listDragStart = start
+                        listWidth = min(max(start + g.translation.width, 260), 480)
+                    }
+                    .onEnded { _ in listDragStart = nil }
+            )
     }
 
     private var listBody: some View {
@@ -665,10 +705,15 @@ private struct MainNotesList: View {
             filterChip(.active,   label: L("Active",   "未归档"), icon: "checklist")
             filterChip(.archived, label: L("Archived", "已归档"), icon: "archivebox")
             filterChip(.trash,    label: L("Trash",    "回收站"), icon: "trash")
-            Spacer()
-            bulkAction
+            Spacer(minLength: 4)
+            // The left column can be narrow: the bulk button drops its text.
+            ViewThatFits(in: .horizontal) {
+                bulkAction(compact: false)
+                bulkAction(compact: true)
+            }
+            if roomy { columnsToggle }
         }
-        .alert(L("Empty trash?", "清空回收站?"),
+        .alert(L("Empty trash?", "清空回收站？"),
                isPresented: $confirmingEmptyTrash) {
             Button(L("Empty (\(trashCount))", "清空 (\(trashCount))"), role: .destructive) {
                 emptyTrash()
@@ -676,18 +721,19 @@ private struct MainNotesList: View {
             Button(L("Cancel", "取消"), role: .cancel) {}
         } message: {
             Text(L("Items in the trash will be permanently deleted and can't be recovered.",
-                   "回收站中的任务将被彻底删除,无法恢复。"))
+                   "回收站中的任务将被彻底删除，无法恢复。"))
         }
     }
 
     @ViewBuilder
-    private var bulkAction: some View {
+    private func bulkAction(compact: Bool) -> some View {
         if filter == .active && doneActiveCount > 0 {
             bulkButton(
                 icon: "tray.full",
                 label: L("Archive done (\(doneActiveCount))",
                          "归档已完成 (\(doneActiveCount))"),
                 tint: CyberPalette.neonCyan,
+                compact: compact,
                 help: L("Move all completed tasks to archive",
                         "把所有已完成任务移到归档")
             ) { archiveAllDone() }
@@ -696,19 +742,24 @@ private struct MainNotesList: View {
                 icon: "trash.slash",
                 label: L("Empty (\(trashCount))", "清空 (\(trashCount))"),
                 tint: CyberPalette.neonPink,
+                compact: compact,
                 help: L("Permanently delete every item in trash",
                         "彻底删除回收站中所有任务")
             ) { confirmingEmptyTrash = true }
         }
     }
 
-    private func bulkButton(icon: String, label: String, tint: Color, help: String, action: @escaping () -> Void) -> some View {
+    private func bulkButton(icon: String, label: String, tint: Color, compact: Bool = false,
+                            help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 10, weight: .semibold))
-                Text(label)
-                    .font(.caption.weight(.medium))
+                if !compact {
+                    Text(label)
+                        .font(.caption.weight(.medium))
+                        .fixedSize()
+                }
             }
             .foregroundStyle(tint)
             .padding(.horizontal, 10)
@@ -717,7 +768,23 @@ private struct MainNotesList: View {
             .overlay(Capsule().stroke(tint.opacity(0.4), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
-        .help(help)
+        .help(compact ? "\(label) — \(help)" : help)
+    }
+
+    /// Two columns on or off (shown only when the window has room).
+    private var columnsToggle: some View {
+        Button { twoColumnsOn.toggle() } label: {
+            Image(systemName: twoColumnsOn ? "rectangle.split.2x1.fill" : "rectangle.split.2x1")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(twoColumnsOn ? 0.75 : 0.45))
+                .frame(width: 26, height: 22)
+                .background(Capsule().fill(Color.primary.opacity(twoColumnsOn ? 0.10 : 0)))
+                .overlay(Capsule().stroke(Color.primary.opacity(0.12), lineWidth: 0.5))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(twoColumnsOn ? L("Show one column", "改为单列显示")
+                           : L("Show the list and the task side by side", "列表和任务左右两列显示"))
     }
 
     private func filterChip(_ value: TodoFilter, label: String, icon: String) -> some View {
@@ -792,7 +859,7 @@ private struct MainNotesList: View {
                 HStack(spacing: 4) {
                     Image(systemName: "plus")
                         .font(.system(size: 10, weight: .bold))
-                    Text(L("Add task", "新增任务"))
+                    Text(L("Add task", "添加任务"))
                         .font(.caption2.weight(.medium))
                 }
                 .foregroundStyle(CyberPalette.neonCyan)
@@ -910,14 +977,14 @@ private struct MainNotesList: View {
     private var emptyHint: String {
         switch filter {
         case .active:
-            return L("Press \"+ Add task\" or just start typing.",
-                     "点击下方「+ 新增任务」开始。")
+            return L("Click \"+ Add task\" below to start.",
+                     "点击下方「+ 添加任务」开始。")
         case .archived:
-            return L("Tasks you archive will show up here. Use the box icon on a row, or the bulk button on the active list.",
-                     "归档的任务会出现在这里。点行尾的箱子图标,或在「未归档」列表用批量按钮。")
+            return L("Tasks you archive show up here. Use the box icon on a row, or the bulk button on the Active list.",
+                     "归档的任务会出现在这里。点行尾的箱子图标，或在「未归档」列表里用批量按钮。")
         case .trash:
-            return L("Deleted tasks land here, recoverable until you Empty trash.",
-                     "删除的任务会出现在这里,清空之前都可以还原。")
+            return L("Deleted tasks stay here for 24 hours — restore them before then.",
+                     "删除的任务会在这里保留 24 小时，期间随时可以恢复。")
         }
     }
 }

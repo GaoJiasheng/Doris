@@ -179,10 +179,8 @@ final class NoteBodyUITextView: UITextView {
     /// 格式 in the text menu, for a selection.
     var formatMenu: UIMenu {
         let highlight = UIMenu(title: L("Highlight", "高亮"), image: UIImage(systemName: "highlighter"),
-                               children: NoteInlineMarkup.Highlight.allCases.map { h in
-            UIAction(title: NoteFormatBar.name(h),
-                     image: UIImage(systemName: "circle.fill")?.withTintColor(
-                        NoteRichText.color(h).withAlphaComponent(1), renderingMode: .alwaysOriginal)) {
+                               children: NoteFormatBar.colours.map { h in
+            UIAction(title: NoteFormatBar.name(h), image: NoteRichText.swatch(h)) {
                 [weak self] _ in self?.applyRichText(.highlight(h))
             }
         } + [UIAction(title: L("Remove Highlight", "清除高亮"), image: UIImage(systemName: "eraser")) {
@@ -212,13 +210,27 @@ final class NoteBodyUITextView: UITextView {
             image: UIImage(systemName: "highlighter"),
             primaryAction: UIAction { [weak self] _ in self?.applyRichText(.highlight(.yellow)) },
             menu: (formatMenu.children.last as? UIMenu))
-        highlight.accessibilityLabel = L("Highlight", "高亮")
+        highlight.accessibilityLabel = L("Highlight Yellow", "黄色高亮")
+        // The colours, under a name: 高亮 ⌄ opens them on a tap.
+        var config = UIButton.Configuration.plain()
+        config.title = L("Highlight", "高亮")
+        config.image = UIImage(systemName: "chevron.down",
+                               withConfiguration: UIImage.SymbolConfiguration(pointSize: 11, weight: .semibold))
+        config.imagePlacement = .trailing
+        config.imagePadding = 3
+        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4)
+        let colourButton = UIButton(configuration: config)
+        colourButton.menu = formatMenu.children.last as? UIMenu
+        colourButton.showsMenuAsPrimaryAction = true
+        colourButton.accessibilityLabel = L("Highlight Colour", "高亮颜色")
+        let colours = UIBarButtonItem(customView: colourButton)
         let done = UIBarButtonItem(image: UIImage(systemName: "keyboard.chevron.compact.down"),
                                    primaryAction: UIAction { [weak self] _ in self?.resignFirstResponder() })
         done.accessibilityLabel = L("Hide Keyboard", "收起键盘")
         bar.items = [item("bold", L("Bold", "加粗"), .bold),
                      item("underline", L("Underline", "下划线"), .underline),
                      highlight,
+                     colours,
                      UIBarButtonItem(systemItem: .flexibleSpace),
                      done]
         bar.sizeToFit()

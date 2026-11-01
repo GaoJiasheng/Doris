@@ -138,7 +138,7 @@ struct DesktopPanelView: View {
                                     tint: longTermViolet, notes: longTermNotes)
                         }
                         if !dueNotes.isEmpty || !laterNotes.isEmpty {
-                            section(L("Due", "日程"), icon: "calendar",
+                            section(L("Upcoming", "日程"), icon: "calendar",
                                     tint: CyberPalette.neonCyan, notes: dueNotes)
                             if !laterNotes.isEmpty { laterDisclosure }
                         }
@@ -420,8 +420,8 @@ struct DesktopPanelView: View {
                                                       : AnyShapeStyle(tint))
             }
             .buttonStyle(.plain)
-            .help(note.isCompleted ? L("Mark not done", "标为未完成")
-                                   : L("Mark done", "标记完成"))
+            .help(note.isCompleted ? L("Mark as not done", "标为未完成")
+                                   : L("Mark as done", "标为已完成"))
 
             // Tap the title / meta — everything except the done circle —
             // to open the note for editing. This is the entry point to a
@@ -511,9 +511,9 @@ struct DesktopPanelView: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 22))
                 .foregroundStyle(CyberPalette.neonCyan)
-            Text(L("All clear", "全部完成"))
+            Text(L("All clear", "今日清净"))
                 .font(.system(size: 12, weight: .bold, design: .rounded))
-            Text(L("Nothing pinned or due.", "暂无置顶或今日任务"))
+            Text(L("Nothing pinned or due today.", "没有置顶或今天到期的任务。"))
                 .font(.system(size: 10))
                 .foregroundStyle(.primary.opacity(0.45))
         }

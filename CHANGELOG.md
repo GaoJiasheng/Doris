@@ -6,6 +6,51 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.13.1 — 2026-11-01
+
+Fixes the Mac's two-column window, names the highlight menu, and tidies
+the wording across both apps. The iPhone app ships here for the first
+time since 1.12.0, so it also brings 1.13.0's bold, underline and
+highlight.
+
+### Fixed
+
+- **The Mac app no longer crashes in two-column mode, and the right
+  column can be edited at any zoom.** The columns were an AppKit
+  `HSplitView`; under the zoom's scale effect it drew in one place and
+  took clicks in another, and its nested hosting views could loop on
+  layout until AppKit killed the app. They're plain SwiftUI columns now,
+  with a divider you drag to resize the list (the width is remembered).
+- **One click selects a task in the left column.** Clicking into a
+  row's title or a checklist item also shows that task on the right.
+
+### New
+
+- **Turn two columns off.** A button at the right of the filter bar
+  (shown only when the window is wide enough) switches between one and
+  two columns; the choice is remembered.
+- **A named 高亮 / Highlight menu.** On the Mac the format bar reads
+  B · U · pen · 高亮 ⌄: the pen highlights yellow (⌘⇧H), and 高亮 ⌄
+  opens the colour list (yellow, green, red, clear) with real coloured
+  dots instead of black ones. The iPhone keyboard bar gets the same
+  高亮 ⌄ button.
+
+### Improved
+
+- **Wording review across both apps and both languages.** A to-do is
+  「任务」 everywhere and the main tab is 「待办」 / "To-dos"; the same
+  action now has the same words (恢复, 取消归档, 添加, 标为已完成 /
+  标为未完成); Chinese punctuation is full-width. Text that described
+  the wrong behaviour is fixed: the trash says tasks are cleared after
+  24 hours, and the Mac editor's button is 「归档」 (it always archived,
+  but said it would delete). The full list, with a glossary, is in
+  `docs/copy.md`; `scripts/copy-inventory.py` regenerates it.
+- **The iPhone widget follows the app's language**, dates included.
+  The language choice is mirrored into the App Group so the widget can
+  read it.
+
+---
+
 ## 1.13.0 — 2026-10-30
 
 Bold, underline and highlighting in notes, on both the Mac and the

@@ -85,7 +85,7 @@ struct SettingsView: View {
                    isOn: Binding(get: { tokenSettings.monitoringEnabled },
                                  set: { tokenSettings.monitoringEnabled = $0 }))
             Text(L("Tallies token consumption by reading AI tools' local logs. macOS only — data stays on this Mac.",
-                   "通过读取 AI 工具的本地日志统计 Token 消耗。仅 macOS,数据只保存在本机。"))
+                   "通过读取 AI 工具的本地日志统计 Token 消耗。仅 macOS，数据只保存在本机。"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -136,8 +136,8 @@ struct SettingsView: View {
                         Text(L(pack.displayNameEN, pack.displayName)).tag(pack.id)
                     }
                 }
-                .help(L("Pick the character Doris uses — animation + portrait.",
-                        "选择 Doris 使用的形象 —— 动画与头像。"))
+                .help(L("Pick the character Doris uses — its animation and portrait switch with it.",
+                        "选择 Doris 的形象 —— 动画与头像随之切换。"))
             }
             Picker(L("Avatar activity", "助手活跃度"), selection: activityLevelBinding) {
                 Text(L("Quiet", "安静")).tag(AvatarActivityLevel.quiet)
@@ -155,7 +155,7 @@ struct SettingsView: View {
                 Text(L("Desktop pet", "桌面")).tag(AvatarPlacement.desktop)
             }
             .help(L("Edge: docked to the menu bar / notch. Desktop: a free-floating pet you can drag anywhere, on top of all windows.",
-                    "贴边:停靠在菜单栏/刘海。桌面:可随意拖动的桌宠,浮于所有窗口之上。"))
+                    "贴边：停靠在菜单栏/刘海。桌面：可随意拖动的桌宠，浮于所有窗口之上。"))
             if avatarSettings.placement == .desktop {
                 Picker(L("Pet size", "桌宠大小"), selection: petSizeBinding) {
                     Text(L("Small", "小")).tag(PetSize.small)
@@ -222,7 +222,7 @@ struct SettingsView: View {
             HStack {
                 Text(L("CLI installed at", "CLI 安装位置"))
                 Spacer()
-                Text(settings.cliInstalledAt ?? L("(not installed)", "(未安装)"))
+                Text(settings.cliInstalledAt ?? L("(not installed)", "（未安装）"))
                     .foregroundStyle(.secondary)
             }
             Text(L("Allowed source app IDs", "允许的来源应用 ID"))
@@ -288,8 +288,8 @@ private struct SyncSettingsTab: View {
             Section {
                 Toggle(L("Use iCloud sync", "使用 iCloud 同步"),
                        isOn: $sync.cloudKitEnabled)
-                    .help(L("Mirrors notes and events through your iCloud account so other devices stay in sync.",
-                            "通过 iCloud 镜像笔记和事件,让其他设备保持同步。"))
+                    .help(L("Syncs your tasks and events through your iCloud account, so your other devices stay up to date.",
+                            "通过你的 iCloud 账号同步任务和事件，让其他设备保持一致。"))
                 if sync.cloudKitEnabled {
                     // Which database this build actually talks to. Invisible
                     // until now, which is how a Development-signed build spent
@@ -304,17 +304,17 @@ private struct SyncSettingsTab: View {
                     }
                     if CloudKitEnvironmentProbe.current != .production {
                         Text(L("Not the Production database — this build syncs with a separate dataset your other devices don't read.",
-                               "不是 Production 数据库 —— 此构建同步到一份独立数据,其他设备读不到。"))
+                               "不是 Production 数据库 —— 此构建同步到一份独立数据，其他设备读不到。"))
                             .font(.caption)
                             .foregroundStyle(.orange)
                     }
-                    Text(L("Restart Doris after toggling iCloud for the change to take effect.",
-                           "切换 iCloud 后需重启 Doris 才会生效。"))
+                    Text(L("Restart Doris after turning iCloud on or off.",
+                           "开关 iCloud 后需重启 Doris 才能生效。"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(L("Local only. Notes stay on this Mac.",
-                           "仅本地存储,笔记不会离开本机。"))
+                    Text(L("Local only. Your tasks stay on this Mac.",
+                           "仅本地存储，任务不会离开本机。"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -323,10 +323,10 @@ private struct SyncSettingsTab: View {
             }
 
             Section {
-                Toggle(L("Auto-sync every 60 seconds", "每 60 秒自动同步"),
+                Toggle(L("Auto-sync every minute", "每分钟自动同步"),
                        isOn: $sync.autoSyncEnabled)
-                    .help(L("When on, Doris periodically flushes pending writes so iCloud has the latest state. Turn off if you only want manual sync.",
-                            "开启后,Doris 会定期刷写改动到 iCloud。关闭则只在手动同步时触发。"))
+                    .help(L("When on, Doris sends your changes to iCloud every minute. Turn it off to sync only when you click Sync Now.",
+                            "开启后，Doris 每分钟把改动同步到 iCloud；关闭则只在点「立即同步」时同步。"))
             } header: {
                 Text(L("Auto-sync", "自动同步"))
             }
@@ -359,8 +359,8 @@ private struct SyncSettingsTab: View {
             } header: {
                 Text(L("Manual sync", "手动同步"))
             } footer: {
-                Text(L("Sync Now performs a local save plus a CloudKit reachability check (account status + user record fetch). Last-synced only updates when both succeed.",
-                       "立即同步会先本地保存,然后真实验证 iCloud 可达性(账号状态 + 拉取用户 record)。两步都成功才会刷新「上次同步」时间。"))
+                Text(L("Sync Now saves your changes and checks that iCloud is reachable; \"Last synced\" only updates when both succeed.",
+                       "「立即同步」会保存改动并确认 iCloud 可以连上，两步都成功才会更新「上次同步」时间。"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -419,10 +419,10 @@ private struct SyncSettingsTab: View {
 
     private var bannerTitle: String {
         if sync.lastSyncError != nil {
-            return L("Sync error", "同步失败")
+            return L("Sync failed", "同步失败")
         }
         if !sync.cloudKitEnabled {
-            return L("iCloud sync disabled", "未启用 iCloud 同步")
+            return L("iCloud sync is off", "iCloud 同步未开启")
         }
         if sync.lastSyncedAt == nil {
             return L("Not synced yet", "尚未同步")
@@ -435,11 +435,11 @@ private struct SyncSettingsTab: View {
             return err
         }
         if !sync.cloudKitEnabled {
-            return L("Notes stay on this Mac. Toggle iCloud on below to mirror to other devices.",
-                     "笔记仅保存在本机。下方开启 iCloud 即可与其他设备同步。")
+            return L("Your tasks stay on this Mac. Turn on iCloud below to sync them to your other devices.",
+                     "任务仅保存在本机。在下方开启 iCloud 即可与其他设备同步。")
         }
         if sync.lastSyncedAt == nil {
-            return L("Tap Sync Now below to start a sync.",
+            return L("Click Sync Now below to start syncing.",
                      "点击下方「立即同步」开始第一次同步。")
         }
         return lastSyncedLabel
@@ -449,7 +449,7 @@ private struct SyncSettingsTab: View {
     /// Recomputes via `nowTick` once a second so the value stays fresh.
     private var lastSyncedLabel: String {
         guard let last = sync.lastSyncedAt else {
-            return L("Never synced yet", "尚未同步")
+            return L("Never synced", "尚未同步")
         }
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .short
@@ -495,11 +495,11 @@ private struct MacRecentlyDeletedTab: View {
                     Image(systemName: "archivebox")
                         .font(.system(size: 32))
                         .foregroundStyle(.secondary)
-                    Text(L("No archived notes.", "暂无已归档的笔记。"))
+                    Text(L("No archived tasks.", "暂无归档任务。"))
                         .font(.headline)
                         .foregroundStyle(.secondary)
-                    Text(L("Notes archived on any of your devices appear here and are kept until you delete them.",
-                           "在任何设备上归档的笔记都会出现在这里,一直保留,直到你手动删除。"))
+                    Text(L("Tasks archived on any of your devices appear here and are kept until you delete them.",
+                           "在任意设备上归档的任务都会出现在这里，一直保留到你手动删除。"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -507,7 +507,7 @@ private struct MacRecentlyDeletedTab: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 HStack {
-                    Text(L("\(archived.count) archived note(s)", "已归档 \(archived.count) 条笔记"))
+                    Text(L("\(archived.count) archived", "已归档 \(archived.count) 个任务"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -547,14 +547,14 @@ private struct MacRecentlyDeletedTab: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Button(L("Restore", "还原")) {
+                            Button(L("Restore", "恢复")) {
                                 note.archived = false
                                 note.touch()
                                 try? ctx.save()
                             }
                             .controlSize(.small)
                             .foregroundStyle(Color.accentColor)
-                            Button(L("Delete Forever", "彻底删除")) {
+                            Button(L("Delete", "删除")) {
                                 // Same soft-delete reasoning as Delete All
                                 // above. Single-note hard delete used to
                                 // race CloudKit mirror sync too, just less

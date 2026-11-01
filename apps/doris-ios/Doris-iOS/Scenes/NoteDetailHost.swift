@@ -29,7 +29,7 @@ struct NoteDetailHost: View {
                 NoteDetailScreen(note: note, onDelete: onDelete)
             } else if resolved {
                 // Fetched and genuinely absent (deleted on another device).
-                Text(L("Note not found", "笔记不存在"))
+                Text(L("Task not found", "任务不存在"))
                     .foregroundStyle(.secondary)
             } else {
                 // First render; the fetch below runs immediately after.

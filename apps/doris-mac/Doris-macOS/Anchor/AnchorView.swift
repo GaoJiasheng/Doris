@@ -402,7 +402,7 @@ struct AnchorView: View {
                 // same). Saves the popup a row of scroll content.
                 HStack(spacing: 6) {
                     tabButton(L("Today", "今日"), tag: .today)
-                    tabButton(L("TODO", "TODO"), tag: .notes)
+                    tabButton(L("To-dos", "待办"), tag: .notes)
                     tabButton(L("Events", "事件"), tag: .events)
                     Spacer()
                     Text(Date().formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
@@ -883,14 +883,14 @@ private struct AnchorNotesView: View {
             Spacer()
             bulkAction
         }
-        .alert(L("Empty trash?", "清空回收站?"), isPresented: $confirmingEmptyTrash) {
+        .alert(L("Empty trash?", "清空回收站？"), isPresented: $confirmingEmptyTrash) {
             Button(L("Empty (\(trashCount))", "清空 (\(trashCount))"), role: .destructive) {
                 emptyTrash()
             }
             Button(L("Cancel", "取消"), role: .cancel) {}
         } message: {
             Text(L("Items in the trash will be permanently deleted and can't be recovered.",
-                   "回收站中的任务将被彻底删除,无法恢复。"))
+                   "回收站中的任务将被彻底删除，无法恢复。"))
         }
     }
 
@@ -1007,7 +1007,7 @@ private struct AnchorNotesView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "plus")
                         .font(.system(size: 10, weight: .bold))
-                    Text(L("Add task", "新增任务"))
+                    Text(L("Add task", "添加任务"))
                         .font(.caption2.weight(.medium))
                 }
                 .foregroundStyle(CyberPalette.neonCyan)
@@ -1246,8 +1246,8 @@ private struct AnchorTodayView: View {
             Text(L("All clear", "今日清净"))
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(.primary.opacity(0.65))
-            Text(L("Pin a note or set a due date to see it here.",
-                   "置顶笔记或设定截止日期即可出现在这里。"))
+            Text(L("Pin a task or give it a due date to see it here.",
+                   "置顶任务或设定截止日期，就会出现在这里。"))
                 .font(.system(size: 11))
                 .foregroundStyle(.primary.opacity(0.45))
                 .multilineTextAlignment(.center)

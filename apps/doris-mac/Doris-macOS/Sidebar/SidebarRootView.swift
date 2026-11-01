@@ -25,7 +25,7 @@ struct SidebarRootView: View {
         HStack {
             Button(L("Events", "事件")) { tab = .events }
                 .fontWeight(tab == .events ? .bold : .regular)
-            Button(L("Notes", "笔记")) { tab = .notes }
+            Button(L("To-dos", "待办")) { tab = .notes }
                 .fontWeight(tab == .notes ? .bold : .regular)
             Button(L("Today", "今日")) { tab = .today }
                 .fontWeight(tab == .today ? .bold : .regular)
@@ -42,8 +42,8 @@ private struct TodayView: View {
         DorisEmptyStateView(
             title: L("Today", "今日"),
             systemImage: "sun.max",
-            subtitle: L("Quick captures and recent items will appear here.",
-                        "快速记录的内容和最近的项目会出现在这里。")
+            subtitle: L("Quick captures and recent items show up here.",
+                        "快速记录和最近的内容会出现在这里。")
         )
     }
 }

@@ -533,7 +533,7 @@ public struct ChecklistEditorView: View {
                     .foregroundStyle(Color.primary.opacity(0.35))
             }
             .buttonStyle(.plain)
-            .help(L("Remove this line", "删除此行"))
+            .help(L("Delete this item", "删除此条"))
         }
     }
 
@@ -545,7 +545,7 @@ public struct ChecklistEditorView: View {
                 Image(systemName: "plus.circle.fill")
                     .foregroundStyle(CyberPalette.neonCyan.opacity(0.75))
                     .font(.system(size: 12, weight: .semibold))
-                Text(L("Add item", "新增条目"))
+                Text(L("Add item", "添加条目"))
                     .font(.caption)
                     .foregroundStyle(.primary.opacity(0.6))
             }
@@ -727,9 +727,9 @@ public struct ChecklistEditorView: View {
 
     private func checkboxHelp(for checked: Bool?) -> String {
         switch checked {
-        case nil:    return L("Promote to task", "提升为任务")
-        case false?: return L("Mark done", "标记完成")
-        case true?:  return L("Mark not done", "取消完成")
+        case nil:    return L("Turn into a task", "转为独立任务")
+        case false?: return L("Mark as done", "标为已完成")
+        case true?:  return L("Mark as not done", "标为未完成")
         }
     }
 }
@@ -789,6 +789,17 @@ final class WrappingTextField: NSTextField {
             (cell as? InsetTextFieldCell)?.verticalPadding = verticalPadding
             invalidateIntrinsicContentSize()
         }
+    }
+
+    /// Called when a click (or code) gives the field focus — unlike the
+    /// delegate's `controlTextDidBeginEditing`, which waits for the first
+    /// keystroke.
+    var onFocus: (() -> Void)?
+
+    override func becomeFirstResponder() -> Bool {
+        let became = super.becomeFirstResponder()
+        if became, let onFocus { DispatchQueue.main.async(execute: onFocus) }
+        return became
     }
 
     override func layout() {

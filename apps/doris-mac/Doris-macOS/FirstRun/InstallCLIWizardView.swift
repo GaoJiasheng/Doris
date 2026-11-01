@@ -14,7 +14,7 @@ struct InstallCLIWizardView: View {
                 .font(.title2)
             Text(L(
                 "This will symlink the CLI bundled inside Doris.app to /usr/local/bin/doris so you can run `doris notify ...` from any shell.",
-                "这会把 Doris.app 内置的 CLI 符号链接到 /usr/local/bin/doris,这样你在任意 shell 里都能跑 `doris notify ...`。"
+                "这会把 Doris.app 内置的 CLI 符号链接到 /usr/local/bin/doris，这样你在任意 shell 里都能跑 `doris notify ...`。"
             ))
                 .font(.body)
             // Display status only when non-empty so the wizard doesn't
@@ -52,7 +52,7 @@ struct InstallCLIWizardView: View {
                 try FileManager.default.createDirectory(atPath: parent, withIntermediateDirectories: true)
             } catch {
                 status = L("Could not create \(parent). You may need to run: sudo mkdir -p \(parent)",
-                           "无法创建 \(parent)。可能需要手动运行: sudo mkdir -p \(parent)")
+                           "无法创建 \(parent)。可能需要手动运行：sudo mkdir -p \(parent)")
                 return
             }
         }
@@ -66,7 +66,7 @@ struct InstallCLIWizardView: View {
         } catch {
             status = L(
                 "Failed: \(error.localizedDescription). You may need to install manually: ln -s \(bundleCLI.path) \(dest)",
-                "失败: \(error.localizedDescription)。可手动安装: ln -s \(bundleCLI.path) \(dest)"
+                "失败：\(error.localizedDescription)。可手动安装：ln -s \(bundleCLI.path) \(dest)"
             )
         }
     }

@@ -5,10 +5,12 @@ import DorisCore
 import AppKit
 typealias RichFont = NSFont
 typealias RichColor = NSColor
+typealias RichImage = NSImage
 #else
 import UIKit
 typealias RichFont = UIFont
 typealias RichColor = UIColor
+typealias RichImage = UIImage
 #endif
 
 extension NSAttributedString.Key {
@@ -109,6 +111,25 @@ enum NoteRichText {
         return UIColor { t in
             UIColor(red: r, green: g, blue: b, alpha: t.userInterfaceStyle == .dark ? dark : light)
         }
+        #endif
+    }
+
+    /// A solid dot of the highlight's colour for menus. Menus draw symbol
+    /// images as monochrome templates, ignoring any tint, so this one is
+    /// drawn as an ordinary image that keeps its colour.
+    static func swatch(_ h: Highlight) -> RichImage {
+        let (r, g, b) = rgb(h)
+        #if os(macOS)
+        let image = NSImage(size: NSSize(width: 12, height: 12), flipped: false) { rect in
+            NSColor(srgbRed: r, green: g, blue: b, alpha: 1).setFill()
+            NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()
+            return true
+        }
+        image.isTemplate = false
+        return image
+        #else
+        return UIImage(systemName: "circle.fill")!
+            .withTintColor(UIColor(red: r, green: g, blue: b, alpha: 1), renderingMode: .alwaysOriginal)
         #endif
     }
 
@@ -214,33 +235,42 @@ struct NoteFormatBar: View {
         HStack(spacing: 2) {
             button("bold", L("Bold (⌘B)", "加粗 (⌘B)"), .bold)
             button("underline", L("Underline (⌘U)", "下划线 (⌘U)"), .underline)
+            button("highlighter", L("Highlight yellow (⌘⇧H)", "黄色高亮 (⌘⇧H)"), .highlight(.yellow))
+            // The colours, under a name rather than a bare arrow.
             Menu {
-                ForEach(NoteInlineMarkup.Highlight.allCases, id: \.self) { h in
+                ForEach(Self.colours, id: \.self) { h in
                     Button {
                         send(.highlight(h))
                     } label: {
-                        Label(Self.name(h), systemImage: "circle.fill")
+                        Label {
+                            Text(Self.name(h))
+                        } icon: {
+                            #if os(macOS)
+                            Image(nsImage: NoteRichText.swatch(h))
+                            #else
+                            Image(uiImage: NoteRichText.swatch(h))
+                            #endif
+                        }
                     }
                 }
                 Divider()
                 Button(L("Remove Highlight", "清除高亮")) { send(.highlight(nil)) }
             } label: {
-                Image(systemName: "highlighter")
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 26, height: 22)
-            } primaryAction: {
-                send(.highlight(.yellow))
+                Text(L("Highlight", "高亮"))
+                    .font(.system(size: 12, weight: .medium))
             }
             #if os(macOS)
             .menuStyle(.borderlessButton)
             .menuIndicator(.visible)
             .fixedSize()
             #endif
-            .help(L("Highlight — click for yellow (⌘⇧H), or pick a colour",
-                    "高亮 — 点按为黄色 (⌘⇧H),也可选颜色"))
+            .help(L("Highlight colour", "高亮颜色"))
         }
         .foregroundStyle(.primary.opacity(0.7))
     }
+
+    /// Yellow first: it's what the pen and ⌘⇧H give.
+    static let colours: [NoteInlineMarkup.Highlight] = [.yellow, .green, .red]
 
     static func name(_ h: NoteInlineMarkup.Highlight) -> String {
         switch h {
