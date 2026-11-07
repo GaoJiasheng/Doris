@@ -6,6 +6,52 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.14.0 — 2026-11-07
+
+Stats: how many tokens your AI tools used, how long you spent in Feishu
+meetings, and how much you typed — on a new Stats page, as numbers
+beside the notch, and on the iPhone's Today screen. Every Mac on the
+same iCloud account adds to the same totals.
+
+### New
+
+- **A Stats page on the Mac** (the old Tokens tab). Pick Token, 会议 /
+  Meetings or 打字 / Typing; each has today, 7 days, 30 days and all
+  time, a bar chart with the daily average (hover a bar for its day),
+  and, when more than one Mac reports, a per-device breakdown and a
+  device filter. Token adds a by-tool ring and a by-model list. The
+  token sources and Rescan sit below it.
+- **Numbers beside the notch.** Choose up to three (Token, meetings,
+  typing) in Settings → 统计与刘海数字, their order, whether the cat sits
+  left, right or between them, and whether they show today or the last
+  7 days. Beside a MacBook notch two numbers stack in one column and
+  each side takes only the room it needs; on an external screen or a
+  screen edge the cat and its numbers stay centred as one shape. Hover
+  them for a card with all three — today, 7 days and the daily average,
+  with the week's bars; click to open Stats.
+- **Meeting time.** Doris notices when Feishu (飞书) is using the
+  microphone or speakers and counts that time, muted or not. Only
+  totals per day are kept, not individual meetings.
+- **Typing.** A small helper, DorisTyping, counts the words you end up
+  with in other apps — typed, dictated or pasted, Typeless and other
+  voice tools included — and hands Doris only the count; the text
+  itself is never kept or logged. It needs its own Accessibility switch
+  (turn it on in Settings → 统计与刘海数字; if it isn't in the
+  Accessibility list, drag it in from the Finder window that opens). Terminals aren't counted.
+- **The iPhone shows them too.** A Stats card on the Today screen shows
+  today's three numbers and the week's bars; tap it for the same Stats
+  page as the Mac. The iPhone records nothing itself.
+
+### How the totals merge
+
+- Each Mac writes its own rows (one per launch per day), so devices
+  never overwrite each other. Words add up; tokens are taken per Mac
+  (and per tool and model) before adding, so rescanning the same logs
+  never counts twice; meeting time is the union of 30-second slots, so
+  two Macs in the same meeting count it once.
+
+---
+
 ## 1.13.1 — 2026-11-01
 
 Fixes the Mac's two-column window, names the highlight menu, and tidies

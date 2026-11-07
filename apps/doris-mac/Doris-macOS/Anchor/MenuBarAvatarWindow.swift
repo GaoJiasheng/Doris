@@ -39,6 +39,7 @@ final class MenuBarAvatarWindow {
     /// (or still-old) rect, and anything deriving geometry from it mid-flight
     /// (the focus pip) would size/place itself off the stale value.
     private var targetFrame: NSRect = .zero
+    private var dockShift: CGFloat = 0
     var screenFrame: NSRect { targetFrame == .zero ? window.frame : targetFrame }
     var screen: NSScreen? { window.screen ?? bestScreen() }
     var edge: AnchorEdge { model.edge }
@@ -46,6 +47,52 @@ final class MenuBarAvatarWindow {
     /// The inline ring is suppressed here and the separate mirrored pip is
     /// used instead — so exactly one of the two ever shows.
     var isRealNotch: Bool { model.shape == .notchExtension }
+    var shape: MenuBarModel.Shape { model.shape }
+
+    /// Square off the tab's start / end corner where a number tab is docked
+    /// against it (see `NotchStatsWindow`), so the two read as one shape.
+    /// `shift` moves the tab along the edge (towards the end side), so the
+    /// logo and its numbers are centred as a whole.
+    func setJoined(start: Bool, end: Bool, shift: CGFloat = 0) {
+        if model.squareStart != start { model.squareStart = start }
+        if model.squareEnd != end { model.squareEnd = end }
+        dockShift = shift
+        // Joined tabs tighten up around the cat, so the logo and its numbers
+        // read as one small pill instead of three separate pieces.
+        guard let s = bestScreen() else { return }
+        let frame = compacted(Self.layoutFor(edge: model.edge, screen: s))
+        if frame != targetFrame {
+            targetFrame = frame
+            window.setFrame(frame, display: true)
+        }
+    }
+
+    /// How much narrower the real-notch tab gets while numbers are docked. It
+    /// comes off the outer side; the notch side stays against the cutout.
+    private static let notchJoinedTrim: CGFloat = 6
+
+    /// The tab's frame, narrowed along the edge while numbers are docked.
+    /// Not while the inline countdown ring needs the room.
+    private func compacted(_ layout: Layout) -> NSRect {
+        guard model.squareStart || model.squareEnd else { return layout.frame }
+        let along: CGFloat = model.focusRing ? 96 : 48
+        // Along a side edge the tab hugs the cat (26) or cat + ring (49), so
+        // the gaps above and below match the spacing between the numbers.
+        let bothJoined = model.squareStart && model.squareEnd
+        let alongSide: CGFloat = model.focusRing ? 56 : (bothJoined ? 30 : 36)
+        switch layout.shape {
+        case .notchExtension:
+            var frame = layout.frame
+            frame.origin.x += Self.notchJoinedTrim
+            frame.size.width -= Self.notchJoinedTrim
+            return frame
+        case .fakeNotch, .edgeBottom:
+            return layout.frame.insetBy(dx: (layout.frame.width - along) / 2, dy: 0).offsetBy(dx: dockShift, dy: 0)
+        case .edgeRight, .edgeLeft:
+            // "Towards the end side" is downward here.
+            return layout.frame.insetBy(dx: 0, dy: (layout.frame.height - alongSide) / 2).offsetBy(dx: 0, dy: -dockShift)
+        }
+    }
 
     init(onClick: @escaping () -> Void,
          onRingClick: @escaping () -> Void = {},
@@ -143,8 +190,8 @@ final class MenuBarAvatarWindow {
         model.edge = edge
         let layout = Self.layoutFor(edge: edge, screen: s)
         model.shape = layout.shape
-        targetFrame = layout.frame
-        window.setFrame(layout.frame, display: true)
+        targetFrame = compacted(layout)
+        window.setFrame(targetFrame, display: true)
         AnchorScreenStore.save(screen: s)
         refreshFocus()   // shape may have changed (notch ↔ edge) → re-eval ring
     }
@@ -212,12 +259,13 @@ final class MenuBarAvatarWindow {
         model.edge = edge
         let layout = Self.layoutFor(edge: edge, screen: s)
         model.shape = layout.shape
-        targetFrame = layout.frame
+        targetFrame = compacted(layout)
+        let frame = targetFrame
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.22
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             ctx.allowsImplicitAnimation = true
-            window.animator().setFrame(layout.frame, display: true)
+            window.animator().setFrame(frame, display: true)
         })
         refreshFocus()   // re-dock may switch notch ↔ edge → re-eval ring
     }
@@ -225,6 +273,11 @@ final class MenuBarAvatarWindow {
     // MARK: - Edge → frame + shape
 
     private struct Layout { let frame: NSRect; let shape: MenuBarModel.Shape }
+
+    /// Fake-notch / bottom-edge tab thickness: the 26 pt cat plus its 2 pt
+    /// offset. Anything smaller and the content's minimum size quietly grows
+    /// the window past this frame, and whatever docks to it stops lining up.
+    private static let tabThickness: CGFloat = 28
 
     /// The real frame the docked logo would occupy at `edge` on `screen` —
     /// used by the drag drop-preview so the dashed outline matches reality
@@ -294,7 +347,7 @@ final class MenuBarAvatarWindow {
                         """
                     )
                     let fbWidth: CGFloat = 96
-                    let fbHeight: CGFloat = 26
+                    let fbHeight: CGFloat = Self.tabThickness
                     return Layout(
                         frame: NSRect(x: f.midX - fbWidth / 2, y: f.maxY - fbHeight, width: fbWidth, height: fbHeight),
                         shape: .fakeNotch
@@ -314,7 +367,7 @@ final class MenuBarAvatarWindow {
                 return Layout(frame: frame, shape: .notchExtension)
             } else {
                 let width: CGFloat = 96
-                let height: CGFloat = 26
+                let height: CGFloat = Self.tabThickness
                 return Layout(
                     frame: NSRect(x: f.midX - width / 2, y: f.maxY - height, width: width, height: height),
                     shape: .fakeNotch
@@ -349,7 +402,7 @@ final class MenuBarAvatarWindow {
                 shape: .edgeLeft
             )
         case .bottom:
-            let height: CGFloat = 26
+            let height: CGFloat = Self.tabThickness
             let width: CGFloat = 96
             return Layout(
                 frame: NSRect(x: f.midX - width / 2, y: f.minY, width: width, height: height),
@@ -385,6 +438,10 @@ final class MenuBarModel: ObservableObject {
     /// True → draw the focus countdown ring inline beside the avatar (edge /
     /// fake-notch only; the real notch uses a separate mirrored pip).
     @Published var focusRing: Bool = false
+    /// A number tab is docked on the start side (left, or above on a side
+    /// edge) / end side (right, or below) — that corner draws square.
+    @Published var squareStart = false
+    @Published var squareEnd = false
 }
 
 private struct MenuBarAvatarContent: View {
@@ -504,15 +561,39 @@ private struct MenuBarAvatarContent: View {
             .contextMenu { FocusRingActions() }
     }
 
-    /// Notch-extension always solid black (so it fuses with the real notch).
-    /// Every other shape honors the user-set background opacity.
+    /// Notch-extension always solid black (so it fuses with the real notch),
+    /// and so is a tab with numbers docked to it — the numbers need a solid
+    /// backing, and the pieces must match to read as one shape. Otherwise
+    /// the user-set background opacity applies.
     private var backgroundOpacity: Double {
-        model.shape == .notchExtension ? 1.0 : settings.backgroundOpacity
+        if model.shape == .notchExtension || model.squareStart || model.squareEnd { return 1.0 }
+        return settings.backgroundOpacity
     }
 
     @ViewBuilder
     private var background: some View {
         let fill = Color.black.opacity(backgroundOpacity)
+        if model.squareStart || model.squareEnd {
+            TabShape(corners: joinedCorners).fill(fill)
+        } else {
+            plainBackground(fill)
+        }
+    }
+
+    /// The shape's usual rounded corners minus the joined sides.
+    private var joinedCorners: TabCorners {
+        let a = !model.squareStart, b = !model.squareEnd
+        switch model.shape {
+        case .notchExtension: return TabCorners(bottomLeft: a)
+        case .fakeNotch:      return TabCorners(bottomLeft: a, bottomRight: b)
+        case .edgeRight:      return TabCorners(topLeft: a, bottomLeft: b)
+        case .edgeLeft:       return TabCorners(topRight: a, bottomRight: b)
+        case .edgeBottom:     return TabCorners(topLeft: a, topRight: b)
+        }
+    }
+
+    @ViewBuilder
+    private func plainBackground(_ fill: Color) -> some View {
         switch model.shape {
         case .notchExtension: NotchExtensionShape(cornerRadius: 10).fill(fill)
         case .fakeNotch:      FakeNotchSymmetric(cornerRadius: 10).fill(fill)

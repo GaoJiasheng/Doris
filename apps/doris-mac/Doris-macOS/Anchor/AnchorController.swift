@@ -31,6 +31,10 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     /// the avatar on a non-notch edge).
     private var focusPip: FocusPipWindow?
     private var focusSink: AnyCancellable?
+    /// Activity-number tabs docked on the logo's start / end side.
+    private var statsStart: NotchStatsWindow?
+    private var statsEnd: NotchStatsWindow?
+    private var statsSettingsSink: AnyCancellable?
 
     /// Expanded panel size when user clicks the anchor (no notification active).
     /// Wider than v0.1 to give the cyber-girl scene a proper hero column on the left.
@@ -82,6 +86,16 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             focusSink = FocusTimer.shared.$session
                 .receive(on: RunLoop.main)
                 .sink { [weak self] _ in self?.updateFocusPip() }
+        }
+        if statsStart == nil {
+            statsStart = NotchStatsWindow(container: modelContainer)
+            statsEnd = NotchStatsWindow(container: modelContainer)
+            statsSettingsSink = NotchStatsSettings.shared.objectWillChange
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in
+                    // objectWillChange fires before the new value lands.
+                    DispatchQueue.main.async { self?.updateStatsWings() }
+                }
         }
         if desktopPet == nil {
             desktopPet = DesktopPetController(
@@ -491,6 +505,8 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     /// running. Hidden in desktop-pet mode (the pet shows the focus overlay on
     /// the character itself) and when finished/idle.
     private func updateFocusPip() {
+        // The number tabs dock against the pip, so they follow it.
+        defer { updateStatsWings() }
         // Any session shows the ring — running, paused (`II`), or finished
         // (green check). It clears only when the session itself is cleared.
         let hasSession = FocusTimer.shared.session != nil
@@ -523,11 +539,109 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
         pip.update(frame: NSRect(x: 2 * sf.midX - c.maxX, y: c.minY, width: c.width, height: c.height))
     }
 
+    // MARK: - Activity numbers beside the logo
+
+    /// Lay out the number tabs from the logo's frame and shape:
+    /// - real notch: start side left of the logo, end side right of the
+    ///   camera cutout (after the focus pip while one runs);
+    /// - fake notch / bottom edge: either side of the tab;
+    /// - side edges: above (start) and below (end), numbers stacked.
+    private func updateStatsWings() {
+        guard let startWin = statsStart, let endWin = statsEnd else { return }
+        guard AvatarSettings.shared.placement == .edge,
+              let avatar = avatarWindow, let screen = avatar.screen,
+              avatar.screenFrame.width > 0 else {
+            startWin.hide(); endWin.hide()
+            avatarWindow?.setJoined(start: false, end: false)
+            focusPip?.setJoinedEnd(false)
+            return
+        }
+        let (start, end) = NotchStatsSettings.shared.sides
+        let shape = avatar.shape
+        let vertical = shape == .edgeLeft || shape == .edgeRight
+        // The menu bar beside a real notch is the tightest spot: stack the numbers.
+        let stacked = shape == .notchExtension
+        let lenStart = stacked ? NotchStatsWindow.stackedLength(start.count)
+                               : NotchStatsWindow.length(start.count, vertical: vertical)
+        let lenEnd = stacked ? NotchStatsWindow.stackedLength(end.count)
+                             : NotchStatsWindow.length(end.count, vertical: vertical)
+        // Before reading its frame: joining tightens and re-centres the tab.
+        if shape == .notchExtension {
+            avatar.setJoined(start: !start.isEmpty, end: false)
+            // The pip mirrors the cat's frame, which joining just narrowed.
+            if focusPip?.isVisible == true { positionFocusPip() }
+        } else {
+            avatar.setJoined(start: !start.isEmpty, end: !end.isEmpty, shift: (lenStart - lenEnd) / 2)
+        }
+        let c = avatar.screenFrame
+        let mid = screen.frame.midX
+        var pipJoined = false
+
+        func place(_ win: NotchStatsWindow, _ metrics: [ActivityMetric], _ frame: NSRect,
+                   _ corners: TabCorners, _ inset: EdgeInsets = EdgeInsets()) {
+            guard frame.width > 0, frame.height > 0 else { win.hide(); return }
+            win.model.metrics = metrics
+            win.model.vertical = vertical
+            win.model.stacked = stacked
+            win.model.corners = corners
+            win.model.inset = inset
+            win.show(frame: frame)
+        }
+
+        switch shape {
+        case .notchExtension:
+            // Each side of the cutout takes only the room its numbers need:
+            // menu-bar space matters more here than symmetry.
+            place(startWin, start, NSRect(x: c.minX - lenStart, y: c.minY, width: lenStart, height: c.height),
+                  TabCorners(bottomLeft: true))
+            let ov = FocusPipWindow.overshoot
+            if let pip = focusPip, pip.isVisible {
+                place(endWin, end, NSRect(x: pip.frame.maxX, y: c.minY, width: lenEnd, height: c.height),
+                      TabCorners(bottomRight: true))
+                pipJoined = lenEnd > 0
+            } else {
+                // Mirror of the logo's notch side: pokes `ov` into the cutout.
+                place(endWin, end, NSRect(x: 2 * mid - c.maxX, y: c.minY, width: lenEnd > 0 ? lenEnd + ov : 0, height: c.height),
+                      TabCorners(bottomRight: true), EdgeInsets(top: 0, leading: ov, bottom: 0, trailing: 0))
+            }
+        case .fakeNotch, .edgeBottom:
+            let top = shape == .fakeNotch
+            // Same 2 pt nudge as the cat, so numbers and cat share a centre line.
+            let nudge = top ? EdgeInsets(top: 0, leading: 0, bottom: 2, trailing: 0)
+                            : EdgeInsets(top: 2, leading: 0, bottom: 0, trailing: 0)
+            place(startWin, start, NSRect(x: c.minX - lenStart, y: c.minY, width: lenStart, height: c.height),
+                  top ? TabCorners(bottomLeft: true) : TabCorners(topLeft: true), nudge)
+            place(endWin, end, NSRect(x: c.maxX, y: c.minY, width: lenEnd, height: c.height),
+                  top ? TabCorners(bottomRight: true) : TabCorners(topRight: true), nudge)
+        case .edgeRight, .edgeLeft:
+            // The logo tab overshoots 10 pt off-screen; keep the numbers on
+            // the visible part.
+            let right = shape == .edgeRight
+            let leading: CGFloat = right ? 0 : 10
+            let trailing: CGFloat = right ? 10 : 0
+            // The padding is uneven (tighter facing the cat): the extra goes on the outer end.
+            let extra = NotchStatsWindow.padding - NotchStatsWindow.verticalCatPadding
+            place(startWin, start, NSRect(x: c.minX, y: c.maxY, width: c.width, height: lenStart),
+                  right ? TabCorners(topLeft: true) : TabCorners(topRight: true),
+                  EdgeInsets(top: extra, leading: leading, bottom: 0, trailing: trailing))
+            place(endWin, end, NSRect(x: c.minX, y: c.minY - lenEnd, width: c.width, height: lenEnd),
+                  right ? TabCorners(bottomLeft: true) : TabCorners(bottomRight: true),
+                  EdgeInsets(top: 0, leading: leading, bottom: extra, trailing: trailing))
+        }
+        focusPip?.setJoinedEnd(pipJoined)
+        var pill = c
+        for win in [startWin, endWin] where win.isVisible { pill = pill.union(win.frame) }
+        startWin.pillFrame = pill
+        endWin.pillFrame = pill
+    }
+
     // MARK: - Drag dock / detach (logo ↔ desktop pet)
 
     /// Live during a drag of either the edge logo or the pet: show the dashed
     /// drop-preview where it would land if released now.
     private func previewAvatarDrag(cursor: CGPoint, windowCenter: CGPoint) {
+        // The number tabs re-dock when the logo lands (relayout → updateFocusPip).
+        statsStart?.hide(); statsEnd?.hide()
         guard let screen = AvatarSnap.screen(containing: cursor) else { snapPreview.hide(); return }
         let target = AvatarSnap.evaluate(center: cursor, screen: screen)
         let w = AvatarSettings.shared.petSize.width

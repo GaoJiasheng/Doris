@@ -246,6 +246,26 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.14.0", date: "2026-11-07", gh: true,
+      zh: { title: "统计来了:Token、飞书会议时长和打字字数",
+        new: [
+          ["Mac 上有了统计页。", "原来的 Token 页变成「统计」:Token、会议、打字各看今日、7 天、30 天和全部,配柱状图和日均线,鼠标移到柱子上看当天数字。Token 还能按工具、按模型拆开看。有多台 Mac 时,可以按设备筛选,也能看每台设备各占多少。"],
+          ["刘海旁边显示数字。", "在设置「统计与刘海数字」里选最多三个数字、排列顺序,小猫放左边、右边还是中间,显示今日还是近 7 日。MacBook 刘海旁两个数字上下叠放,左右各占需要的宽度;外接屏幕和屏幕两侧时,小猫和数字整体居中。鼠标移上去是一张卡片,三项的今日、7 天、日均和一周柱状图都在上面,点一下打开统计。"],
+          ["统计飞书会议时长。", "飞书在用麦克风或扬声器时就计时,静音也算。只保存每天的合计,不记录单场会议。"],
+          ["统计打字字数。", "一个叫 DorisTyping 的小助手统计你在其他 App 里最终留下的字数,打字、语音输入(包括 Typeless 等)和粘贴都算,只把字数交给 Doris,文字本身不保存、不记录。它需要单独打开「辅助功能」权限,在设置「统计与刘海数字」里按提示开启;辅助功能列表里没有它的话,把 Finder 里选中的它拖进去。终端里的输入不统计。"],
+          ["iPhone 也能看。", "「今日」页多了一张统计卡,显示三项的今日数字和一周柱状图,点开就是和 Mac 一样的统计页。iPhone 只看、不统计。"] ],
+        improved: [
+          ["多台设备的数据合并在一起,不冲突、不重复。", "同一个 iCloud 账号下,每台 Mac 只写自己的记录:字数直接相加;Token 先按设备(和工具、模型)取值再相加,重新扫描同一份日志不会重复计算;会议按 30 秒时间片合并,两台 Mac 开同一场会只算一次。"] ] },
+      en: { title: "Stats: tokens, Feishu meeting time and typing",
+        new: [
+          ["A Stats page on the Mac.", "The old Tokens tab is now Stats: Token, meetings and typing, each for today, 7 days, 30 days and all time, with a bar chart and its daily average (hover a bar for its day). Token also breaks down by tool and by model. With more than one Mac you can filter by device and see each one's share."],
+          ["Numbers beside the notch.", "In Settings → Stats and notch numbers, pick up to three numbers, their order, where the cat sits, and today or the last 7 days. Beside a MacBook notch two numbers stack in one column and each side takes only the room it needs; on an external screen or a screen edge the cat and numbers stay centred. Hover for a card with all three (today, 7 days, daily average and the week's bars); click to open Stats."],
+          ["Feishu meeting time.", "Doris counts the time Feishu is using the microphone or speakers, muted or not. Only daily totals are kept, not individual meetings."],
+          ["Typing.", "A small helper, DorisTyping, counts the words you end up with in other apps (typed, dictated with Typeless or other voice tools, or pasted) and hands Doris only the count; the text is never kept or logged. It needs its own Accessibility switch: turn it on in Settings → Stats and notch numbers, and if it isn't in the Accessibility list, drag it in from the Finder window that opens. Terminals aren't counted."],
+          ["On the iPhone too.", "A Stats card on the Today screen shows today's three numbers and the week's bars; tap it for the same Stats page as the Mac. The iPhone only shows them, it doesn't record."] ],
+        improved: [
+          ["Your devices add up without conflicts or double counting.", "On one iCloud account each Mac writes only its own rows. Words add up; tokens are taken per Mac (and per tool and model) before adding, so rescanning the same logs never counts twice; meetings merge by 30-second slots, so two Macs in the same meeting count it once."] ] } },
+
     { v: "1.13.1", date: "2026-11-01", gh: true,
       zh: { title: "Mac 两列模式修好了,高亮菜单有了名字",
         fixed: [

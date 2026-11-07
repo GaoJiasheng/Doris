@@ -61,6 +61,7 @@ final class TokenCollectionService {
             await MainActor.run {
                 TokenMonitorSettings.shared.lastCollectAt = Date()
                 self.isCollecting = false
+                ActivityRecorder.shared?.syncTokens()
             }
         }
     }

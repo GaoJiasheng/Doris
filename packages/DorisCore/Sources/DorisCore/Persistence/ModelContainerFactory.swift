@@ -20,13 +20,18 @@ public enum ModelContainerFactory {
     /// rows silently get NULL. For non-lightweight migrations (renaming
     /// columns, dropping non-null columns) a versioned migration plan
     /// would be required.
+    /// Every synced model. The CloudKit schema initializer pushes this same
+    /// list, so a model added here reaches CloudKit's schema too.
+    public static let models: [any PersistentModel.Type] = [
+        Folder.self, Note.self, ChecklistItem.self,
+        Tag.self, Attachment.self, Message.self,
+        Device.self, UserSettings.self,
+        ActivityDay.self
+    ]
+
     public static func make(useCloudKit: Bool = true, inMemory: Bool = false) throws -> ModelContainer {
         let url = try storeURL(inMemory: inMemory)
-        let schema = Schema([
-            Folder.self, Note.self, ChecklistItem.self,
-            Tag.self, Attachment.self, Message.self,
-            Device.self, UserSettings.self
-        ])
+        let schema = Schema(models)
 
         let config: ModelConfiguration
         if inMemory {

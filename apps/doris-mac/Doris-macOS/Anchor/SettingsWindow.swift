@@ -156,6 +156,8 @@ private struct AppearanceSettingsView: View {
                 Divider().overlay(Color.primary.opacity(0.08))
                 windowSection
                 Divider().overlay(Color.primary.opacity(0.08))
+                NotchStatsSettingsSection()
+                Divider().overlay(Color.primary.opacity(0.08))
                 integrationsSection
                 Divider().overlay(Color.primary.opacity(0.08))
                 agentsSection

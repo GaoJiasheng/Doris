@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Doris 字数助手 is deliberately NOT sandboxed: the App Sandbox blocks
+     reading other apps' text through Accessibility, which is all this
+     helper does. It needs no other entitlement — it talks to Doris through
+     files in ~/.doris/ipc/typing (see TypingWire). Allowed for Developer ID
+     distribution; the App Store would not accept it. -->
+<plist version="1.0">
+<dict>
+</dict>
+</plist>

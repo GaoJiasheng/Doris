@@ -2,6 +2,7 @@ import AppKit
 import ApplicationServices
 import Foundation
 import DorisIPC
+import DorisCore
 
 /// Routes a transcribed string to one of the supported providers:
 ///
@@ -87,6 +88,11 @@ final class AppRouter {
     }
 
     private func paste(_ text: String) {
+        // Dictation into an app the typing helper watches is counted there
+        // (it sees the synthetic ⌘V); anywhere else, count it here.
+        if !TypingBridge.shared.countsFrontmost {
+            ActivityRecorder.shared?.addWords(WordCount.count(text))
+        }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
         synthesize(keyCode: 9, flags: .maskCommand)  // ⌘V

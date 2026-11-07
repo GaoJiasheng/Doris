@@ -125,6 +125,12 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
             // history, and keep the dashboard fresh.
             TokenCollectionService.shared.start()
 
+            // Synced activity counters (tokens, meetings, typing) for the
+            // Stats tab and the notch read-out.
+            ActivityRecorder.start(container: container)
+            TypingBridge.shared.start()
+            MeetingDetector.shared.start()
+
             // Match the Dock tile to the selected character pack (no-op for
             // the default pack, which uses the bundled icon).
             AppIconManager.applyCurrent()
@@ -358,6 +364,10 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
     /// Called once at launch, before SwiftUI processes its scenes. Returning
     /// `false` tells AppKit not to open an "untitled" document at start-up,
     /// which is the path SwiftUI uses to auto-instantiate the first window.
+    func applicationWillTerminate(_ notification: Notification) {
+        ActivityRecorder.shared?.flush()
+    }
+
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool { false }
 
     /// Same plumbing but for the "click the app icon while no window is

@@ -40,11 +40,7 @@ enum CloudKitSchemaInitializer {
     }
 
     private static func initialize() throws {
-        let types: [any PersistentModel.Type] = [
-            Folder.self, Note.self, ChecklistItem.self,
-            Tag.self, Attachment.self, Message.self,
-            Device.self, UserSettings.self,
-        ]
+        let types = ModelContainerFactory.models
         guard let model = NSManagedObjectModel.makeManagedObjectModel(for: types) else {
             throw NSError(domain: "CloudKitSchemaInitializer", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "could not build the Core Data model"])

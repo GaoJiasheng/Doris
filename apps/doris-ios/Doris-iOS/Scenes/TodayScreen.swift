@@ -4,7 +4,8 @@ import DorisCore
 import DorisUI
 
 /// iOS Today tab — three blocks:
-///   1. Weather card — full-width ambient weather panel
+///   1. Weather card — full-width ambient weather panel, then (when a Mac
+///      has recorded any) today's tokens / meeting time / typing
 ///   2. Pinned tasks — 2-column grid of compact cards
 ///   3. Calendar — upcoming / overdue notes sorted by dueDate
 ///
@@ -26,6 +27,10 @@ struct TodayScreen: View {
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var allNotes: [Note]
+
+    /// What the Macs recorded (the iPhone records nothing). Small: one row
+    /// per Mac launch per day.
+    @Query private var activityRows: [ActivityDay]
 
     @State private var path = NavigationPath()
 
@@ -74,6 +79,21 @@ struct TodayScreen: View {
 
                     // ── Block 1: Weather ─────────────────────────────────
                     TodayWeatherCard(vm: weather)
+
+                    // ── Block 1b: Stats from the Macs ─────────────────────
+                    if !activityRows.isEmpty {
+                        sectionHeader(
+                            icon: "chart.bar.fill",
+                            title: L("Stats", "统计"),
+                            tint: ActivityMetric.tokens.color
+                        )
+                        NavigationLink {
+                            StatsScreen()
+                        } label: {
+                            ActivityTodayCard(totals: ActivityTotals.byDay(activityRows.map(ActivityRecord.init)))
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                     // ── Block 2: Pinned tasks ─────────────────────────────
                     // Pink = 置顶 (attention / user-flagged), violet =

@@ -162,6 +162,24 @@ grep -q "flags=.*runtime" <<<"$CLI_SIG" \
   || { echo "❌ embedded CLI missing hardened-runtime flag"; exit 1; }
 echo "   ✓ CLI signed + hardened"
 
+# Same for the typing helper, which must also stay unsandboxed (the sandbox
+# blocks reading other apps' text) and on Doris's version.
+HELPER="$APP/Contents/Library/Helpers/DorisTyping.app"
+[ -d "$HELPER" ] || { echo "❌ typing helper missing at $HELPER"; exit 1; }
+HELPER_SIG="$(codesign -dvv "$HELPER" 2>&1)"
+grep -q "Authority=Developer ID Application" <<<"$HELPER_SIG" \
+  || { echo "❌ typing helper not Developer ID signed"; exit 1; }
+grep -q "flags=.*runtime" <<<"$HELPER_SIG" \
+  || { echo "❌ typing helper missing hardened-runtime flag"; exit 1; }
+HELPER_ENT="$(codesign -d --entitlements - --xml "$HELPER" 2>/dev/null || true)"
+if grep -q "com.apple.security.app-sandbox" <<<"$HELPER_ENT"; then
+  echo "❌ typing helper is sandboxed; it can't read other apps' text"; exit 1
+fi
+HELPER_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$HELPER/Contents/Info.plist")"
+[ "$HELPER_VERSION" = "$VERSION" ] \
+  || { echo "❌ typing helper is $HELPER_VERSION, Doris is $VERSION (project.yml)"; exit 1; }
+echo "   ✓ typing helper signed + hardened + unsandboxed"
+
 # spctl reports "unsigned" before notarization; that's expected here.
 # We only use it post-staple to confirm Gatekeeper sees the ticket.
 

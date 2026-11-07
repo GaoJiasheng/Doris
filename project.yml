@@ -119,8 +119,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.gavin.doris
         CODE_SIGN_ENTITLEMENTS: apps/doris-mac/Doris-macOS/Doris-macOS.entitlements
         ENABLE_HARDENED_RUNTIME: YES
-        MARKETING_VERSION: "1.13.1"
-        CURRENT_PROJECT_VERSION: "34"
+        MARKETING_VERSION: "1.14.0"
+        CURRENT_PROJECT_VERSION: "43"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - package: DorisCore
@@ -141,6 +141,15 @@ targets:
         codeSign: true
         copy:
           destination: resources
+      # Doris 字数助手 — the unsandboxed typing counter (see the
+      # DorisTyping-macOS target). Lives in Contents/Library/Helpers and
+      # is launched by Doris, never by the user.
+      - target: DorisTyping-macOS
+        embed: true
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Library/Helpers
 
   # Standalone `doris` CLI binary. Embedded inside Doris.app/Contents/
   # Resources/doris (see Doris-macOS dependencies). Kept as a sibling
@@ -180,6 +189,44 @@ targets:
     dependencies:
       - package: ArgumentParser
         product: ArgumentParser
+      - package: DorisCore
+        product: DorisIPC
+
+  # Doris 字数助手: counts the words you type in other apps for the Stats
+  # tab and the notch. A separate, UNSANDBOXED app because the App Sandbox
+  # blocks reading other apps' text through Accessibility; it gets its own
+  # Accessibility entry and talks to Doris only through word-count files
+  # (DorisIPC/Typing/TypingWire.swift). Embedded by Doris-macOS above.
+  DorisTyping-macOS:
+    type: application
+    platform: macOS
+    sources:
+      - path: apps/doris-mac/DorisTyping
+        excludes:
+          - "DorisTyping.entitlements"
+          - "Info.plist"
+    info:
+      path: apps/doris-mac/DorisTyping/Info.plist
+      properties:
+        CFBundleName: "Doris 字数助手"
+        CFBundleDisplayName: "Doris 字数助手"
+        LSUIElement: true
+        LSBackgroundOnly: true
+        NSHumanReadableCopyright: ""
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+    settings:
+      base:
+        PRODUCT_NAME: DorisTyping
+        PRODUCT_BUNDLE_IDENTIFIER: com.gavin.doris.typing
+        CODE_SIGN_ENTITLEMENTS: apps/doris-mac/DorisTyping/DorisTyping.entitlements
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        ENABLE_HARDENED_RUNTIME: YES
+        OTHER_CODE_SIGN_FLAGS: --timestamp
+        SKIP_INSTALL: YES
+        MARKETING_VERSION: "1.14.0"
+        CURRENT_PROJECT_VERSION: "43"
+    dependencies:
       - package: DorisCore
         product: DorisIPC
 
@@ -303,8 +350,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.gavin.doris.ios
         CODE_SIGN_ENTITLEMENTS: apps/doris-ios/Doris-iOS/Doris-iOS.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
-        MARKETING_VERSION: "1.13.1"
-        CURRENT_PROJECT_VERSION: "50"
+        MARKETING_VERSION: "1.14.0"
+        CURRENT_PROJECT_VERSION: "51"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Compile *all* "iOS App Icon" sets in the catalog (not just the
         # primary) so per-pack alternate icons named `AppIcon-<id>` become
@@ -363,8 +410,8 @@ targets:
         # Embedded extensions must carry the SAME version as the host app
         # or App Store Connect rejects the upload. Keep in lock-step with
         # the Doris-iOS target's MARKETING_VERSION / CURRENT_PROJECT_VERSION.
-        MARKETING_VERSION: "1.13.1"
-        CURRENT_PROJECT_VERSION: "50"
+        MARKETING_VERSION: "1.14.0"
+        CURRENT_PROJECT_VERSION: "51"
     info:
       path: apps/doris-ios/DorisWidget-iOS/Info.plist
       properties:
@@ -427,6 +474,7 @@ schemes:
         DorisWidget-macOS: all
         DorisIntents-macOS: all
         doris-cli: all
+        DorisTyping-macOS: all
     run:
       config: Debug
     test:

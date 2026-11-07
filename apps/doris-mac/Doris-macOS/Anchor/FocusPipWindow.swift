@@ -14,6 +14,12 @@ import DorisUI
 final class FocusPipWindow {
     private let window: NSWindow
     var onClick: () -> Void = {}
+    private let joint = PipJoint()
+
+    /// A number tab docked on the pip's outer side squares its bottom-right corner.
+    func setJoinedEnd(_ joined: Bool) {
+        if joint.squareEnd != joined { joint.squareEnd = joined }
+    }
 
     /// Overshoot (points the tab pokes into the notch), matched to the
     /// avatar's `NotchExtensionShape` so the mirror lines up.
@@ -38,7 +44,7 @@ final class FocusPipWindow {
         win.hidesOnDeactivate = false
         self.window = win
 
-        let host = NSHostingController(rootView: FocusPipView(onClick: { [weak self] in self?.onClick() }))
+        let host = NSHostingController(rootView: FocusPipView(joint: joint, onClick: { [weak self] in self?.onClick() }))
         host.view.wantsLayer = true
         win.contentViewController = host
 
@@ -59,16 +65,27 @@ final class FocusPipWindow {
     func show() { window.orderFrontRegardless() }
     func hide() { window.orderOut(nil) }
     var isVisible: Bool { window.isVisible }
+    var frame: NSRect { window.frame }
+}
+
+@MainActor
+private final class PipJoint: ObservableObject {
+    @Published var squareEnd = false
 }
 
 private struct FocusPipView: View {
+    @ObservedObject var joint: PipJoint
     let onClick: () -> Void
 
     var body: some View {
         ZStack {
             // Black tab mirroring the avatar's notch extension so the two
             // read as one pair bracketing the camera cutout.
-            NotchExtensionShapeRight(cornerRadius: 10).fill(Color.black)
+            if joint.squareEnd {
+                Rectangle().fill(Color.black)
+            } else {
+                NotchExtensionShapeRight(cornerRadius: 10).fill(Color.black)
+            }
             // Shared badge — running ring / paused `II` / finished green
             // check, so the pip and the inline edge ring never drift apart.
             FocusRingBadge(diameter: 18, lineWidth: 2.5)

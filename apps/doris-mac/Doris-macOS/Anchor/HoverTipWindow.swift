@@ -53,6 +53,14 @@ final class HoverTipWindow {
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.delay, execute: work)
     }
 
+    /// The same, for a richer tip than a line of text.
+    func schedule(card: AnyView, under anchor: NSRect) {
+        cancel()
+        let work = DispatchWorkItem { [weak self] in self?.show(card: card, under: anchor) }
+        pendingShow = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.delay, execute: work)
+    }
+
     func cancel() {
         pendingShow?.cancel()
         pendingShow = nil
@@ -60,7 +68,17 @@ final class HoverTipWindow {
     }
 
     private func show(text: String, under anchor: NSRect) {
+        model.card = nil
         model.text = text
+        present(under: anchor)
+    }
+
+    private func show(card: AnyView, under anchor: NSRect) {
+        model.card = card
+        present(under: anchor)
+    }
+
+    private func present(under anchor: NSRect) {
         // Measure the SwiftUI content so the window hugs the label.
         guard let host = window.contentViewController?.view else { return }
         host.layoutSubtreeIfNeeded()
@@ -78,19 +96,34 @@ final class HoverTipWindow {
             if y < f.minY + 4 { y = anchor.maxY + 6 }
         }
         window.setFrame(NSRect(x: x, y: y, width: w, height: h), display: true)
+        window.alphaValue = 0
         window.orderFrontRegardless()
+        window.invalidateShadow()
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.12
+            window.animator().alphaValue = 1
+        }
     }
 }
 
 @MainActor
 private final class HoverTipModel: ObservableObject {
     @Published var text: String = ""
+    @Published var card: AnyView?
 }
 
 private struct HoverTipView: View {
     @ObservedObject var model: HoverTipModel
 
     var body: some View {
+        if let card = model.card {
+            card
+        } else {
+            textTip
+        }
+    }
+
+    private var textTip: some View {
         Text(model.text)
             .font(.system(size: 11, weight: .medium, design: .rounded))
             .foregroundStyle(.white)
@@ -119,7 +152,13 @@ final class HoverTrackingView: NSView {
     /// Returns the tip text for the pointer's location in this view's
     /// coordinates, or nil for "no tip here" (e.g. over the cat, not the ring).
     var tipProvider: ((NSPoint) -> String?)?
+    /// A card instead of text, built when the pointer enters. Takes
+    /// precedence over `tipProvider`.
+    var cardProvider: (() -> AnyView?)?
+    /// What the card hangs under; defaults to this view's window.
+    var anchorProvider: (() -> NSRect)?
     private var lastText: String?
+    private var cardShown = false
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
@@ -135,6 +174,14 @@ final class HoverTrackingView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override func mouseMoved(with event: NSEvent) {
+        if let cardProvider {
+            guard !cardShown, let win = window else { return }
+            cardShown = true
+            if let card = cardProvider() {
+                HoverTipWindow.shared.schedule(card: card, under: anchorProvider?() ?? win.frame)
+            }
+            return
+        }
         let p = convert(event.locationInWindow, from: nil)
         let text = tipProvider?(p)
         guard text != lastText else { return }   // don't restart the timer every pixel
@@ -148,6 +195,7 @@ final class HoverTrackingView: NSView {
 
     override func mouseExited(with event: NSEvent) {
         lastText = nil
+        cardShown = false
         HoverTipWindow.shared.cancel()
     }
 }

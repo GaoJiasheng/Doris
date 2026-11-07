@@ -105,6 +105,10 @@ struct MainWindowView: View {
         // Focus-ring click → open that note's editor. Fetch by id from our
         // own context and set `editingNote` (the editor shows regardless of
         // the current tab).
+        .onReceive(NotificationCenter.default.publisher(for: .dorisOpenStats)) { _ in
+            editingNote = nil
+            tab = .tokens
+        }
         .onReceive(NotificationCenter.default.publisher(for: .dorisOpenNote)) { note in
             guard let id = note.object as? UUID else { return }
             var fd = FetchDescriptor<Note>(predicate: #Predicate { $0.id == id })
@@ -179,7 +183,7 @@ struct MainWindowView: View {
                 tabButton(.today, label: L("Today", "今日"), system: "sparkles", showsLabel: labels)
                 tabButton(.notes, label: L("To-dos", "待办"), system: "checklist", showsLabel: labels)
                 tabButton(.events, label: L("Events", "事件"), system: "tray.fill", showsLabel: labels)
-                tabButton(.tokens, label: L("Tokens", "Token"), system: "bolt.fill", showsLabel: labels)
+                tabButton(.tokens, label: L("Stats", "统计"), system: "chart.bar.fill", showsLabel: labels)
             }
 
             Spacer()
