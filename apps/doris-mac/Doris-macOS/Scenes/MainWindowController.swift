@@ -99,7 +99,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         // `.preferredColorScheme` reactively — don't apply it here too
         // (a static modifier at construction time wins, freezing the
         // window to whatever theme was active when first opened).
-        let root = MainWindowView(onClose: { [weak self] in self?.closeMainWindow() })
+        let root = MainWindowView(windowID: windowID, onClose: { [weak self] in self?.closeMainWindow() })
             .modelContainer(container)
         let host = NSHostingController(rootView: root)
         // The content's minimum is the window's minimum — but don't let the

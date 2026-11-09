@@ -246,6 +246,16 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.14.1", date: "2026-11-09", gh: true,
+      zh: { title: "刘海数字的点击和小猫一样了",
+        improved: [
+          ["左键点数字,打开弹出窗口的统计页,再点一下关掉。", "和点小猫一样,不会再直接跳到主窗口。"],
+          ["右键点数字,打开主窗口的统计页。", "数字上不再弹菜单,相关选项都在设置「统计与刘海数字」里。"] ] },
+      en: { title: "The notch numbers click like the cat",
+        improved: [
+          ["Left-click a number to open the popup on Stats; click again to close it.", "Just like the cat, and it no longer jumps to the main window."],
+          ["Right-click a number to open Stats in the main window.", "The numbers no longer have a context menu; their options are in Settings → Stats and notch numbers."] ] } },
+
     { v: "1.14.0", date: "2026-11-07", gh: true,
       zh: { title: "统计来了:Token、飞书会议时长和打字字数",
         new: [

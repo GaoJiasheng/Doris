@@ -131,9 +131,12 @@ final class NotchStatsWindow {
     static let stackedPadding: CGFloat = 4
     static let stackedColumnGap: CGFloat = 6
 
-    init(container: ModelContainer) {
-        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 60, height: 32),
-                           styleMask: [.borderless], backing: .buffered, defer: true)
+    /// Left click → the popup's Stats page; right click → the main window's.
+    init(container: ModelContainer, onClick: @escaping () -> Void, onRightClick: @escaping () -> Void) {
+        let win = ClickWindow(contentRect: NSRect(x: 0, y: 0, width: 60, height: 32),
+                              styleMask: [.borderless], backing: .buffered, defer: true)
+        win.onClick = onClick
+        win.onRightClick = onRightClick
         win.isReleasedWhenClosed = false
         win.level = .statusBar
         win.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
@@ -185,6 +188,28 @@ final class NotchStatsWindow {
 
     /// The whole logo-and-numbers shape; the hover card centres under it.
     var pillFrame: NSRect = .zero
+
+    /// Takes the clicks itself, so a right click opens the main window
+    /// instead of a context menu.
+    private final class ClickWindow: NSWindow {
+        var onClick: () -> Void = {}
+        var onRightClick: () -> Void = {}
+
+        override func sendEvent(_ event: NSEvent) {
+            switch event.type {
+            case .leftMouseUp:
+                HoverTipWindow.shared.cancel()
+                onClick()
+            case .rightMouseDown:
+                HoverTipWindow.shared.cancel()
+                onRightClick()
+            case .leftMouseDown, .rightMouseUp:
+                break
+            default:
+                super.sendEvent(event)
+            }
+        }
+    }
 }
 
 @MainActor
@@ -230,22 +255,7 @@ private struct NotchStatsView: View {
                 .padding(model.inset)
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { openStats() }
-        .contextMenu {
-            Button(L("Open Stats", "打开统计")) { openStats() }
-            Button(L("Notch Numbers…", "刘海数字设置…")) {
-                SettingsWindowController.shared.show()
-            }
-        }
-    }
-
-    private func openStats() {
-        AppCommands.openMainWindow()
-        // After the window exists, so its tab state hears it.
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .dorisOpenStats, object: nil)
-        }
+        // Clicks are handled by the window (NotchStatsWindow.ClickWindow).
     }
 
     /// Two numbers to a column, icons lined up down the column.
@@ -320,7 +330,8 @@ enum NotchStatsTip {
 }
 
 extension Notification.Name {
-    /// Switch the main window to the Stats tab.
+    /// Switch a window to the Stats tab. `object` is the window's id
+    /// (`MainWindowController.windowID`); nil means every window.
     static let dorisOpenStats = Notification.Name("doris.openStats")
 }
 

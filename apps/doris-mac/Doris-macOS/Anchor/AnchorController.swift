@@ -88,8 +88,10 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
                 .sink { [weak self] _ in self?.updateFocusPip() }
         }
         if statsStart == nil {
-            statsStart = NotchStatsWindow(container: modelContainer)
-            statsEnd = NotchStatsWindow(container: modelContainer)
+            let onClick: () -> Void = { [weak self] in self?.openStatsInPopup() }
+            let onRightClick: () -> Void = { [weak self] in self?.openStatsInMainWindow() }
+            statsStart = NotchStatsWindow(container: modelContainer, onClick: onClick, onRightClick: onRightClick)
+            statsEnd = NotchStatsWindow(container: modelContainer, onClick: onClick, onRightClick: onRightClick)
             statsSettingsSink = NotchStatsSettings.shared.objectWillChange
                 .receive(on: RunLoop.main)
                 .sink { [weak self] _ in
@@ -309,6 +311,29 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             NotificationCenter.default.post(
                 name: .dorisOpenNote, object: noteID, userInfo: info)
         }
+        post()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: post)
+    }
+
+    /// Left click on the notch numbers toggles the popup like the cat does,
+    /// except that opening it lands on the Stats page.
+    private func openStatsInPopup() {
+        let popup = MainWindowController.popup
+        let willOpen = !popup.isMainWindowVisible
+        toggleExpanded()
+        if willOpen { showStats(in: popup.windowID) }
+    }
+
+    /// Right click on the notch numbers: the main window, on its Stats page.
+    private func openStatsInMainWindow() {
+        AppCommands.openMainWindow()
+        showStats(in: MainWindowController.shared.windowID)
+    }
+
+    private func showStats(in windowID: String) {
+        // Now (the window may already be mounted) and after a beat (it's
+        // mounting fresh and its subscriber isn't attached yet).
+        let post = { NotificationCenter.default.post(name: .dorisOpenStats, object: windowID) }
         post()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: post)
     }

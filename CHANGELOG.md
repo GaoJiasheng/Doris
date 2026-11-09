@@ -6,6 +6,19 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.14.1 — 2026-11-09
+
+macOS only. The iPhone stays on 1.14.0.
+
+### Improved
+
+- **Clicking the notch numbers works like clicking the cat.** A left
+  click opens the popup on its Stats page and a second click closes it.
+  A right click opens the main window on Stats; the numbers no longer
+  have a context menu (their settings are in Settings → 统计与刘海数字).
+
+---
+
 ## 1.14.0 — 2026-11-07
 
 Stats: how many tokens your AI tools used, how long you spent in Feishu

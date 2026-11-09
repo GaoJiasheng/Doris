@@ -35,6 +35,8 @@ struct MainWindowView: View {
     /// The smallest layout (in content points, before zoom) everything is
     /// designed to fit.
     static let minimumSize = CGSize(width: 540, height: 520)
+    /// `MainWindowController.windowID` of the window this view is in.
+    var windowID: String = ""
     /// Closes the window this view is in (main window or popup).
     var onClose: () -> Void = {}
     @State private var tab: Tab = .today
@@ -105,7 +107,8 @@ struct MainWindowView: View {
         // Focus-ring click → open that note's editor. Fetch by id from our
         // own context and set `editingNote` (the editor shows regardless of
         // the current tab).
-        .onReceive(NotificationCenter.default.publisher(for: .dorisOpenStats)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .dorisOpenStats)) { note in
+            if let target = note.object as? String, target != windowID { return }
             editingNote = nil
             tab = .tokens
         }
