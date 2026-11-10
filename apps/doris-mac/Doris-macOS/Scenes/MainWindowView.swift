@@ -40,6 +40,8 @@ struct MainWindowView: View {
     /// Closes the window this view is in (main window or popup).
     var onClose: () -> Void = {}
     @State private var tab: Tab = .today
+    /// Kept here so the notch can pick the Stats tab before the page exists.
+    @State private var statsMetric: ActivityMetric = .tokens
     /// Lifted up from `MainNotesList` so the detail header (DORIS
     /// brand + tab buttons) can hide while editing — the editor gets
     /// the entire detail pane. Shared with `MainTodayView` too, so
@@ -97,7 +99,7 @@ struct MainWindowView: View {
                 case .today:  MainTodayView(editing: $editingNote, onOpenTokens: { tab = .tokens })
                 case .events: MainEventsList()
                 case .notes:  MainNotesList(editing: $editingNote)
-                case .tokens: MainTokensView()
+                case .tokens: MainTokensView(metric: $statsMetric)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -107,10 +109,17 @@ struct MainWindowView: View {
         // Focus-ring click → open that note's editor. Fetch by id from our
         // own context and set `editingNote` (the editor shows regardless of
         // the current tab).
-        .onReceive(NotificationCenter.default.publisher(for: .dorisOpenStats)) { note in
-            if let target = note.object as? String, target != windowID { return }
+        .onReceive(NotificationCenter.default.publisher(for: .dorisShowPage)) { note in
+            guard note.object as? String == windowID,
+                  let page = note.userInfo?["page"] as? NotchPage else { return }
             editingNote = nil
-            tab = .tokens
+            switch page {
+            case .tasks:
+                tab = .notes
+            case .stats(let metric):
+                statsMetric = metric
+                tab = .tokens
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .dorisOpenNote)) { note in
             guard let id = note.object as? UUID else { return }

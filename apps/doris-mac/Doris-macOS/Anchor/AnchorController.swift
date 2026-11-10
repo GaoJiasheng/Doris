@@ -41,6 +41,9 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
     static let expandedWidth: CGFloat = 560
     static let expandedHeight: CGFloat = 380
 
+    /// What the cat or a number last opened the popup on.
+    private var popupPage: NotchPage?
+
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
         super.init()
@@ -51,7 +54,7 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             avatarWindow = MenuBarAvatarWindow(
                 // The CAT keeps its original behavior — click opens the
                 // panel, focus session or not. Only the ring jumps to a task.
-                onClick: { [weak self] in self?.toggleExpanded() },
+                onClick: { [weak self] in self?.togglePopup(on: .tasks) },
                 onRingClick: { [weak self] in self?.toggleFocusedTask() },
                 onDragMove: { [weak self] cursor, center in self?.previewAvatarDrag(cursor: cursor, windowCenter: center) },
                 onDragEnded: { [weak self] cursor, center in self?.commitEdgeDrag(cursor: cursor, windowCenter: center) ?? false }
@@ -88,8 +91,8 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
                 .sink { [weak self] _ in self?.updateFocusPip() }
         }
         if statsStart == nil {
-            let onClick: () -> Void = { [weak self] in self?.openStatsInPopup() }
-            let onRightClick: () -> Void = { [weak self] in self?.openStatsInMainWindow() }
+            let onClick: (ActivityMetric) -> Void = { [weak self] in self?.togglePopup(on: .stats($0)) }
+            let onRightClick: (ActivityMetric) -> Void = { [weak self] in self?.showNumberMenu(for: $0) }
             statsStart = NotchStatsWindow(container: modelContainer, onClick: onClick, onRightClick: onRightClick)
             statsEnd = NotchStatsWindow(container: modelContainer, onClick: onClick, onRightClick: onRightClick)
             statsSettingsSink = NotchStatsSettings.shared.objectWillChange
@@ -101,7 +104,7 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
         }
         if desktopPet == nil {
             desktopPet = DesktopPetController(
-                onClick: { [weak self] in self?.toggleExpanded() },
+                onClick: { [weak self] in self?.togglePopup(on: .tasks) },
                 onDragMove: { [weak self] cursor, center in self?.previewAvatarDrag(cursor: cursor, windowCenter: center) },
                 onDragEnded: { [weak self] cursor, center in self?.commitPetDrag(cursor: cursor, windowCenter: center) ?? false }
             )
@@ -315,25 +318,49 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: post)
     }
 
-    /// Left click on the notch numbers toggles the popup like the cat does,
-    /// except that opening it lands on the Stats page.
-    private func openStatsInPopup() {
+    /// Left click on the cat or a notch number: opens the popup on that page.
+    /// Clicking the same one again closes it; clicking another switches page.
+    private func togglePopup(on page: NotchPage) {
         let popup = MainWindowController.popup
-        let willOpen = !popup.isMainWindowVisible
-        toggleExpanded()
-        if willOpen { showStats(in: popup.windowID) }
+        if popup.isMainWindowVisible, popupPage == page {
+            toggleExpanded()
+            return
+        }
+        if !popup.isMainWindowVisible { toggleExpanded() }
+        popupPage = page
+        show(page, in: popup.windowID)
     }
 
-    /// Right click on the notch numbers: the main window, on its Stats page.
-    private func openStatsInMainWindow() {
-        AppCommands.openMainWindow()
-        showStats(in: MainWindowController.shared.windowID)
+    /// Right click on a notch number: the cat's menu, item for item, where
+    /// 打开主窗口 lands on that number's Stats tab.
+    private func showNumberMenu(for metric: ActivityMetric) {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        func add(_ title: String, _ action: @escaping () -> Void) {
+            let item = NSMenuItem(title: title, action: #selector(MenuAction.run), keyEquivalent: "")
+            let target = MenuAction(action)
+            item.target = target
+            item.representedObject = target   // NSMenuItem.target is weak
+            menu.addItem(item)
+        }
+        add(L("Open Main Window", "打开主窗口")) { [weak self] in
+            AppCommands.openMainWindow()
+            self?.show(.stats(metric), in: MainWindowController.shared.windowID)
+        }
+        menu.addItem(.separator())
+        add(L("Sync Now", "立即同步")) { AppCommands.syncNow() }
+        add(L("Settings…", "设置…")) { SettingsWindowController.shared.show() }
+        menu.addItem(.separator())
+        add(L("Quit Doris", "退出 Doris")) { NSApp.terminate(nil) }
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 
-    private func showStats(in windowID: String) {
+    private func show(_ page: NotchPage, in windowID: String) {
         // Now (the window may already be mounted) and after a beat (it's
         // mounting fresh and its subscriber isn't attached yet).
-        let post = { NotificationCenter.default.post(name: .dorisOpenStats, object: windowID) }
+        let post = {
+            NotificationCenter.default.post(name: .dorisShowPage, object: windowID, userInfo: ["page": page])
+        }
         post()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: post)
     }
@@ -925,4 +952,11 @@ final class AnchorController: NSObject, NotificationPresenter, NSWindowDelegate 
             self?.dismissActiveMessage()
         }
     }
+}
+
+/// Block target for the notch numbers' NSMenu items.
+private final class MenuAction: NSObject {
+    private let action: () -> Void
+    init(_ action: @escaping () -> Void) { self.action = action }
+    @objc func run() { action() }
 }

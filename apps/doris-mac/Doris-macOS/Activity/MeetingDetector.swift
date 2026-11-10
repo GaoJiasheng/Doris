@@ -1,20 +1,29 @@
-import AppKit
+import Foundation
 import CoreAudio
 import DorisCore
 
-/// Marks the minutes this Mac spends in a Feishu (Lark) meeting.
+/// Marks the minutes this Mac spends in a video meeting: Feishu / Lark
+/// (every edition), Zoom, Tencent Meeting (腾讯会议) or DingTalk (钉钉).
 ///
-/// Feishu runs meetings in a process of their own ("飞书会议",
-/// `com.bytedance.macos.feishu.iron`) that starts when you join and quits
-/// a few seconds after you leave. While you're in, it keeps both the
-/// microphone and the speakers open — muting yourself doesn't release the
-/// mic — so "the meeting process is using audio" holds for the whole
-/// meeting, muted or not. Requiring audio leaves out the few seconds of
-/// the pre-join screen, and voice messages or videos in chats, which play
-/// from the main Feishu process.
+/// The signal is "the meeting app is using audio", read per process
+/// through CoreAudio's process objects (macOS 14.2+: no permission prompt,
+/// works in the sandbox). Each app needs its own rule, because not all of
+/// them run meetings in a process of their own:
 ///
-/// Read through CoreAudio's process objects (macOS 14.2+): no permission
-/// prompt, works in the sandbox.
+/// - **Feishu / Lark** run a meeting in a separate process ("飞书会议",
+///   bundle ID `<app>.iron`: `com.bytedance.macos.feishu.iron`, or
+///   `com.larksuite.larkApp.iron` for international Lark) that starts when
+///   you join and quits a few seconds after you leave. It keeps the mic and
+///   the speakers open the whole time, muted or not, so mic *or* speakers
+///   counts. Voice messages and videos in chats play from the main process
+///   and don't.
+/// - **Zoom** and **Tencent Meeting** are meeting apps and open audio only
+///   in a meeting, so mic or speakers counts.
+/// - **DingTalk** also plays message sounds, voice messages and videos, so
+///   it counts only while it holds the microphone.
+///
+/// Bundle IDs match by prefix, so a helper process that carries the audio
+/// counts as its app.
 @MainActor
 final class MeetingDetector {
     static let shared = MeetingDetector()
@@ -37,18 +46,35 @@ final class MeetingDetector {
         ActivityRecorder.shared?.markMeeting()
     }
 
-    static let meetingBundles: Set<String> = ["com.bytedance.macos.feishu.iron"]
+    struct Rule {
+        /// Matches when the audio process's bundle ID is accepted by this.
+        let matches: (String) -> Bool
+        /// Microphone only (speakers alone could be a message sound).
+        let needsMic: Bool
+    }
 
-    /// True while a Feishu meeting process has audio running.
+    static let rules: [Rule] = [
+        // Feishu / Lark: only the dedicated meeting process.
+        Rule(matches: { b in
+            b.hasSuffix(".iron")
+                && (b.hasPrefix("com.bytedance.macos.feishu") || b.hasPrefix("com.larksuite.")
+                    || b.hasPrefix("com.bytedance.macos.lark") || b.hasPrefix("com.electron.lark"))
+        }, needsMic: false),
+        Rule(matches: { $0.hasPrefix("us.zoom.xos") }, needsMic: false),
+        Rule(matches: { $0.hasPrefix("com.tencent.meeting") || $0.hasPrefix("com.tencent.tencentmeeting") },
+             needsMic: false),
+        Rule(matches: { $0.hasPrefix("com.alibaba.DingTalk") || $0.hasPrefix("com.alibaba.dingtalk") },
+             needsMic: true),
+    ]
+
+    /// True while one of the meeting apps is using audio per its rule.
     static func inMeeting() -> Bool {
-        // Cheap check first: no meeting process, no meeting.
-        guard NSWorkspace.shared.runningApplications.contains(where: {
-            meetingBundles.contains($0.bundleIdentifier ?? "")
-        }) else { return false }
         for o in audioProcessObjects() {
-            guard let b = string(o, kAudioProcessPropertyBundleID), meetingBundles.contains(b) else { continue }
-            if uint32(o, kAudioProcessPropertyIsRunningInput) != 0
-                || uint32(o, kAudioProcessPropertyIsRunningOutput) != 0 { return true }
+            guard let b = string(o, kAudioProcessPropertyBundleID), !b.isEmpty,
+                  let rule = rules.first(where: { $0.matches(b) }) else { continue }
+            let mic = uint32(o, kAudioProcessPropertyIsRunningInput) != 0
+            let speakers = uint32(o, kAudioProcessPropertyIsRunningOutput) != 0
+            if mic || (!rule.needsMic && speakers) { return true }
         }
         return false
     }

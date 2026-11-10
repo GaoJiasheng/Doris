@@ -7,11 +7,12 @@ import DorisUI
 /// rows), then the state of this Mac's token sources.
 struct MainTokensView: View {
     @ObservedObject private var lang = LanguageSettings.shared
+    @Binding var metric: ActivityMetric
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                ActivityOverview(localDeviceKey: ActivityDevice.key, title: L("Stats", "统计"))
+                ActivityOverview(metric: $metric, localDeviceKey: ActivityDevice.key, title: L("Stats", "统计"))
                 if TokenStore.shared != nil {
                     TokenSourcesSection()
                 } else {

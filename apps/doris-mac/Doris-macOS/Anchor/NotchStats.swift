@@ -131,12 +131,13 @@ final class NotchStatsWindow {
     static let stackedPadding: CGFloat = 4
     static let stackedColumnGap: CGFloat = 6
 
-    /// Left click → the popup's Stats page; right click → the main window's.
-    init(container: ModelContainer, onClick: @escaping () -> Void, onRightClick: @escaping () -> Void) {
+    /// Left click → that number's Stats tab in the popup; right click → the
+    /// cat's menu (built by the caller), told which number was clicked.
+    init(container: ModelContainer,
+         onClick: @escaping (ActivityMetric) -> Void,
+         onRightClick: @escaping (ActivityMetric) -> Void) {
         let win = ClickWindow(contentRect: NSRect(x: 0, y: 0, width: 60, height: 32),
                               styleMask: [.borderless], backing: .buffered, defer: true)
-        win.onClick = onClick
-        win.onRightClick = onRightClick
         win.isReleasedWhenClosed = false
         win.level = .statusBar
         win.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
@@ -149,6 +150,12 @@ final class NotchStatsWindow {
         // even when the Mac is in light mode.
         win.appearance = NSAppearance(named: .darkAqua)
         window = win
+        win.onClick = { [weak self] point in
+            if let self { onClick(self.metric(at: point)) }
+        }
+        win.onRightClick = { [weak self] point in
+            if let self { onRightClick(self.metric(at: point)) }
+        }
 
         let host = NSHostingController(rootView: NotchStatsView(model: model).modelContainer(container))
         // The frame comes from the logo's; content must never resize the window.
@@ -189,20 +196,33 @@ final class NotchStatsWindow {
     /// The whole logo-and-numbers shape; the hover card centres under it.
     var pillFrame: NSRect = .zero
 
-    /// Takes the clicks itself, so a right click opens the main window
-    /// instead of a context menu.
+    /// The number nearest a click, so the gaps between numbers aren't dead.
+    /// `point` is in window coordinates (origin bottom-left).
+    private func metric(at point: NSPoint) -> ActivityMetric {
+        let p = CGPoint(x: point.x, y: window.frame.height - point.y)
+        func distance(_ r: CGRect) -> CGFloat {
+            hypot(max(r.minX - p.x, 0, p.x - r.maxX), max(r.minY - p.y, 0, p.y - r.maxY))
+        }
+        let nearest = model.metrics
+            .compactMap { m in model.cellFrames[m].map { (m, distance($0)) } }
+            .min { $0.1 < $1.1 }
+        return nearest?.0 ?? model.metrics.first ?? .tokens
+    }
+
+    /// Takes the clicks itself and reports where they landed, so the caller
+    /// knows which number was clicked.
     private final class ClickWindow: NSWindow {
-        var onClick: () -> Void = {}
-        var onRightClick: () -> Void = {}
+        var onClick: (NSPoint) -> Void = { _ in }
+        var onRightClick: (NSPoint) -> Void = { _ in }
 
         override func sendEvent(_ event: NSEvent) {
             switch event.type {
             case .leftMouseUp:
                 HoverTipWindow.shared.cancel()
-                onClick()
+                onClick(event.locationInWindow)
             case .rightMouseDown:
                 HoverTipWindow.shared.cancel()
-                onRightClick()
+                onRightClick(event.locationInWindow)
             case .leftMouseDown, .rightMouseUp:
                 break
             default:
@@ -220,6 +240,15 @@ final class NotchStatsModel: ObservableObject {
     @Published var corners = TabCorners()
     /// Extra room on one side that pokes into the camera notch (not drawn on).
     @Published var inset = EdgeInsets()
+    /// Where each number is drawn (window coordinates, origin top-left).
+    var cellFrames: [ActivityMetric: CGRect] = [:]
+}
+
+private struct CellFramesKey: PreferenceKey {
+    static var defaultValue: [ActivityMetric: CGRect] = [:]
+    static func reduce(value: inout [ActivityMetric: CGRect], nextValue: () -> [ActivityMetric: CGRect]) {
+        value.merge(nextValue()) { $1 }
+    }
 }
 
 private struct NotchStatsView: View {
@@ -248,6 +277,7 @@ private struct NotchStatsView: View {
                         stack {
                             ForEach(model.metrics) { m in
                                 cell(m, m.compact(m.value(totals)))
+                                    .background(frameReporter(m))
                             }
                         }
                     }
@@ -255,7 +285,15 @@ private struct NotchStatsView: View {
                 .padding(model.inset)
             }
         }
-        // Clicks are handled by the window (NotchStatsWindow.ClickWindow).
+        // Clicks are handled by the window (NotchStatsWindow.ClickWindow),
+        // which uses these frames to tell which number was hit.
+        .onPreferenceChange(CellFramesKey.self) { model.cellFrames = $0 }
+    }
+
+    private func frameReporter(_ m: ActivityMetric) -> some View {
+        GeometryReader { geo in
+            Color.clear.preference(key: CellFramesKey.self, value: [m: geo.frame(in: .global)])
+        }
     }
 
     /// Two numbers to a column, icons lined up down the column.
@@ -281,6 +319,7 @@ private struct NotchStatsView: View {
                         }
                         // A lone number centres in its tab; a pair keeps its icons in line.
                         .frame(width: column.count > 1 ? NotchStatsWindow.stackedSlotWidth : nil, alignment: .leading)
+                        .background(frameReporter(m))
                     }
                 }
             }
@@ -329,10 +368,16 @@ enum NotchStatsTip {
     }
 }
 
+/// What a click on the notch's cat or numbers opens.
+enum NotchPage: Equatable {
+    case tasks
+    case stats(ActivityMetric)
+}
+
 extension Notification.Name {
-    /// Switch a window to the Stats tab. `object` is the window's id
-    /// (`MainWindowController.windowID`); nil means every window.
-    static let dorisOpenStats = Notification.Name("doris.openStats")
+    /// Switch a window to a `NotchPage`. `object` is the window's id
+    /// (`MainWindowController.windowID`); `userInfo["page"]` the page.
+    static let dorisShowPage = Notification.Name("doris.showPage")
 }
 
 // MARK: - Settings section

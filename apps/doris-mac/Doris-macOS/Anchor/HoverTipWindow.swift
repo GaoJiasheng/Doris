@@ -15,7 +15,6 @@ final class HoverTipWindow {
     static let shared = HoverTipWindow()
 
     private let window: NSWindow
-    private let model = HoverTipModel()
     /// Pending show, so a tip only appears after a deliberate hover rather
     /// than flashing as the pointer sweeps past on its way to the menu bar.
     private var pendingShow: DispatchWorkItem?
@@ -37,10 +36,6 @@ final class HoverTipWindow {
         win.ignoresMouseEvents = true
         win.hidesOnDeactivate = false
         window = win
-
-        let host = NSHostingController(rootView: HoverTipView(model: model))
-        host.view.wantsLayer = true
-        win.contentViewController = host
     }
 
     /// Show `text` anchored under `anchor` (a screen-coordinate rect — the
@@ -68,19 +63,22 @@ final class HoverTipWindow {
     }
 
     private func show(text: String, under anchor: NSRect) {
-        model.card = nil
-        model.text = text
-        present(under: anchor)
+        present(AnyView(HoverTipText(text: text)), under: anchor)
     }
 
     private func show(card: AnyView, under anchor: NSRect) {
-        model.card = card
-        present(under: anchor)
+        present(card, under: anchor)
     }
 
-    private func present(under anchor: NSRect) {
-        // Measure the SwiftUI content so the window hugs the label.
-        guard let host = window.contentViewController?.view else { return }
+    private func present(_ content: AnyView, under anchor: NSRect) {
+        // A fresh hosting view per tip, measured before it's shown. Swapping
+        // the content of a long-lived one and reading `fittingSize` straight
+        // away measured the *previous* tip (SwiftUI hadn't laid out the new
+        // one yet), so a wider card got squeezed: numbers wrapped and the
+        // footer was clipped.
+        let host = NSHostingView(rootView: content)
+        host.wantsLayer = true
+        window.contentView = host
         host.layoutSubtreeIfNeeded()
         let size = host.fittingSize
         let w = max(size.width, 40), h = max(size.height, 20)
@@ -106,25 +104,11 @@ final class HoverTipWindow {
     }
 }
 
-@MainActor
-private final class HoverTipModel: ObservableObject {
-    @Published var text: String = ""
-    @Published var card: AnyView?
-}
-
-private struct HoverTipView: View {
-    @ObservedObject var model: HoverTipModel
+private struct HoverTipText: View {
+    let text: String
 
     var body: some View {
-        if let card = model.card {
-            card
-        } else {
-            textTip
-        }
-    }
-
-    private var textTip: some View {
-        Text(model.text)
+        Text(text)
             .font(.system(size: 11, weight: .medium, design: .rounded))
             .foregroundStyle(.white)
             .lineLimit(2)

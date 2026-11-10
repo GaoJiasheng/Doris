@@ -20,10 +20,11 @@ public struct ActivityOverview: View {
     private var rows: [ActivityDay]
     /// The device being looked at; nil = all of them.
     @State private var device: String?
-    @State private var metric: ActivityMetric = .tokens
+    @Binding private var metric: ActivityMetric
     @State private var period: ActivityPeriod = .week
 
-    public init(localDeviceKey: String? = nil, title: String? = nil) {
+    public init(metric: Binding<ActivityMetric>, localDeviceKey: String? = nil, title: String? = nil) {
+        _metric = metric
         self.localDeviceKey = localDeviceKey
         self.title = title
     }
@@ -548,7 +549,8 @@ private struct ActivityBarChart: View {
     private var emptyMessage: String {
         switch metric {
         case .tokens:  return L("No token use in this range.", "这段时间没有 Token 用量。")
-        case .meeting: return L("Feishu meetings show up here on their own.", "开飞书会议时，时长会自动记到这里。")
+        case .meeting: return L("Meetings in Feishu / Lark, Zoom, Tencent Meeting or DingTalk show up here on their own.",
+                                 "在飞书 / Lark、Zoom、腾讯会议或钉钉开会时，时长会自动记到这里。")
         case .words:   return L("What you type or dictate is counted here.", "打字和语音输入的字数会记到这里。")
         }
     }

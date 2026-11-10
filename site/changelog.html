@@ -246,6 +246,26 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.14.2", date: "2026-11-10", gh: true,
+      zh: { title: "会议统计支持更多 App,刘海图标各开各的页面,CPU 占用大幅下降",
+        new: [
+          ["会议时长支持更多 App。", "除了飞书,现在国际版 Lark、Zoom、腾讯会议和钉钉开会也会计时。之前国际版 Lark 没被认出来,开会一直记 0。钉钉也会播消息提示音和视频,所以只在它占用麦克风时计时。"] ],
+        improved: [
+          ["点刘海上的哪个图标,就打开哪一页。", "打字数字打开统计的「打字」,会议数字打开「会议」,Token 数字打开「Token」,小猫打开待办。再点同一个图标关掉,点另一个直接切过去。"],
+          ["数字的右键菜单和小猫一样了。", "打开主窗口、立即同步、设置、退出 Doris;在数字上点「打开主窗口」,会直接停在这个数字的统计页。"] ],
+        fixed: [
+          ["Doris 不再长时间占用大量 CPU。", "以前每次 AI 工具写日志,Doris 都会把全部 Token 记录重新读一遍,记录多了能占到 80% 左右的 CPU。现在只查新出现的那几条,日志频繁变化时也最多每 10 秒统计一次。"],
+          ["鼠标移到刘海数字上弹出的卡片不再折行、被截断。", "之前卡片窗口按上一次的内容算尺寸,数字大了就折成两行,最下面一行也被挡住。"] ] },
+      en: { title: "Meetings in more apps, a page per notch icon, and much less CPU",
+        new: [
+          ["Meeting time counts more apps.", "Besides Feishu, meetings in international Lark, Zoom, Tencent Meeting and DingTalk now count. International Lark wasn't recognised before, so its meetings counted 0. DingTalk also plays message sounds and videos, so it counts only while it holds the microphone."] ],
+        improved: [
+          ["Each notch icon opens its own page.", "The typing number opens Stats on Typing, the meeting number on Meetings, the Token number on Token, and the cat opens your tasks. Click the same icon again to close it, or another one to switch."],
+          ["The numbers' right-click menu matches the cat's.", "Open Main Window, Sync Now, Settings and Quit Doris; Open Main Window on a number lands on that number's Stats."] ],
+        fixed: [
+          ["Doris no longer keeps the CPU busy.", "Every time an AI tool wrote to its log, Doris re-read every token record it had stored, which could reach about 80% CPU on a large history. It now looks up only the new entries, and counts at most once every 10 seconds while logs keep changing."],
+          ["The card over the notch numbers no longer wraps or gets cut off.", "It was sized for the previous card, so big numbers wrapped onto two lines and the bottom line was clipped."] ] } },
+
     { v: "1.14.1", date: "2026-11-09", gh: true,
       zh: { title: "刘海数字的点击和小猫一样了",
         improved: [

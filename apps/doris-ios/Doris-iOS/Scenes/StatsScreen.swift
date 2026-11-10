@@ -6,11 +6,12 @@ import DorisUI
 /// and typing, summed across Macs. The iPhone records nothing itself.
 struct StatsScreen: View {
     @ObservedObject private var lang = LanguageSettings.shared
+    @State private var metric: ActivityMetric = .tokens
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                ActivityOverview()
+                ActivityOverview(metric: $metric)
                 Text(L("Recorded by Doris on your Macs and synced through iCloud.",
                        "由各台 Mac 上的 Doris 记录，经 iCloud 同步。"))
                     .font(.caption)

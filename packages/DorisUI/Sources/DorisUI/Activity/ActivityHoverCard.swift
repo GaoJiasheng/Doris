@@ -48,6 +48,7 @@ public struct ActivityHoverCard: View {
                             .frame(width: 40, height: 16)
                     }
                     .monospacedDigit()
+                    .lineLimit(1)
                 }
             }
             Text(L("All your devices · click for Stats", "全部设备合计 · 点击查看统计"))

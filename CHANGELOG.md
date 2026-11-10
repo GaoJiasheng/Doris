@@ -6,6 +6,50 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.14.2 — 2026-11-10
+
+macOS only. The iPhone stays on 1.14.0.
+
+### New
+
+- **Meeting time counts more apps.** Besides Feishu, international Lark
+  (`com.larksuite.larkApp.iron`, which wasn't recognised, so a Lark
+  meeting counted 0), Zoom, Tencent Meeting (腾讯会议) and DingTalk (钉钉).
+  Each app has its own rule in `MeetingDetector`: Feishu / Lark count
+  only their separate meeting process (mic or speakers); Zoom and Tencent
+  Meeting count while they use the mic or speakers; DingTalk, which also
+  plays message sounds and videos, counts only while it holds the mic.
+  Bundle IDs match by prefix, so a helper process carrying the audio
+  counts as its app.
+
+### Improved
+
+- **Each notch icon opens its own page.** In the popup, the typing
+  number opens Stats on Typing, the meeting number on Meetings, the
+  Token number on Token, and the cat opens the tasks (待办) tab.
+  Clicking the same icon again closes the popup; clicking another
+  switches pages. The icon under the pointer is found from each cell's
+  on-screen frame, so the gaps between them still count.
+- **The numbers' right-click menu is the cat's.** 打开主窗口 / 立即同步 /
+  设置… / 退出 Doris, item for item; on a number, 打开主窗口 lands on that
+  number's Stats tab.
+
+### Fixed
+
+- **High CPU use (around 80%).** Every token collection pass fetched
+  every stored `TokenUsageEvent` (1.85M rows on one Mac, ~84 s per pass)
+  just to check for duplicates, and each log append triggered another
+  pass. The pass now looks up only the new samples' dedup keys (in
+  batches of 500, against the unique index), and log changes start at
+  most one pass every 10 seconds. A manual Rescan is not throttled.
+- **The hover card no longer wraps or clips.** The tip window measured
+  its content right after swapping it, before SwiftUI had laid out the
+  new card, so it was sized for the previous one: big numbers wrapped
+  ("13.6 / M") and the footer line was cut off. Each tip now gets a fresh
+  hosting view, measured before it's shown.
+
+---
+
 ## 1.14.1 — 2026-11-09
 
 macOS only. The iPhone stays on 1.14.0.

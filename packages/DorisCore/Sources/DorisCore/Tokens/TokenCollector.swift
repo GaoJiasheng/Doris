@@ -43,13 +43,6 @@ public final class TokenCollector: @unchecked Sendable {
             mdefaults.set(true, forKey: migFlag)
         }
 
-        // Existing dedup keys (cross-run dedup — resumed sessions re-emit old
-        // requestIds). propertiesToFetch keeps this light.
-        var seen = Set<String>()
-        var keyFetch = FetchDescriptor<TokenUsageEvent>()
-        keyFetch.propertiesToFetch = [\.dedupKey]
-        if let existing = try? ctx.fetch(keyFetch) { for e in existing { seen.insert(e.dedupKey) } }
-
         var dailyCache: [String: TokenUsageDaily] = [:]
         let cal = Calendar.current
         let dayFmt = DateFormatter()
@@ -82,6 +75,10 @@ public final class TokenCollector: @unchecked Sendable {
             guard let result = try? adapter.collect(cursorJSON: state.cursorJSON.isEmpty ? nil : state.cursorJSON)
             else { continue }
 
+            // Resumed sessions re-emit old ids. If this lookup fails, leave the
+            // cursor alone and retry next pass rather than count them twice.
+            guard var seen = try? Self.storedKeys(among: result.samples, ctx: ctx) else { continue }
+
             for s in result.samples where !seen.contains(s.dedupKey) {
                 seen.insert(s.dedupKey)
                 let cost = TokenPricing.cost(model: s.model, input: s.inputTokens, output: s.outputTokens,
@@ -111,6 +108,20 @@ public final class TokenCollector: @unchecked Sendable {
         }
         try? ctx.save()
         return summary
+    }
+
+    /// Which of these samples' keys are already stored. Asks the unique index
+    /// about just this batch: the table can hold millions of rows, and
+    /// fetching them all took 84 s at 1.85M, on every pass.
+    static func storedKeys(among samples: [TokenSample], ctx: ModelContext) throws -> Set<String> {
+        let keys = Array(Set(samples.map(\.dedupKey)))
+        var stored = Set<String>()
+        for start in stride(from: 0, to: keys.count, by: 500) {
+            let batch = Array(keys[start..<min(start + 500, keys.count)])
+            let fetch = FetchDescriptor<TokenUsageEvent>(predicate: #Predicate { batch.contains($0.dedupKey) })
+            for event in try ctx.fetch(fetch) { stored.insert(event.dedupKey) }
+        }
+        return stored
     }
 }
 

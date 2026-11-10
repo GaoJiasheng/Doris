@@ -17,6 +17,11 @@ final class TokenCollectionService {
     private var collector: TokenCollector?
     private var running = false
     private var isCollecting = false
+    private var logPassPending = false
+    private var lastCollect = Date.distantPast
+    /// AI tools append to their logs every few seconds while they work, and
+    /// each pass walks thousands of files.
+    private static let minLogPassGap: TimeInterval = 10
 
     private init() {}
 
@@ -51,10 +56,20 @@ final class TokenCollectionService {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
+    /// A log changed: one pass soon, at most one per `minLogPassGap`. Later
+    /// changes ride along with the pass already scheduled.
+    private func logsChanged() {
+        guard !logPassPending else { return }
+        logPassPending = true
+        scheduleCollect(delay: max(1.5, lastCollect.addingTimeInterval(Self.minLogPassGap).timeIntervalSinceNow))
+    }
+
     private func runCollect() {
+        logPassPending = false
         guard !isCollecting, let collector,
               TokenMonitorSettings.shared.monitoringEnabled else { return }
         isCollecting = true
+        lastCollect = Date()
         let tools = TokenMonitorSettings.shared.enabledTools
         Task.detached(priority: .utility) {
             _ = collector.collect(tools: tools)
@@ -77,7 +92,7 @@ final class TokenCollectionService {
         let callback: FSEventStreamCallback = { _, info, _, _, _, _ in
             guard let info else { return }
             let me = Unmanaged<TokenCollectionService>.fromOpaque(info).takeUnretainedValue()
-            DispatchQueue.main.async { me.scheduleCollect() }
+            DispatchQueue.main.async { me.logsChanged() }
         }
         guard let stream = FSEventStreamCreate(
             kCFAllocatorDefault, callback, &context,
