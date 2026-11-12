@@ -246,6 +246,20 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.14.3", date: "2026-11-12", gh: true,
+      zh: { title: "打字统计不再虚高,今日卡片的 Token 合计所有设备",
+        improved: [
+          ["今日页的「TOKEN 用量 · 今日」合计所有 Mac。", "之前只算这台 Mac,现在和统计页、刘海数字一样,是所有设备的合计。"],
+          ["打字字数可以清零今天。", "设置「统计与刘海数字」里打字那一行多了「清零今天…」,确认后这台 Mac 今天的字数归零,其他 Mac 和之前的日子不受影响。"] ],
+        fixed: [
+          ["打字字数不再虚高。", "之前按方向键、翻页或 ⌘K 之类的快捷键也算在打字,之后输入框里冒出来的草稿、滚动加载的文档内容都被算进去,一天能多出几万字。现在只有真正打字、删字的键才算,而且按一个键最多只记几个字;没按键时,要光标停在新出现的字后面(听写、语音输入就是这样)才算。Typeless 等语音工具输入的字照常全部统计。"] ] },
+      en: { title: "Typing counts stop inflating; the Today card's tokens cover every Mac",
+        improved: [
+          ["Today's token usage adds up every Mac.", "It used to count only this Mac; now it's the total across devices, like Stats and the notch numbers."],
+          ["Reset today's typing.", "Settings → Stats and notch numbers has Reset Today… on the typing row: this Mac's words for today go back to zero. Other Macs and earlier days stay as they are."] ],
+        fixed: [
+          ["Typing no longer counts far more than you typed.", "Arrow keys, Page Down and shortcuts like ⌘K counted as typing, so a chat draft appearing or a document loading as you scrolled was credited too, adding tens of thousands of words a day. Now only keys that type or delete count, each worth a few words at most; with no key pressed, new text counts only when the caret sits right after it, as with dictation and voice input. Voice tools like Typeless still count in full."] ] } },
+
     { v: "1.14.2", date: "2026-11-10", gh: true,
       zh: { title: "会议统计支持更多 App,刘海图标各开各的页面,CPU 占用大幅下降",
         new: [

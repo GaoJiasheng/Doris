@@ -6,6 +6,38 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.14.3 — 2026-11-12
+
+macOS only. The iPhone stays on 1.14.0.
+
+### Improved
+
+- **The Today card's token number covers every Mac.** 「TOKEN 用量 · 今日」
+  read only this Mac's `TokenStore`; it now sums the synced `ActivityDay`
+  rows, the same numbers as the Stats page and the notch.
+- **Reset today's typing.** Settings → typing has 「清零今天…」 (with a
+  confirmation): this Mac's words for today go back to zero, in every row
+  it wrote today. Other Macs and earlier days are untouched.
+- **Words per app, for diagnosis.** The typing helper keeps today's words
+  per app in `~/.doris/ipc/typing/apps.json`: bundle IDs and numbers
+  only, never text, local to the Mac.
+
+### Fixed
+
+- **Typing counted far more than was typed** (35k words in a day of
+  little typing on one Mac). Two holes in `TypingCounter`:
+  - Any key counted as typing, arrows, Page Down and shortcuts like ⌘K
+    included, and after one, everything new in the field was credited: a
+    chat's draft, a document loading as it scrolls, another file. Now only
+    keys that produce or edit text count (`TypingRules.isTypingKey`), and
+    one settle credits at most `keys × 4 + 2` words.
+  - With no key at all, any pure insertion counted (meant for
+    dictation), which also caught content loading into a field. Now the
+    caret must sit right after the insertion, as it does after dictation
+    or a voice input method, and one insertion credits at most 300 words.
+  Input posted by software still counts in full: Typeless and other voice
+  tools paste with a posted ⌘V or type with posted keys.
+
 ## 1.14.2 — 2026-11-10
 
 macOS only. The iPhone stays on 1.14.0.

@@ -86,6 +86,22 @@ final class ActivityTotalsTests: XCTestCase {
         XCTAssertEqual(WordCount.count("，。 !? 🙂"), 0)
     }
 
+    func testOnlyTextKeysCountAsTyping() {
+        XCTAssertTrue(TypingRules.isTypingKey(code: 0, command: false, control: false))     // a
+        XCTAssertTrue(TypingRules.isTypingKey(code: 51, command: false, control: false))    // delete
+        XCTAssertTrue(TypingRules.isTypingKey(code: 49, command: false, control: false))    // space
+        XCTAssertFalse(TypingRules.isTypingKey(code: 125, command: false, control: false))  // ↓
+        XCTAssertFalse(TypingRules.isTypingKey(code: 121, command: false, control: false))  // page down
+        XCTAssertFalse(TypingRules.isTypingKey(code: 40, command: true, control: false))    // ⌘K
+        XCTAssertFalse(TypingRules.isTypingKey(code: 49, command: false, control: true))    // ⌃Space
+    }
+
+    func testAllowanceFollowsKeys() {
+        XCTAssertEqual(TypingRules.allowance(keys: 0), 2)
+        XCTAssertEqual(TypingRules.allowance(keys: 1), 6)    // one key picking a phrase
+        XCTAssertLessThan(TypingRules.allowance(keys: 3), 1_000)
+    }
+
     // MARK: Periods
 
     private func total(_ words: Int) -> ActivityTotal { ActivityTotal(typedWords: words) }

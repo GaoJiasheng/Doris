@@ -466,6 +466,7 @@ struct NotchStatsSettingsSection: View {
 struct TypingAccessRow: View {
     @ObservedObject private var lang = LanguageSettings.shared
     @ObservedObject private var typing = TypingBridge.shared
+    @State private var confirmClear = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -480,8 +481,15 @@ struct TypingAccessRow: View {
                     Button(L("Allow…", "去开启…")) { typing.requestAccess() }
                     Button(L("Turn Off", "关闭")) { typing.disable() }
                 case .counting:
+                    Button(L("Reset Today…", "清零今天…")) { confirmClear = true }
                     Button(L("Turn Off", "关闭")) { typing.disable() }
                 }
+            }
+            .confirmationDialog(L("Reset today’s typing on this Mac to zero?", "把这台 Mac 今天的打字字数清零？"),
+                                isPresented: $confirmClear) {
+                Button(L("Reset to Zero", "清零"), role: .destructive) { ActivityRecorder.shared?.clearWords() }
+            } message: {
+                Text(L("Other Macs’ counts and earlier days stay as they are.", "其他 Mac 和之前的日子不受影响。"))
             }
             if typing.state != .counting {
                 Text(L("Counting reads what you type in other apps, so it runs in a small helper that needs its own Accessibility switch, listed as “DorisTyping”. If it isn’t there, drag it in from the Finder window. Only word counts reach Doris; the text is never kept.",

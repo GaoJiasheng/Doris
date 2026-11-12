@@ -3,17 +3,16 @@ import SwiftData
 import DorisCore
 import DorisUI
 
-/// Compact token-usage glance for the Today home. Reads from the dedicated
-/// `TokenStore` container (not the main Notes container), so it's wrapped in
-/// its own `.modelContainer` and the `@Query` lives in the inner view (the
-/// descendant of where the container is applied).
+/// Compact token-usage glance for the Today home. Shows today's total across
+/// every device — the synced `ActivityDay` rows in the main container (this
+/// Mac's own rows are kept current from `TokenStore` by `ActivityRecorder`),
+/// the same numbers the Stats page and the notch use.
 struct TokenSummaryCard: View {
     var onTap: () -> Void = {}
 
     var body: some View {
-        if let container = TokenStore.shared {
+        if TokenStore.shared != nil {
             TokenSummaryCardInner(onTap: onTap)
-                .modelContainer(container)
         }
     }
 }
@@ -21,9 +20,15 @@ struct TokenSummaryCard: View {
 private struct TokenSummaryCardInner: View {
     @ObservedObject private var lang = LanguageSettings.shared
     @ObservedObject private var weather = WeatherViewModel.shared
-    @Query(sort: [SortDescriptor(\TokenUsageDaily.day, order: .reverse)])
-    private var dailies: [TokenUsageDaily]
+    @Query private var rows: [ActivityDay]
     var onTap: () -> Void
+
+    init(onTap: @escaping () -> Void) {
+        self.onTap = onTap
+        // Today only; a two-day window keeps midnight safe.
+        let cutoff = Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? .distantPast
+        _rows = Query(filter: #Predicate<ActivityDay> { $0.dayStart >= cutoff })
+    }
 
     /// Theme-aware accent gradient (adapts per character pack:
     /// secondary → primary accent).
@@ -33,7 +38,7 @@ private struct TokenSummaryCardInner: View {
     }
 
     var body: some View {
-        let today = TokenStats.totals(dailies, .today)
+        let today = ActivityTotals.total(ActivityTotals.byDay(rows.map(ActivityRecord.init)), .today)
 
         // Borderless glance — no CyberCard box (the Today screen already has
         // plenty of bordered cards below). A gradient headline number + a soft
@@ -52,12 +57,12 @@ private struct TokenSummaryCardInner: View {
                         .foregroundStyle(.primary.opacity(0.4))
                         .tracking(0.6)
                     HStack(alignment: .firstTextBaseline, spacing: 7) {
-                        Text(TokenFormat.tokens(today.billable))
+                        Text(TokenFormat.tokens(today.tokens))
                             .font(.system(size: 25, weight: .heavy, design: .rounded))
                             .foregroundStyle(accent)
                             .monospacedDigit()
-                        if today.cost > 0 {
-                            Text(TokenFormat.usd(today.cost))
+                        if today.tokenCostUSD > 0 {
+                            Text(TokenFormat.usd(today.tokenCostUSD))
                                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.primary.opacity(0.45))
                                 .monospacedDigit()

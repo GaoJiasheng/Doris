@@ -14,6 +14,8 @@ final class Helper {
     static let shared = Helper()
 
     private var pending: [TypingWire.Entry] = []
+    private var tally: TypingWire.AppTally?
+    private var tallyDirty = false
     private var lastStatus: Bool?
     private var promptSub: DarwinNotify.Subscription?
     private var timers: [Timer] = []
@@ -34,7 +36,10 @@ final class Helper {
             MainActor.assumeIsolated { Helper.shared.prompt() }
         }
 
-        TypingCounter.shared.onWords = { n, at in Helper.shared.pending.append(.init(at: at, words: n)) }
+        TypingCounter.shared.onWords = { n, at, app in
+            Helper.shared.pending.append(.init(at: at, words: n))
+            Helper.shared.count(n, at: at, in: app)
+        }
         TypingCounter.shared.start()
 
         timers.append(Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { _ in
@@ -57,7 +62,24 @@ final class Helper {
         if !Self.dorisRunning() { quit() }
     }
 
+    /// Adds to today's per-app tally, picking up where the file left off
+    /// after a relaunch.
+    private func count(_ n: Int, at: Date, in app: String) {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: at)
+        let day = String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+        var t = tally ?? TypingWire.readAppTally() ?? TypingWire.AppTally(day: day)
+        if t.day != day { t = TypingWire.AppTally(day: day) }
+        let key = app.isEmpty ? "?" : app
+        t.words[key] = max(0, (t.words[key] ?? 0) + n)
+        tally = t
+        tallyDirty = true
+    }
+
     private func flush() {
+        if tallyDirty, let tally {
+            try? TypingWire.write(tally)
+            tallyDirty = false
+        }
         guard !pending.isEmpty else { return }
         do {
             try TypingWire.write(TypingWire.Batch(entries: pending))

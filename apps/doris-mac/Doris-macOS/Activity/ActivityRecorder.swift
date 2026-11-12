@@ -63,6 +63,21 @@ final class ActivityRecorder {
         dirty = true
     }
 
+    /// Sets this Mac's typed words for `date`'s day back to zero, in every
+    /// row it wrote that day. Rows from its earlier launches have no other
+    /// writer (one Doris per Mac), so changing them can't collide.
+    func clearWords(on date: Date = Date()) {
+        let key = ActivityTotals.dayKey(date)
+        let me = ActivityDevice.key
+        let mine = (try? context.fetch(FetchDescriptor<ActivityDay>(
+            predicate: #Predicate { $0.deviceKey == me && $0.day == key }))) ?? []
+        for r in mine + [rows[key]].compactMap({ $0 }) where r.typedWords != 0 {
+            r.typedWords = 0
+            dirty = true
+        }
+        flush()
+    }
+
     /// Marks the 30 s slot containing `date` as spent in a meeting.
     func markMeeting(at date: Date = Date()) {
         let r = row(for: date)

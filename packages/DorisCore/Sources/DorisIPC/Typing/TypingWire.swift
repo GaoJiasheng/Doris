@@ -12,6 +12,9 @@ import Foundation
 ///   every delta is counted exactly once.
 /// - `status.json`: whether the helper has Accessibility access, so
 ///   Settings can say so.
+/// - `apps.json`: today's words per app (bundle IDs and numbers, nothing
+///   else), for telling which app a surprising count came from. Stays on
+///   this Mac and is rewritten every day.
 ///
 /// A Darwin notification nudges Doris when a batch lands.
 public enum TypingWire {
@@ -49,6 +52,13 @@ public enum TypingWire {
         }
     }
 
+    /// Today's words per app.
+    public struct AppTally: Codable, Sendable, Equatable {
+        public var day: String
+        public var words: [String: Int]
+        public init(day: String, words: [String: Int] = [:]) { self.day = day; self.words = words }
+    }
+
     public static func directory() throws -> URL {
         try IPCDirectory.ipcRoot().appendingPathComponent("typing", isDirectory: true)
     }
@@ -81,6 +91,22 @@ public enum TypingWire {
         let dir = try directory()
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         try encoder.encode(status).write(to: try statusURL(), options: .atomic)
+    }
+
+    public static func appTallyURL() throws -> URL {
+        try directory().appendingPathComponent("apps.json")
+    }
+
+    public static func write(_ tally: AppTally) throws {
+        let dir = try directory()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let e = JSONEncoder(); e.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try e.encode(tally).write(to: try appTallyURL(), options: .atomic)
+    }
+
+    public static func readAppTally() -> AppTally? {
+        guard let url = try? appTallyURL(), let data = try? Data(contentsOf: url) else { return nil }
+        return try? decoder.decode(AppTally.self, from: data)
     }
 
     // MARK: Doris side
