@@ -71,7 +71,7 @@ public enum WidgetReloadCoordinator {
     static func signature(container: ModelContainer) -> String {
         let context = ModelContext(container)
         let descriptor = FetchDescriptor<Note>(
-            predicate: #Predicate { !$0.archived && !$0.deleted }
+            predicate: #Predicate { !$0.archived && $0.deletedAt == nil }
         )
         let rows = ((try? context.fetch(descriptor)) ?? [])
             .filter { $0.pinned || $0.dueDate != nil }

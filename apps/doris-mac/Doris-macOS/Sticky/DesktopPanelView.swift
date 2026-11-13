@@ -37,7 +37,7 @@ struct DesktopPanelView: View {
     private let longTermViolet = Color(red: 0.62, green: 0.51, blue: 1.0)
 
     @Query(
-        filter: #Predicate<Note> { !$0.archived && !$0.deleted },
+        filter: #Predicate<Note> { !$0.archived && $0.deletedAt == nil },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var allNotes: [Note]

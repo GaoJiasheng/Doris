@@ -169,7 +169,7 @@ struct FocusPickerSheet: View {
     @ObservedObject private var lang = LanguageSettings.shared
     @State private var minutes = 25
 
-    @Query(filter: #Predicate<Note> { !$0.archived && !$0.deleted && !$0.done },
+    @Query(filter: #Predicate<Note> { !$0.archived && $0.deletedAt == nil && !$0.done },
            sort: [SortDescriptor(\Note.updatedAt, order: .reverse)])
     private var open: [Note]
 

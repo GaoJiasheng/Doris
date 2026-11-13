@@ -740,9 +740,9 @@ private struct AnchorNotesView: View {
     private var sortedNotes: [Note] {
         let filtered = notes.filter { n in
             switch filter {
-            case .trash:    return n.deleted
-            case .archived: return !n.deleted && n.archived
-            case .active:   return !n.deleted && !n.archived
+            case .trash:    return n.isTrashed
+            case .archived: return !n.isTrashed && n.archived
+            case .active:   return !n.isTrashed && !n.archived
             }
         }
         switch filter {
@@ -780,10 +780,10 @@ private struct AnchorNotesView: View {
         try? ctx.save()
     }
     private var doneActiveCount: Int {
-        notes.filter { !$0.deleted && !$0.archived && $0.done }.count
+        notes.filter { !$0.isTrashed && !$0.archived && $0.done }.count
     }
     private var trashCount: Int {
-        notes.filter { $0.deleted }.count
+        notes.filter { $0.isTrashed }.count
     }
     @State private var confirmingEmptyTrash = false
 
@@ -968,7 +968,7 @@ private struct AnchorNotesView: View {
     /// disappear with one click; undone ones stay.
     private func archiveAllDone() {
         let now = Date()
-        for n in notes where !n.deleted && !n.archived && n.done {
+        for n in notes where !n.isTrashed && !n.archived && n.done {
             n.archived = true
             n.archivedAt = now
             n.updatedAt = now
@@ -989,7 +989,7 @@ private struct AnchorNotesView: View {
     /// every device first.
     private func emptyTrash() {
         let purgeMarker = Date().addingTimeInterval(-31 * 24 * 60 * 60)
-        for n in notes where n.deleted {
+        for n in notes where n.isTrashed {
             n.deletedAt = purgeMarker
             n.updatedAt = purgeMarker
         }
@@ -1108,7 +1108,7 @@ private struct AnchorTodayView: View {
     @Environment(\.modelContext) private var ctx
 
     @Query(
-        filter: #Predicate<Note> { note in !note.archived && !note.deleted },
+        filter: #Predicate<Note> { note in !note.archived && note.deletedAt == nil },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var allNotes: [Note]

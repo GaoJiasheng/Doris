@@ -18,7 +18,7 @@ struct CalendarTimelineScreen: View {
     @Query(
         // Excludes trashed rows too (`deleted` is a soft-delete flag), so a
         // note in the Trash stops occupying its due date on the timeline.
-        filter: #Predicate<Note> { note in !note.archived && !note.deleted },
+        filter: #Predicate<Note> { note in !note.archived && note.deletedAt == nil },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var allNotes: [Note]

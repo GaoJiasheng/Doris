@@ -31,14 +31,17 @@ public final class Note {
     /// "most recently archived first" (more useful than `updatedAt`
     /// for digging through old tasks).
     public var archivedAt: Date?
-    /// Soft-delete flag — `true` means the row is in the trash view,
-    /// recoverable. The user requested this so the regular delete
-    /// button doesn't need a confirmation dialog (mistakes can be
-    /// undone from Trash). Hard-delete (truly removing the row) only
-    /// happens from inside the trash view.
+    /// Legacy soft-delete flag. **Don't read it — use `isTrashed`, or
+    /// `deletedAt != nil` in a predicate.** The name collides with
+    /// `NSManagedObject.isDeleted` (KVC key `deleted`), so CloudKit
+    /// mirroring reads that instead and always uploads `false`: a trashed
+    /// note came back on the next import of its record and never left the
+    /// other devices. Still written alongside `deletedAt` for older
+    /// clients, which read it locally.
     public var deleted: Bool = false
-    /// Timestamp when `deleted` flipped from false → true. Cleared on
-    /// restore. Used to sort the Trash view newest-first.
+    /// When the note went into the trash; nil when it isn't there. This is
+    /// the trash state (it syncs; see `deleted`). Set on trash, cleared on
+    /// restore. Also sorts the Trash view newest-first.
     public var deletedAt: Date?
     /// Manual sort key for drag-and-drop reordering. Lower value =
     /// higher in the list within the same pinned/done group. Default 0
@@ -90,6 +93,9 @@ public final class Note {
     }
 
     // MARK: - Helpers
+
+    /// In the trash (see `deletedAt`).
+    public var isTrashed: Bool { deletedAt != nil }
 
     /// Stamps `updatedAt` to now. Use this instead of setting `updatedAt`
     /// directly — single chokepoint for all "note was modified" signals,

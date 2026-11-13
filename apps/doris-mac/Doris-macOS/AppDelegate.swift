@@ -111,6 +111,11 @@ final class DorisAppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.registerForRemoteNotifications()
             }
 
+            // Before anything reads the trash as `deletedAt` (and before
+            // the timer's first purge): sort out notes the old trash bug
+            // brought back. Once per device.
+            TrashRepair.runOnce(context: container.mainContext)
+
             self.syncTimer = SyncTimer(container: container, interval: 60)
             await self.syncTimer?.start()
 

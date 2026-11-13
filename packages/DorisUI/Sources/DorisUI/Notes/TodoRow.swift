@@ -373,7 +373,7 @@ public struct TodoRow: View {
     /// restore (in trash view). Icon + tooltip flip based on state.
     @ViewBuilder
     private var primaryActionButton: some View {
-        if note.deleted {
+        if note.isTrashed {
             // Trash row → restore button
             Button {
                 let now = Date()
@@ -410,7 +410,7 @@ public struct TodoRow: View {
     @ViewBuilder
     private var deleteActionButton: some View {
         Button {
-            if note.deleted {
+            if note.isTrashed {
                 confirmingDelete = true   // permanent — needs confirmation
             } else {
                 let now = Date()
@@ -419,11 +419,11 @@ public struct TodoRow: View {
                 note.updatedAt = now
             }
         } label: {
-            actionIcon(note.deleted ? "trash.slash" : "trash",
+            actionIcon(note.isTrashed ? "trash.slash" : "trash",
                        tint: CyberPalette.neonPink)
         }
         .buttonStyle(.plain)
-        .help(note.deleted
+        .help(note.isTrashed
               ? L("Delete forever", "彻底删除")
               : L("Move to trash", "移到回收站"))
     }

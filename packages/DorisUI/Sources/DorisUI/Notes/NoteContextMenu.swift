@@ -64,7 +64,7 @@ private struct NoteContextMenuModifier: ViewModifier {
 
     @ViewBuilder
     private var menu: some View {
-        if note.deleted {
+        if note.isTrashed {
             // Trash row — limited actions
             Button {
                 let now = Date()

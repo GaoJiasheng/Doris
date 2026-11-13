@@ -160,7 +160,7 @@ struct TasksProvider: TimelineProvider {
         }
         let context = ModelContext(container)
         var descriptor = FetchDescriptor<Note>(
-            predicate: #Predicate { !$0.archived && !$0.deleted },
+            predicate: #Predicate { !$0.archived && $0.deletedAt == nil },
             sortBy: [SortDescriptor(\.order), SortDescriptor(\.updatedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 120

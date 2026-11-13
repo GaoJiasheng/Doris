@@ -28,7 +28,7 @@ struct MainTodayView: View {
     // anchor.
 
     @Query(
-        filter: #Predicate<Note> { note in !note.archived && !note.deleted },
+        filter: #Predicate<Note> { note in !note.archived && note.deletedAt == nil },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var allNotes: [Note]

@@ -22,8 +22,8 @@ import WidgetKit
 /// logs. `lastSyncedAt` is NOT updated on failure — the "Last synced N
 /// minutes ago" label stays anchored to the last verified-good sync.
 ///
-/// Also purges the trash on each poke: notes soft-deleted (`deleted = true`)
-/// more than 24 hours ago are hard-deleted. Archived notes are never
+/// Also purges the trash on each poke: notes trashed (`deletedAt` set, last
+/// touched more than 24 hours ago) are hard-deleted. Archived notes are never
 /// purged — see `purgeTombstones`.
 public actor SyncTimer {
     private let container: ModelContainer
@@ -250,7 +250,7 @@ public actor SyncTimer {
         NoteImageStore.purgeOrphans(context: context, now: now)
     }
 
-    /// Hard-deletes notes that were put in the trash (`deleted = true`) more
+    /// Hard-deletes notes that were put in the trash (`deletedAt` set) more
     /// than 24 hours ago — long enough that every active device has pulled
     /// the soft-delete on a sync cycle and won't resurrect the record via a
     /// CloudKit mirror race.
@@ -264,9 +264,12 @@ public actor SyncTimer {
     /// Must be called on the main actor (`ModelContext` is main-bound).
     @MainActor
     static func purgeTombstones(context: ModelContext, now: Date = Date()) {
+        // Never purge by the new trash rule before notes the old trash bug
+        // brought back are sorted out (normally done at launch already).
+        TrashRepair.runOnce(context: context)
         let trashCutoff = now.addingTimeInterval(-24 * 60 * 60)
         let stale = (try? context.fetch(FetchDescriptor<Note>(
-            predicate: #Predicate<Note> { $0.deleted && $0.updatedAt < trashCutoff }
+            predicate: #Predicate<Note> { $0.deletedAt != nil && $0.updatedAt < trashCutoff }
         ))) ?? []
         guard !stale.isEmpty else { return }
         NoteImageStore.detachSharedImages(from: stale, context: context)

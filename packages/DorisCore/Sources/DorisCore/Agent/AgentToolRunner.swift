@@ -296,19 +296,19 @@ public final class AgentToolRunner {
 
     /// Notes on the user's lists: not trashed, not archived.
     private func liveNotes() throws -> [Note] {
-        try context.fetch(FetchDescriptor<Note>(predicate: #Predicate { !$0.deleted && !$0.archived }))
+        try context.fetch(FetchDescriptor<Note>(predicate: #Predicate { $0.deletedAt == nil && !$0.archived }))
     }
 
     /// By full id, or by a unique prefix of at least 6 characters.
     private func findNote(_ raw: String) throws -> Note {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if let id = UUID(uuidString: text) {
-            var fd = FetchDescriptor<Note>(predicate: #Predicate { $0.id == id && !$0.deleted })
+            var fd = FetchDescriptor<Note>(predicate: #Predicate { $0.id == id && $0.deletedAt == nil })
             fd.fetchLimit = 1
             if let note = try context.fetch(fd).first { return note }
         } else if text.count >= 6 {
             let prefix = text.lowercased()
-            let all = try context.fetch(FetchDescriptor<Note>(predicate: #Predicate { !$0.deleted }))
+            let all = try context.fetch(FetchDescriptor<Note>(predicate: #Predicate { $0.deletedAt == nil }))
             let matches = all.filter { $0.id.uuidString.lowercased().hasPrefix(prefix) }
             if matches.count == 1 { return matches[0] }
             if matches.count > 1 { throw AgentToolError("More than one task starts with \"\(text)\"; pass the full id.") }

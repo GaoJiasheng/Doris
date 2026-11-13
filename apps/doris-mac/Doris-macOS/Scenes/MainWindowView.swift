@@ -507,9 +507,9 @@ private struct MainNotesList: View {
     private var sortedNotes: [Note] {
         let filtered = notes.filter { n in
             switch filter {
-            case .trash:    return n.deleted
-            case .archived: return !n.deleted && n.archived
-            case .active:   return !n.deleted && !n.archived
+            case .trash:    return n.isTrashed
+            case .archived: return !n.isTrashed && n.archived
+            case .active:   return !n.isTrashed && !n.archived
             }
         }
         switch filter {
@@ -546,10 +546,10 @@ private struct MainNotesList: View {
     }
 
     private var doneActiveCount: Int {
-        notes.filter { !$0.deleted && !$0.archived && $0.done }.count
+        notes.filter { !$0.isTrashed && !$0.archived && $0.done }.count
     }
     private var trashCount: Int {
-        notes.filter { $0.deleted }.count
+        notes.filter { $0.isTrashed }.count
     }
 
     var body: some View {
@@ -594,9 +594,9 @@ private struct MainNotesList: View {
     /// else the top of the list.
     private var rightNote: Note? {
         if cleared { return nil }
-        if let selectedID, let n = notes.first(where: { $0.id == selectedID }), !n.deleted { return n }
+        if let selectedID, let n = notes.first(where: { $0.id == selectedID }), !n.isTrashed { return n }
         if let last = UUID(uuidString: lastOpenedID),
-           let n = notes.first(where: { $0.id == last }), !n.deleted { return n }
+           let n = notes.first(where: { $0.id == last }), !n.isTrashed { return n }
         return sortedNotes.first
     }
 
@@ -837,7 +837,7 @@ private struct MainNotesList: View {
     /// click; undone ones stay rolled over to today.
     private func archiveAllDone() {
         let now = Date()
-        for n in notes where !n.deleted && !n.archived && n.done {
+        for n in notes where !n.isTrashed && !n.archived && n.done {
             n.archived = true
             n.archivedAt = now
             n.updatedAt = now
@@ -860,7 +860,7 @@ private struct MainNotesList: View {
         // delete is safe. User loses "instant emptiness" but gains
         // "actually deleted, doesn't come back".
         let purgeMarker = Date().addingTimeInterval(-31 * 24 * 60 * 60)
-        for n in notes where n.deleted {
+        for n in notes where n.isTrashed {
             n.deletedAt = purgeMarker
             n.updatedAt = purgeMarker
         }

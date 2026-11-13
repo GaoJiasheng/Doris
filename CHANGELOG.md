@@ -6,6 +6,28 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## Unreleased
+
+To ship on macOS and iOS together, under one version number.
+
+### Fixed
+
+- **Trashed notes came back.** The trash was the `Note.deleted` flag,
+  whose name collides with `NSManagedObject.isDeleted` (KVC key
+  `deleted`): CloudKit mirroring read that and always uploaded `false`.
+  A trashed note never left the other devices, and returned on this one
+  at the next import of its record. The trash is now `deletedAt != nil`
+  (that field syncs); every read goes through `Note.isTrashed` or a
+  `deletedAt` predicate, and `deleted` is still written for older clients.
+  `TrashRepair` runs once per device at launch, before any purge: a note
+  edited after its trash stamp stays (stamp cleared); one untouched since
+  goes back to the trash with a fresh 24 hours.
+- **Checklist rows lost the first pinyin letter** in a new list's first
+  row: the row published the input method's marked text, the write
+  re-rendered and refocused the field, and its select-all let the next
+  key replace it. Marked text is no longer published, the field isn't
+  reset mid-composition, and refocus puts the caret at the end.
+
 ## 1.14.4 — 2026-11-13
 
 macOS only. The iPhone stays on 1.14.0.

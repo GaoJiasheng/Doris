@@ -63,6 +63,11 @@ final class DorisAppDelegate: NSObject, UIApplicationDelegate {
             // checklist item done) so the CloudKit mirror picks them up.
             // The timer also drives the "Last synced 30 s ago" label in
             // Settings via `SyncSettings.markSyncedNow()`.
+            // Before anything reads the trash as `deletedAt` (and before
+            // the timer's first purge): sort out notes the old trash bug
+            // brought back. Once per device.
+            TrashRepair.runOnce(context: container.mainContext)
+
             self.syncTimer = SyncTimer(container: container, interval: 60)
             await self.syncTimer?.start()
 

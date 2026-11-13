@@ -23,7 +23,7 @@ struct NotesScreen: View {
     @Query(
         // Excludes trashed rows too — `deleted` is a soft-delete flag, so
         // without it the Trash's contents stay listed here.
-        filter: #Predicate<Note> { note in !note.archived && !note.deleted },
+        filter: #Predicate<Note> { note in !note.archived && note.deletedAt == nil },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var notes: [Note]
@@ -550,7 +550,7 @@ private struct ArchivedNotesSheet: View {
         // for the rationale. After "Delete All" the row is set to
         // `deleted = true` (soft-delete) so it survives sync race; the
         // archived sheet should treat it as gone immediately.
-        filter: #Predicate<Note> { note in note.archived && !note.deleted },
+        filter: #Predicate<Note> { note in note.archived && note.deletedAt == nil },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var archived: [Note]

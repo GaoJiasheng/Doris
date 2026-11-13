@@ -23,7 +23,7 @@ struct TodayScreen: View {
         // soft-deleted, so without it a pinned note sitting in the Trash keeps
         // showing up here — looking exactly like a sync bug against macOS,
         // which has always filtered both.
-        filter: #Predicate<Note> { note in !note.archived && !note.deleted },
+        filter: #Predicate<Note> { note in !note.archived && note.deletedAt == nil },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var allNotes: [Note]

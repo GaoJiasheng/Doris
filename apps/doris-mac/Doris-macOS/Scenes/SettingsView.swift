@@ -483,7 +483,7 @@ private struct MacRecentlyDeletedTab: View {
         // `!note.deleted` clause the records linger here because
         // `archived` stays true after soft-delete, and the user sees
         // "nothing happened".
-        filter: #Predicate<Note> { note in note.archived && !note.deleted },
+        filter: #Predicate<Note> { note in note.archived && note.deletedAt == nil },
         sort: [SortDescriptor(\Note.updatedAt, order: .reverse)]
     )
     private var archived: [Note]
