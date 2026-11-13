@@ -246,6 +246,20 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.14.5", date: "2026-11-13", gh: true,
+      zh: { title: "删掉的待办不再“复活”;Mac 和 iPhone 一起更新",
+        fixed: [
+          ["移到回收站的待办不会再自己回来。", "以前在一台设备上删掉的待办,其他设备上一直还在,过一会儿连这台设备上也会重新出现。现在删除和恢复都能正确同步到所有设备。之前删过、后来又被“救”回来的待办,升级后会自动整理:删除后你还改过的会留下,之后没再动过的会回到回收站,24 小时后才彻底清除。"],
+          ["Mac 上新建清单时,第一行敲拼音不再吃掉第一个字母。", "之前在新清单的第一行打拼音,第一个字母会被选中,接着被下一个字母替换掉。"] ],
+        improved: [
+          ["iPhone 一起更新到 1.14.5。", "这是 iPhone 在 1.14.0 之后的第一次更新,统计里的会议时长、打字字数等改进(由 Mac 记录)也一起带上。"] ] },
+      en: { title: "Trashed tasks stay gone; Mac and iPhone update together",
+        fixed: [
+          ["Tasks moved to the trash no longer come back.", "A task trashed on one device stayed on the others, and before long came back on that one too. Trashing and restoring now sync to every device. Tasks that came back this way are sorted out when you update: ones you've edited since stay, ones untouched since go back to the trash, with 24 hours before they're deleted for good."],
+          ["Typing pinyin into a new checklist's first row on the Mac no longer loses the first letter.", "The first letter got selected and was replaced by the next one."] ],
+        improved: [
+          ["The iPhone updates to 1.14.5 too.", "Its first update since 1.14.0, so it also picks up the stats improvements recorded by the Mac, like meeting time in more apps and typing counts."] ] } },
+
     { v: "1.14.4", date: "2026-11-13", gh: true,
       zh: { title: "笔记里又能粘贴文字了",
         fixed: [

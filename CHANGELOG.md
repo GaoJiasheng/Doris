@@ -6,9 +6,11 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
-## Unreleased
+## 1.14.5 — 2026-11-13
 
-To ship on macOS and iOS together, under one version number.
+macOS and iOS together, both 1.14.5 (Mac 51, iOS 52) — the iPhone's first
+update since 1.14.0, so it also picks up what 1.14.1–1.14.4 changed in the
+shared stats (more meeting apps and typing counts recorded by the Macs).
 
 ### Fixed
 
