@@ -6,6 +6,19 @@ Versions follow [semver](https://semver.org). `MARKETING_VERSION` in
 
 ---
 
+## 1.14.4 — 2026-11-13
+
+macOS only. The iPhone stays on 1.14.0.
+
+### Fixed
+
+- **Pasting text into a note did nothing** (since 1.13.0). The body
+  editor narrows `readablePasteboardTypes` to plain text, and with that
+  `pasteAsPlainText` silently inserts nothing, so every paste copied from
+  outside Doris was lost; images and copies from another note took other
+  paths and still worked. `paste(_:)` now reads the pasteboard's string
+  and inserts it itself, still as plain text in the note's own style.
+
 ## 1.14.3 — 2026-11-12
 
 macOS only. The iPhone stays on 1.14.0.

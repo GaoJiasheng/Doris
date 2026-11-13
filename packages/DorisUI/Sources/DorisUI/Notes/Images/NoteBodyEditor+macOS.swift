@@ -94,8 +94,11 @@ final class NoteBodyNSTextView: NSTextView {
             return
         }
         // Anything else comes in as plain text — fonts and colours from a
-        // web page or another app aren't the note's styles.
-        pasteAsPlainText(sender)
+        // web page or another app aren't the note's styles. Inserted by
+        // hand: `pasteAsPlainText` does nothing once `readablePasteboardTypes`
+        // is narrowed to plain text (below), so every outside paste was lost.
+        guard let text = pb.string(forType: .string), !text.isEmpty else { return }
+        insertText(text, replacementRange: selectedRange())
     }
 
     /// Plain text only (plus images, handled above): no RTF from drops.

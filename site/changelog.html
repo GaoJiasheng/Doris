@@ -246,6 +246,14 @@
   // `gh: true` for versions with a GitHub release (1.8.0 onward).
   // ---------------------------------------------------------------------
   const RELEASES = [
+    { v: "1.14.4", date: "2026-11-13", gh: true,
+      zh: { title: "笔记里又能粘贴文字了",
+        fixed: [
+          ["在 Mac 上往笔记正文里粘贴文字不再没反应。", "从 1.13.0 起,从其他 App 或网页复制的文字粘贴到笔记里会悄无声息地失败(图片和从另一条笔记复制的内容不受影响)。现在能正常粘贴了,进来的仍是纯文本,不带原来的字体和颜色。"] ] },
+      en: { title: "Pasting text into notes works again",
+        fixed: [
+          ["Pasting text into a note on the Mac works again.", "Since 1.13.0, text copied from another app or a web page silently failed to paste into a note (images and copies from another note were fine). It pastes again, still as plain text without the source's fonts and colours."] ] } },
+
     { v: "1.14.3", date: "2026-11-12", gh: true,
       zh: { title: "打字统计不再虚高,今日卡片的 Token 合计所有设备",
         improved: [
