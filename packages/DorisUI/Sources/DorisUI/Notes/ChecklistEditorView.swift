@@ -762,6 +762,8 @@ func dorisFocusFieldToEnd(_ tf: NSTextField, tries: Int = 8) {
         // Already the focused field → leave the caret alone (don't yank
         // it to the end while the user is typing mid-string).
         guard window.firstResponder !== tf.currentEditor() else { return }
+        // Never take focus over an input method that's still composing.
+        if let ed = window.firstResponder as? NSTextView, ed.hasMarkedText() { return }
         window.makeFirstResponder(tf)
         if let editor = tf.currentEditor() {
             let end = (tf.stringValue as NSString).length
@@ -796,10 +798,27 @@ final class WrappingTextField: NSTextField {
     /// keystroke.
     var onFocus: (() -> Void)?
 
+    /// An NSTextField selects all its text when it takes focus. A checklist
+    /// row never wants that: when a re-render hands focus back mid-typing,
+    /// the next key replaced what was just typed (the first pinyin letter
+    /// of a new list's first row was "eaten" that way). Caret at the end
+    /// instead; a click still puts it where you clicked.
     override func becomeFirstResponder() -> Bool {
         let became = super.becomeFirstResponder()
+        if became, let editor = currentEditor() {
+            let length = (stringValue as NSString).length
+            if length > 0, editor.selectedRange.length == length {
+                editor.selectedRange = NSRange(location: length, length: 0)
+            }
+        }
         if became, let onFocus { DispatchQueue.main.async(execute: onFocus) }
         return became
+    }
+
+    /// True while an input method is composing in this field (pinyin not
+    /// yet turned into characters).
+    var isComposing: Bool {
+        (currentEditor() as? NSTextView)?.hasMarkedText() ?? false
     }
 
     override func layout() {
@@ -922,7 +941,9 @@ struct ChecklistItemField: NSViewRepresentable {
         c.parent = self
         let appName: NSAppearance.Name = colorScheme == .dark ? .darkAqua : .aqua
         if tf.appearance?.name != appName { tf.appearance = NSAppearance(named: appName) }
-        if tf.stringValue != text { tf.stringValue = text }
+        // Never while composing: the field holds pinyin the note doesn't
+        // have yet, and setting it would throw the composition away.
+        if !tf.isComposing, tf.stringValue != text { tf.stringValue = text }
         // Only re-color when `checked` flips — NSColor comparison is
         // unreliable for dynamic/alpha colors, so the old guard re-assigned
         // (and redrew) every pass, flickering the row on unrelated refreshes.
@@ -955,11 +976,23 @@ struct ChecklistItemField: NSViewRepresentable {
         init(_ parent: ChecklistItemField) { self.parent = parent }
 
         func controlTextDidChange(_ obj: Notification) {
-            guard let tf = obj.object as? NSTextField else { return }
+            guard let tf = obj.object as? WrappingTextField else { return }
+            // Don't publish a half-composed input method buffer (raw
+            // pinyin): it would save and sync, and the re-render it sets
+            // off can take focus mid-word. This fires again on commit.
+            // (Same rule as the note body editor.)
+            guard !tf.isComposing else { return }
             parent.text = tf.stringValue
         }
         func controlTextDidBeginEditing(_ obj: Notification) { parent.onFocusChange(true) }
-        func controlTextDidEndEditing(_ obj: Notification) { parent.onFocusChange(false) }
+        func controlTextDidEndEditing(_ obj: Notification) {
+            // Leaving mid-composition commits the pinyin as it stands,
+            // which may not announce a change: publish what's there.
+            if let tf = obj.object as? NSTextField, tf.stringValue != parent.text {
+                parent.text = tf.stringValue
+            }
+            parent.onFocusChange(false)
+        }
 
         func control(_ control: NSControl, textView: NSTextView,
                      doCommandBy selector: Selector) -> Bool {
